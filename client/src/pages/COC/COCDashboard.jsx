@@ -1,135 +1,270 @@
-import { useEffect, useState } from "react";
-import api from "../../utils/api";
-import { useSelector } from "react-redux";
+import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+import { useSelector } from "react-redux";
+import {
+  FileSpreadsheet,
+  CheckCircle,
+  AlertTriangle,
+  Calendar,
+  TrendingUp,
+  Clock,
+  ChevronRight,
+  BookOpen,
+  Megaphone
+} from "lucide-react";
+
 
 const COCDashboard = () => {
   const { user } = useSelector((state) => state.auth);
-  const [assignments, setAssignments] = useState([]);
-  const [complaints, setComplaints] = useState([]);
-  const [workload, setWorkload] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [stats, setStats] = useState({
+    assignments: {
+      common: { total: 0, completed: 0, pending: 0 },
+      extension: { total: 0, completed: 0, pending: 0 },
+      summer: { total: 0, completed: 0, pending: 0 }
+    },
+    complaints: { total: 0, resolved: 0, pending: 0 },
+    announcements: { total: 0, recent: 0 }
+  });
+  const [isLoading, setIsLoading] = useState(true);
 
+  // Fetch dashboard data
   useEffect(() => {
-    fetchAssignments();
-    fetchComplaints();
-    fetchWorkload();
+    const fetchDashboardData = async () => {
+      try {
+        // In a real application, these would be separate API calls
+        // For demo purposes, we're using mock data
+
+        // Mock statistics data
+        const statsData = {
+          assignments: {
+            common: { total: 48, completed: 36, pending: 12 },
+            extension: { total: 24, completed: 18, pending: 6 },
+            summer: { total: 18, completed: 10, pending: 8 }
+          },
+          complaints: { total: 15, resolved: 9, pending: 6 },
+          announcements: { total: 8, recent: 3 }
+        };
+
+
+        setStats(statsData);
+        setIsLoading(false);
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error);
+        setIsLoading(false);
+      }
+    };
+
+    fetchDashboardData();
   }, []);
 
-  const fetchAssignments = async () => {
-    setLoading(true);
-    try {
-      const { data } = await api.get("/assignments/coc");
-      setAssignments(data);
-    } catch (error) {
-      console.error("Error fetching assignments:", error);
-    }
-    setLoading(false);
+
+  // Calculate completion percentage
+  const calculateCompletion = (completed, total) => {
+    return total > 0 ? Math.round((completed / total) * 100) : 0;
   };
 
-  const fetchComplaints = async () => {
-    try {
-      const { data } = await api.get(`/complaints`);
-      setComplaints(data.filter((c) => c.status === "Pending"));
-    } catch (error) {
-      console.error("Error fetching complaints:", error);
-    }
-  };
 
-  const fetchWorkload = async () => {
-    try {
-      const { data } = await api.get(`/reports/workload`);
-      setWorkload(data);
-    } catch (error) {
-      console.error("Error fetching workload:", error);
-    }
-  };
+
+  if (isLoading) {
+    return (
+      <div className="h-64 flex items-center justify-center">
+        <div className="animate-pulse flex flex-col items-center">
+          <div className="h-12 w-12 bg-indigo-200 rounded-full mb-4"></div>
+          <div className="h-4 w-36 bg-gray-200 rounded mb-3"></div>
+          <div className="h-3 w-24 bg-gray-200 rounded"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="p-6 bg-gray-100 min-h-screen">
-      <h1 className="text-3xl font-bold text-gray-800 mb-6 text-center">COC Dashboard</h1>
+    <div className="space-y-6">
+      {/* Welcome section */}
+      <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-xl shadow-md overflow-hidden">
+        <div className="px-6 py-8 md:px-8 md:py-10">
+          <h1 className="text-2xl md:text-3xl font-bold text-white mb-2">
+            Welcome back, {user?.fullName || 'Course Coordinator'}
+          </h1>
+          <p className="text-indigo-100 mb-6">
+            Here's an overview of course operations and current activities
+          </p>
+          <div className="flex flex-wrap gap-4">
+            <Link
+              to="/assignments/auto/common"
+              className="inline-flex items-center px-4 py-2 bg-white/90 hover:bg-white rounded-lg text-indigo-700 font-medium transition duration-150 ease-in-out shadow-sm"
+            >
+              Manage Course Assignments
+              <ChevronRight size={16} className="ml-1" />
+            </Link>
+            <Link
+              to="/complaintsCOC"
+              className="inline-flex items-center px-4 py-2 bg-indigo-700/50 hover:bg-indigo-700/70 rounded-lg text-white font-medium transition duration-150 ease-in-out"
+            >
+              View Complaints
+              <ChevronRight size={16} className="ml-1" />
+            </Link>
+          </div>
+        </div>
+      </div>
 
+      {/* Stats overview */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-xl shadow-md text-center">
-          <h2 className="text-lg font-semibold text-gray-700">Total Assignments</h2>
-          <p className="text-3xl font-bold text-blue-600">{assignments.length}</p>
-        </div>
-        <div className="bg-white p-6 rounded-xl shadow-md text-center">
-          <h2 className="text-lg font-semibold text-gray-700">Pending Complaints</h2>
-          <Link to="/complaints" className="text-red-600 font-semibold hover:underline">
-            View Complaints ({complaints.length})
+        {/* Course Assignments stat card */}
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-500 mb-1">Total Course Assignments</p>
+              <h3 className="text-2xl font-bold text-gray-900">
+                {stats.assignments.common.total + stats.assignments.extension.total + stats.assignments.summer.total}
+              </h3>
+            </div>
+            <div className="p-2 bg-indigo-50 rounded-lg">
+              <FileSpreadsheet size={24} className="text-indigo-600" />
+            </div>
+          </div>
+
+          <div className="mt-4 space-y-3">
+            <div>
+              <div className="flex justify-between text-sm mb-1">
+                <span className="font-medium">Common Courses</span>
+                <span className="text-gray-600">{stats.assignments.common.completed} / {stats.assignments.common.total}</span>
+              </div>
+              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-indigo-500 rounded-full"
+                  style={{ width: `${calculateCompletion(stats.assignments.common.completed, stats.assignments.common.total)}%` }}
+                ></div>
+              </div>
+            </div>
+
+            <div>
+              <div className="flex justify-between text-sm mb-1">
+                <span className="font-medium">Extension Courses</span>
+                <span className="text-gray-600">{stats.assignments.extension.completed} / {stats.assignments.extension.total}</span>
+              </div>
+              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-purple-500 rounded-full"
+                  style={{ width: `${calculateCompletion(stats.assignments.extension.completed, stats.assignments.extension.total)}%` }}
+                ></div>
+              </div>
+            </div>
+
+            <div>
+              <div className="flex justify-between text-sm mb-1">
+                <span className="font-medium">Summer Courses</span>
+                <span className="text-gray-600">{stats.assignments.summer.completed} / {stats.assignments.summer.total}</span>
+              </div>
+              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-amber-500 rounded-full"
+                  style={{ width: `${calculateCompletion(stats.assignments.summer.completed, stats.assignments.summer.total)}%` }}
+                ></div>
+              </div>
+            </div>
+          </div>
+
+          <Link
+            to="/assignments/auto/common"
+            className="mt-5 text-sm text-indigo-600 hover:text-indigo-800 font-medium inline-flex items-center"
+          >
+            View all assignments
+            <ChevronRight size={16} className="ml-1" />
           </Link>
         </div>
-        <div className="bg-white p-6 rounded-xl shadow-md text-center">
-          <h2 className="text-lg font-semibold text-gray-700">Instructor Workload</h2>
-          <Link to="/reports" className="text-green-600 font-semibold hover:underline">
-            View Workload Report
+
+        {/* Complaints stat card */}
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-500 mb-1">Complaints Status</p>
+              <h3 className="text-2xl font-bold text-gray-900">{stats.complaints.total}</h3>
+            </div>
+            <div className="p-2 bg-orange-50 rounded-lg">
+              <AlertTriangle size={24} className="text-orange-600" />
+            </div>
+          </div>
+
+          <div className="mt-6 grid grid-cols-2 gap-3">
+            <div className="bg-green-50 rounded-lg p-3 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
+                <CheckCircle size={18} className="text-green-600" />
+              </div>
+              <div>
+                <p className="text-xs text-green-700 font-medium">Resolved</p>
+                <p className="text-lg font-bold text-green-800">{stats.complaints.resolved}</p>
+              </div>
+            </div>
+
+            <div className="bg-orange-50 rounded-lg p-3 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center">
+                <Clock size={18} className="text-orange-600" />
+              </div>
+              <div>
+                <p className="text-xs text-orange-700 font-medium">Pending</p>
+                <p className="text-lg font-bold text-orange-800">{stats.complaints.pending}</p>
+              </div>
+            </div>
+          </div>
+
+          <Link
+            to="/complaintsCOC"
+            className="mt-5 text-sm text-indigo-600 hover:text-indigo-800 font-medium inline-flex items-center"
+          >
+            Manage complaints
+            <ChevronRight size={16} className="ml-1" />
           </Link>
         </div>
-      </div>
 
-      <div className="mt-8 bg-white p-6 rounded-xl shadow-md">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">Assigned Courses</h2>
-        {loading ? (
-          <p className="text-gray-500">Loading...</p>
-        ) : assignments.length === 0 ? (
-          <p className="text-gray-500">No assigned courses.</p>
-        ) : (
-          <table className="w-full border border-gray-300 rounded-lg overflow-hidden">
-            <thead>
-              <tr className="bg-blue-500 text-white">
-                <th className="p-3">Course</th>
-                <th className="p-3">Instructor</th>
-                <th className="p-3">Program</th>
-                <th className="p-3">Year</th>
-                <th className="p-3">Workload</th>
-              </tr>
-            </thead>
-            <tbody>
-              {assignments.map((a) => (
-                <tr key={a._id} className="text-center border-b">
-                  <td className="p-3">{a.courseId?.name}</td>
-                  <td className="p-3">{a.instructorId?.name}</td>
-                  <td className="p-3">{a.program}</td>
-                  <td className="p-3">{a.year}</td>
-                  <td className="p-3">{a.workload} Hours</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+        {/* Quick Access card */}
+        <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-100">
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Access</h3>
 
-      <div className="mt-8 bg-white p-6 rounded-xl shadow-md">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">Instructor Workload Distribution</h2>
-        {workload.length === 0 ? (
-          <p className="text-gray-500">No workload data available.</p>
-        ) : (
-          <table className="w-full border border-gray-300 rounded-lg overflow-hidden">
-            <thead>
-              <tr className="bg-green-500 text-white">
-                <th className="p-3">Instructor Name</th>
-                <th className="p-3">Total Courses</th>
-                <th className="p-3">Total Workload</th>
-              </tr>
-            </thead>
-            <tbody>
-              {workload.map((instructor) => (
-                <tr key={instructor._id} className="text-center border-b">
-                  <td className="p-3">{instructor.name}</td>
-                  <td className="p-3">{instructor.totalCourses}</td>
-                  <td className="p-3">{instructor.totalHours} Hours</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
+          <div className="grid grid-cols-2 gap-3">
+            <Link to="/assignments/auto/common" className="flex flex-col items-center gap-2 p-3 bg-gray-50 hover:bg-indigo-50 rounded-lg transition-colors group">
+              <div className="w-10 h-10 rounded-full bg-indigo-100 group-hover:bg-indigo-200 flex items-center justify-center transition-colors">
+                <FileSpreadsheet size={20} className="text-indigo-600" />
+              </div>
+              <span className="text-sm font-medium text-gray-700 group-hover:text-indigo-700">Common Courses</span>
+            </Link>
 
-      <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Link to="/assignments" className="bg-blue-600 text-white p-4 rounded-xl text-center font-semibold shadow-lg hover:bg-blue-700">Manage Assignments</Link>
-        <Link to="/complaints" className="bg-red-600 text-white p-4 rounded-xl text-center font-semibold shadow-lg hover:bg-red-700">Resolve Complaints</Link>
-        <Link to="/reports" className="bg-green-600 text-white p-4 rounded-xl text-center font-semibold shadow-lg hover:bg-green-700">View Reports</Link>
+            <Link to="/assignments/auto/extension" className="flex flex-col items-center gap-2 p-3 bg-gray-50 hover:bg-purple-50 rounded-lg transition-colors group">
+              <div className="w-10 h-10 rounded-full bg-purple-100 group-hover:bg-purple-200 flex items-center justify-center transition-colors">
+                <BookOpen size={20} className="text-purple-600" />
+              </div>
+              <span className="text-sm font-medium text-gray-700 group-hover:text-purple-700">Extension</span>
+            </Link>
+
+            <Link to="/assignments/auto/summer" className="flex flex-col items-center gap-2 p-3 bg-gray-50 hover:bg-amber-50 rounded-lg transition-colors group">
+              <div className="w-10 h-10 rounded-full bg-amber-100 group-hover:bg-amber-200 flex items-center justify-center transition-colors">
+                <Calendar size={20} className="text-amber-600" />
+              </div>
+              <span className="text-sm font-medium text-gray-700 group-hover:text-amber-700">Summer</span>
+            </Link>
+
+            <Link to="/reportsCOC" className="flex flex-col items-center gap-2 p-3 bg-gray-50 hover:bg-green-50 rounded-lg transition-colors group">
+              <div className="w-10 h-10 rounded-full bg-green-100 group-hover:bg-green-200 flex items-center justify-center transition-colors">
+                <TrendingUp size={20} className="text-green-600" />
+              </div>
+              <span className="text-sm font-medium text-gray-700 group-hover:text-green-700">Reports</span>
+            </Link>
+          </div>
+
+          <Link
+            to="/announcementsCOC"
+            className="mt-4 flex items-center justify-between p-3 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center">
+                <Megaphone size={18} className="text-indigo-600" />
+              </div>
+              <span className="font-medium text-indigo-800">Announcements</span>
+            </div>
+            <span className="bg-indigo-200 text-indigo-800 text-xs font-medium px-2 py-1 rounded-full">
+              {stats.announcements.recent} new
+            </span>
+          </Link>
+        </div>
       </div>
     </div>
   );
