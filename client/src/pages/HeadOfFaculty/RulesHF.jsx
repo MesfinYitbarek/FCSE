@@ -155,12 +155,12 @@ const RulesHF = () => {
       return matchesSearchTerm;
     });
 
-    // Sort by title
+    // Sort by ruleName
     result.sort((a, b) => {
       if (sortOrder === "asc") {
-        return a.title.localeCompare(b.ruleName);
+        return a.ruleName.localeCompare(b.ruleName);
       } else {
-        return b.title.localeCompare(a.ruleName);
+        return b.ruleName.localeCompare(a.ruleName);
       }
     });
 
@@ -253,7 +253,7 @@ const RulesHF = () => {
                 </Box>
               </Grid>
               <Grid item xs={4} md={1}>
-                <Tooltip ruleName={`Sort ${sortOrder === "asc" ? "descending" : "ascending"}`}>
+                <Tooltip title={`Sort ${sortOrder === "asc" ? "descending" : "ascending"}`}>
                   <IconButton onClick={toggleSortOrder}>
                     <SortIcon color={sortOrder === "desc" ? "primary" : "action"} />
                   </IconButton>
