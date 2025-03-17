@@ -1,10 +1,6 @@
 import { useEffect, useState } from "react";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableRow } from "@/components/ui/table";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Pencil, PlusCircle } from "lucide-react";
+import axios from "axios";
+import { Card, CardContent, Typography, TextField, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Select, MenuItem } from "@mui/material";
 import api from "../../utils/api";
 
 const ManageWeights = () => {
@@ -54,20 +50,20 @@ const ManageWeights = () => {
   };
 
   return (
-    <div className="p-6 space-y-6">
-      <h2 className="text-3xl font-bold">Manage Weights</h2>
-      <Card className="p-4">
+    <div className="p-6">
+      <Typography variant="h4" gutterBottom>Manage Weights</Typography>
+      <Card className="mb-6 p-4">
         <CardContent>
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Input
-              placeholder="Max Weight"
+            <TextField
+              label="Max Weight"
               type="number"
               value={form.maxWeight}
               onChange={(e) => setForm({ ...form, maxWeight: e.target.value })}
               required
             />
-            <Input
-              placeholder="Interval"
+            <TextField
+              label="Interval"
               type="number"
               value={form.interval}
               onChange={(e) => setForm({ ...form, interval: e.target.value })}
@@ -75,58 +71,68 @@ const ManageWeights = () => {
             />
             <Select
               value={form.type}
-              onValueChange={(value) => setForm({ ...form, type: value })}
+              onChange={(e) => setForm({ ...form, type: e.target.value })}
+              fullWidth
             >
-              <SelectTrigger>
-                <SelectValue>{form.type === "preference" ? "Preference Weight" : "Course Experience Weight"}</SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="preference">Preference Weight</SelectItem>
-                <SelectItem value="course">Course Experience Weight</SelectItem>
-              </SelectContent>
+              <MenuItem value="preference">Preference Weight</MenuItem>
+              <MenuItem value="course">Course Experience Weight</MenuItem>
             </Select>
-            <Button type="submit" className="col-span-3 mt-2 flex items-center gap-2">
-              <PlusCircle className="h-5 w-5" /> {editingId ? "Update" : "Create"} Weight
+            <Button type="submit" variant="contained" color="primary" className="col-span-3 mt-2">
+              {editingId ? "Update" : "Create"} Weight
             </Button>
           </form>
         </CardContent>
       </Card>
 
-      <h3 className="text-2xl font-semibold">Preference Weights</h3>
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableCell>Max Weight</TableCell>
-            <TableCell>Interval</TableCell>
-            <TableCell>Actions</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {preferenceWeights.map((weight) => (
-            <TableRow key={weight._id}>
-              <TableCell>{weight.maxWeight}</TableCell>
-              <TableCell>{weight.interval}</TableCell>
-              <TableCell>
-                <Button variant="ghost" size="icon" onClick={() => handleEdit(weight, "preference")}> 
-                  <Pencil className="h-4 w-4" />
-                </Button>
-              </TableCell>
+      <Typography variant="h5" gutterBottom>Preference Weights</Typography>
+      <TableContainer component={Paper} className="mb-6">
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Max Weight</TableCell>
+              <TableCell>Interval</TableCell>
+              <TableCell>Actions</TableCell>
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHead>
+          <TableBody>
+            {preferenceWeights.map((weight) => (
+              <TableRow key={weight._id}>
+                <TableCell>{weight.maxWeight}</TableCell>
+                <TableCell>{weight.interval}</TableCell>
+                <TableCell>
+                  <Button onClick={() => handleEdit(weight, "preference")} size="small">Edit</Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
 
-      <h3 className="text-2xl font-semibold">Course Experience Weights</h3>
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableCell>Max Weight</TableCell>
-            <TableCell>Interval</TableCell>
-            <TableCell>Actions</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {courseExperienceWeights.map((weight) => (
-            <TableRow key={weight._id}>
-              <TableCell>{weight.maxWeight}</TableCell>
-              <TableCell>{weight.interval}</T
+      <Typography variant="h5" gutterBottom>Course Experience Weights</Typography>
+      <TableContainer component={Paper}>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Max Weight</TableCell>
+              <TableCell>Interval</TableCell>
+              <TableCell>Actions</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {courseExperienceWeights.map((weight) => (
+              <TableRow key={weight._id}>
+                <TableCell>{weight.maxWeight}</TableCell>
+                <TableCell>{weight.interval}</TableCell>
+                <TableCell>
+                  <Button onClick={() => handleEdit(weight, "course")} size="small">Edit</Button>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </TableContainer>
+    </div>
+  );
+};
+
+export default ManageWeights;
