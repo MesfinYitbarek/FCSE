@@ -22,8 +22,14 @@ import preferenceWeightRoutes from "./routes/preferenceWeightRoutes.js";
 import courseExperienceWeightRoutes from "./routes/courseExperienceWeightRoutes.js";
 import { authenticate, authorize } from "./middleware/authMiddleware.js";
 import positionRoutes from "./routes/postionRoutes.js";
+import path from"path"
+
 
 dotenv.config();
+
+const __dirname = path.resolve();
+
+
 const app = express();
 app.use(express.json());
 app.use(cors());
@@ -46,6 +52,13 @@ app.use("/api/announcements", authenticate, announcementRoutes);
 app.use("/api/reports", authenticate, authorize(["HeadOfFaculty", "ChairHead", "COC", "Instructor"]), reportRoutes);
 app.use("/api/preference-weights", authenticate, authorize(["HeadOfFaculty"]), preferenceWeightRoutes);
 app.use("/api/course-experience-weights", authenticate, authorize(["HeadOfFaculty"]), courseExperienceWeightRoutes);
+
+
+app.use(express.static(path.join(__dirname, '/client/dist')));
+
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'client', 'dist', 'index.html'));
+})
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {
