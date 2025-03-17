@@ -29,12 +29,9 @@ import {
   AdminPanelSettings as AdminIcon,
   SupervisorAccount as ChairHeadIcon,
   Groups as FacultyIcon,
-  Settings as SettingsIcon,
   Visibility as VisibilityIcon,
   VisibilityOff as VisibilityOffIcon,
-  Sort as SortIcon,
   ExpandMore as ExpandMoreIcon,
-  ChevronRight as ChevronRightIcon
 } from "@mui/icons-material";
 import { motion } from "framer-motion";
 
@@ -608,7 +605,6 @@ const UsersHF = () => {
         <Tab icon={<AdminIcon />} label="Head Of Faculty" />
         <Tab icon={<ChairHeadIcon />} label="Chair Heads" />
         <Tab icon={<FacultyIcon />} label="Instructors" />
-        <Tab icon={<FacultyIcon />} label="COC" />
       </Tabs>
 
       {loading ? (
