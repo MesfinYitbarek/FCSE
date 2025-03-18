@@ -63,6 +63,7 @@ const AppRoutes = () => {
   if (isLoading || !appInitialized) {
     return <LoadingScreen />;
   }
+  console.log("API Base URL:", import.meta.env.VITE_API_BASE_URL);
 
   return (
     <Router>
