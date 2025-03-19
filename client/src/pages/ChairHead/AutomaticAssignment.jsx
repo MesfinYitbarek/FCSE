@@ -1,4 +1,3 @@
-// AutomaticAssignment.jsx
 import { useEffect, useState } from "react";
 import api from "../../utils/api";
 import { useSelector } from "react-redux";
@@ -41,7 +40,6 @@ const AutomaticAssignment = ({ fetchAssignments, filters }) => {
 
       const { data } = await api.get(`/assignments/automatic?${queryParams}`);
       
-      // Format assignments for display
       const formattedAssignments = data.assignments.flatMap((assignment) =>
         assignment.assignments.map((a) => ({
           instructorName: a.instructorId?.fullName || "Unassigned",
@@ -56,7 +54,6 @@ const AutomaticAssignment = ({ fetchAssignments, filters }) => {
 
       setAssignedCourses(formattedAssignments);
       
-      // Calculate statistics
       const instructorCount = new Set(formattedAssignments.map(a => a.instructorName)).size;
       const totalCourses = formattedAssignments.length;
       const unassignedCount = formattedAssignments.filter(a => a.instructorName === "Unassigned").length;
@@ -94,7 +91,6 @@ const AutomaticAssignment = ({ fetchAssignments, filters }) => {
       
       setSuccess("Automatic assignment completed successfully!");
       
-      // Auto-hide success message after 5 seconds
       setTimeout(() => {
         setSuccess(null);
       }, 5000);
@@ -108,7 +104,6 @@ const AutomaticAssignment = ({ fetchAssignments, filters }) => {
   };
 
   const handleExportCSV = () => {
-    // Create CSV content
     const headers = ["Instructor", "Email", "Course", "Code", "Section", "Lab Division", "Workload"];
     const rows = assignedCourses.map(assignment => [
       assignment.instructorName,
@@ -125,7 +120,6 @@ const AutomaticAssignment = ({ fetchAssignments, filters }) => {
       ...rows.map(row => row.join(','))
     ].join('\n');
     
-    // Create and download the file
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -138,7 +132,7 @@ const AutomaticAssignment = ({ fetchAssignments, filters }) => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-4">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold text-gray-800">Automatic Course Assignment</h2>
@@ -216,7 +210,7 @@ const AutomaticAssignment = ({ fetchAssignments, filters }) => {
 
       {/* Stats Cards */}
       {assignedCourses.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-blue-50 rounded-lg p-4 border border-blue-100">
             <div className="flex items-center text-blue-700">
               <BookOpen className="w-5 h-5 mr-2" />
@@ -257,43 +251,43 @@ const AutomaticAssignment = ({ fetchAssignments, filters }) => {
           <table className="w-full text-sm text-left text-gray-700 shadow-sm rounded-lg overflow-hidden">
             <thead className="text-xs uppercase bg-gray-100">
               <tr>
-                <th scope="col" className="px-6 py-3 font-medium">
+                <th scope="col" className="px-4 py-3 font-medium">
                   <div className="flex items-center">
                     <User className="w-4 h-4 mr-1" />
                     Instructor
                   </div>
                 </th>
-                <th scope="col" className="px-6 py-3 font-medium">
+                <th scope="col" className="px-4 py-3 font-medium">
                   <div className="flex items-center">
                     <Mail className="w-4 h-4 mr-1" />
                     Email
                   </div>
                 </th>
-                <th scope="col" className="px-6 py-3 font-medium">
+                <th scope="col" className="px-4 py-3 font-medium">
                   <div className="flex items-center">
                     <BookOpen className="w-4 h-4 mr-1" />
                     Course
                   </div>
                 </th>
-                <th scope="col" className="px-6 py-3 font-medium">
+                <th scope="col" className="px-4 py-3 font-medium">
                   <div className="flex items-center">
                     <Hash className="w-4 h-4 mr-1" />
                     Code
                   </div>
                 </th>
-                <th scope="col" className="px-6 py-3 font-medium">
+                <th scope="col" className="px-4 py-3 font-medium">
                   <div className="flex items-center">
                     <Layers className="w-4 h-4 mr-1" />
                     Section
                   </div>
                 </th>
-                <th scope="col" className="px-6 py-3 font-medium">
+                <th scope="col" className="px-4 py-3 font-medium">
                   <div className="flex items-center">
                     <Divide className="w-4 h-4 mr-1" />
                     Lab Division
                   </div>
                 </th>
-                <th scope="col" className="px-6 py-3 font-medium">
+                <th scope="col" className="px-4 py-3 font-medium">
                   <div className="flex items-center">
                     <Clock className="w-4 h-4 mr-1" />
                     Workload
@@ -311,7 +305,7 @@ const AutomaticAssignment = ({ fetchAssignments, filters }) => {
                     assignment.instructorName === 'Unassigned' ? 'bg-yellow-50' : ''
                   } border-b hover:bg-gray-100 transition-colors`}
                 >
-                  <td className="px-6 py-4 font-medium">
+                  <td className="px-4 py-4 font-medium">
                     {assignment.instructorName === 'Unassigned' ? (
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
                         Unassigned
@@ -320,26 +314,26 @@ const AutomaticAssignment = ({ fetchAssignments, filters }) => {
                       assignment.instructorName
                     )}
                   </td>
-                  <td className="px-6 py-4 text-gray-600">
+                  <td className="px-4 py-4 text-gray-600">
                     {assignment.instructorEmail}
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 py-4">
                     {assignment.courseName}
                   </td>
-                  <td className="px-6 py-4 font-medium">
+                  <td className="px-4 py-4 font-medium">
                     {assignment.courseCode}
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 py-4">
                     {assignment.section}
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 py-4">
                     {assignment.labDivision !== 'No' ? (
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
                         {assignment.labDivision}
                       </span>
                     ) : 'N/A'}
                   </td>
-                  <td className="px-6 py-4 font-medium">
+                  <td className="px-4 py-4 font-medium">
                     {assignment.workload} hrs
                   </td>
                 </tr>

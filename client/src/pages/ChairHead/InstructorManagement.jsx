@@ -22,6 +22,7 @@ const InstructorManagement = () => {
   const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
   const [filterWorkload, setFilterWorkload] = useState("");
   const [activeFilters, setActiveFilters] = useState([]);
+  const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
 
   useEffect(() => {
     fetchInstructors();
@@ -93,6 +94,7 @@ const InstructorManagement = () => {
     if (!activeFilters.some(f => f.type === type && f.value === value)) {
       setActiveFilters([...activeFilters, { type, value }]);
     }
+    setIsFilterDropdownOpen(false);
   };
 
   // Remove filter tag
@@ -165,11 +167,11 @@ const InstructorManagement = () => {
   }, [users, instructors]);
 
   return (
-    <div className="p-6 max-w-7xl mx-auto bg-white rounded-xl shadow-sm">
+    <div className="p-4 sm:p-6 max-w-7xl mx-auto bg-white rounded-xl shadow-sm">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-800">Instructor Management</h1>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Instructor Management</h1>
           <p className="text-gray-500 mt-1">
             Manage instructors for {user.chair} department
           </p>
@@ -225,41 +227,37 @@ const InstructorManagement = () => {
           
           <div className="relative">
             <button 
-              className="flex items-center px-4 py-2.5 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors"
-              onClick={() => document.getElementById('filter-dropdown').classList.toggle('hidden')}
+              className="flex items-center px-4 py-2.5 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors w-full sm:w-auto justify-center sm:justify-start"
+              onClick={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}
             >
               <Filter className="w-5 h-5 mr-2 text-gray-600" />
               <span>Filters</span>
               <ChevronDown className="w-4 h-4 ml-2 text-gray-600" />
             </button>
             
-            <div id="filter-dropdown" className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 p-2 z-10 hidden">
-              <div className="p-2">
-                <h3 className="font-medium text-gray-700 mb-2">Workload Status</h3>
-                <div className="space-y-2">
-                  <button 
-                    className="flex items-center w-full px-3 py-2 text-left text-sm rounded-md hover:bg-gray-100"
-                    onClick={() => {
-                      addFilter('workload', 'has-workload');
-                      document.getElementById('filter-dropdown').classList.add('hidden');
-                    }}
-                  >
-                    <Clock className="w-4 h-4 mr-2 text-blue-500" />
-                    Has workload
-                  </button>
-                  <button 
-                    className="flex items-center w-full px-3 py-2 text-left text-sm rounded-md hover:bg-gray-100"
-                    onClick={() => {
-                      addFilter('workload', 'no-workload');
-                      document.getElementById('filter-dropdown').classList.add('hidden');
-                    }}
-                  >
-                    <Clock className="w-4 h-4 mr-2 text-gray-500" />
-                    No workload
-                  </button>
+            {isFilterDropdownOpen && (
+              <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 p-2 z-10">
+                <div className="p-2">
+                  <h3 className="font-medium text-gray-700 mb-2">Workload Status</h3>
+                  <div className="space-y-2">
+                    <button 
+                      className="flex items-center w-full px-3 py-2 text-left text-sm rounded-md hover:bg-gray-100"
+                      onClick={() => addFilter('workload', 'has-workload')}
+                    >
+                      <Clock className="w-4 h-4 mr-2 text-blue-500" />
+                      Has workload
+                    </button>
+                    <button 
+                      className="flex items-center w-full px-3 py-2 text-left text-sm rounded-md hover:bg-gray-100"
+                      onClick={() => addFilter('workload', 'no-workload')}
+                    >
+                      <Clock className="w-4 h-4 mr-2 text-gray-500" />
+                      No workload
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
         
@@ -301,104 +299,177 @@ const InstructorManagement = () => {
         </div>
       ) : (
         <>
-          {/* Instructors Table */}
+          {/* Instructors Table - Visible on medium screens and larger */}
           {filteredInstructors.length > 0 ? (
-            <div className="border border-gray-200 rounded-lg overflow-hidden shadow-sm">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th 
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                      onClick={() => requestSort('name')}
-                    >
-                      <div className="flex items-center">
-                        <User className="w-4 h-4 mr-1" />
-                        Instructor
-                        <ArrowUpDown className={`w-4 h-4 ml-1 ${sortConfig.key === 'name' ? 'text-blue-600' : 'text-gray-400'}`} />
-                      </div>
-                    </th>
-                    <th 
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                      onClick={() => requestSort('workload')}
-                    >
-                      <div className="flex items-center">
-                        <Clock className="w-4 h-4 mr-1" />
-                        Workload
-                        <ArrowUpDown className={`w-4 h-4 ml-1 ${sortConfig.key === 'workload' ? 'text-blue-600' : 'text-gray-400'}`} />
-                      </div>
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {filteredInstructors.map((inst) => (
-                    <tr key={inst._id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4">
+            <>
+              <div className="hidden md:block border border-gray-200 rounded-lg overflow-hidden shadow-sm">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th 
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                        onClick={() => requestSort('name')}
+                      >
                         <div className="flex items-center">
-                          <div className="flex-shrink-0 h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-800 font-medium">
-                            {inst.userId.fullName.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2)}
-                          </div>
-                          <div className="ml-4">
-                            <div className="text-sm font-medium text-gray-900">{inst.userId.fullName}</div>
-                            <div className="text-sm text-gray-500">{inst.userId.email}</div>
-                          </div>
+                          <User className="w-4 h-4 mr-1" />
+                          Instructor
+                          <ArrowUpDown className={`w-4 h-4 ml-1 ${sortConfig.key === 'name' ? 'text-blue-600' : 'text-gray-400'}`} />
                         </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        {inst.workload.length === 0 ? (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                            No workload
-                          </span>
-                        ) : (
-                          <div className="space-y-1">
-                            {inst.workload.map((wl, index) => (
-                              <div key={`${wl.year}-${wl.semester}-${wl.program}-${index}`} className="flex items-center">
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mr-2">
-                                  {wl.year} {wl.semester}
-                                </span>
-                                <span className="text-sm text-gray-600">
-                                  {wl.program}: <span className="font-medium">{wl.value} hrs</span>
-                                </span>
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        {deleteConfirmId === inst._id ? (
-                          <div className="flex items-center justify-end space-x-2">
-                            <button
-                              onClick={() => setDeleteConfirmId(null)}
-                              className="bg-gray-100 text-gray-700 px-3 py-1 rounded-md text-sm"
-                            >
-                              Cancel
-                            </button>
-                            <button
-                              onClick={() => handleDeleteInstructor(inst._id)}
-                              className="bg-red-600 text-white px-3 py-1 rounded-md text-sm flex items-center"
-                              disabled={actionLoading}
-                            >
-                              {actionLoading ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Trash2 className="w-3 h-3 mr-1" />}
-                              Confirm
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => setDeleteConfirmId(inst._id)}
-                            className="text-red-600 hover:text-red-800 transition-colors"
-                            title="Remove instructor"
-                          >
-                            <Trash2 className="w-5 h-5" />
-                          </button>
-                        )}
-                      </td>
+                      </th>
+                      <th 
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                        onClick={() => requestSort('workload')}
+                      >
+                        <div className="flex items-center">
+                          <Clock className="w-4 h-4 mr-1" />
+                          Workload
+                          <ArrowUpDown className={`w-4 h-4 ml-1 ${sortConfig.key === 'workload' ? 'text-blue-600' : 'text-gray-400'}`} />
+                        </div>
+                      </th>
+                      <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Actions
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {filteredInstructors.map((inst) => (
+                      <tr key={inst._id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center">
+                            <div className="flex-shrink-0 h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-800 font-medium">
+                              {inst.userId.fullName.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2)}
+                            </div>
+                            <div className="ml-4">
+                              <div className="text-sm font-medium text-gray-900">{inst.userId.fullName}</div>
+                              <div className="text-sm text-gray-500">{inst.userId.email}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          {inst.workload.length === 0 ? (
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                              No workload
+                            </span>
+                          ) : (
+                            <div className="space-y-1">
+                              {inst.workload.map((wl, index) => (
+                                <div key={`${wl.year}-${wl.semester}-${wl.program}-${index}`} className="flex items-center">
+                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mr-2">
+                                    {wl.year} {wl.semester}
+                                  </span>
+                                  <span className="text-sm text-gray-600">
+                                    {wl.program}: <span className="font-medium">{wl.value} hrs</span>
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          {deleteConfirmId === inst._id ? (
+                            <div className="flex items-center justify-end space-x-2">
+                              <button
+                                onClick={() => setDeleteConfirmId(null)}
+                                className="bg-gray-100 text-gray-700 px-3 py-1 rounded-md text-sm"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                onClick={() => handleDeleteInstructor(inst._id)}
+                                className="bg-red-600 text-white px-3 py-1 rounded-md text-sm flex items-center"
+                                disabled={actionLoading}
+                              >
+                                {actionLoading ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Trash2 className="w-3 h-3 mr-1" />}
+                                Confirm
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              onClick={() => setDeleteConfirmId(inst._id)}
+                              className="text-red-600 hover:text-red-800 transition-colors"
+                              title="Remove instructor"
+                            >
+                              <Trash2 className="w-5 h-5" />
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile view - Cards for small screens */}
+              <div className="md:hidden space-y-4">
+                {filteredInstructors.map((inst) => (
+                  <div key={inst._id} className="bg-white border border-gray-200 rounded-lg p-4 shadow-sm">
+                    <div className="flex justify-between items-start">
+                      <div className="flex items-center">
+                        <div className="h-10 w-10 bg-blue-100 rounded-full flex items-center justify-center text-blue-800 font-medium">
+                          {inst.userId.fullName.split(' ').map(n => n[0]).join('').toUpperCase().substring(0, 2)}
+                        </div>
+                        <div className="ml-3">
+                          <div className="text-sm font-medium text-gray-900">{inst.userId.fullName}</div>
+                          <div className="text-xs text-gray-500">{inst.userId.email}</div>
+                        </div>
+                      </div>
+                      
+                      {deleteConfirmId === inst._id ? (
+                        <div className="flex flex-col items-end gap-2 mt-2">
+                          <button
+                            onClick={() => handleDeleteInstructor(inst._id)}
+                            className="bg-red-600 text-white px-3 py-1 rounded-md text-xs flex items-center"
+                            disabled={actionLoading}
+                          >
+                            {actionLoading ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Trash2 className="w-3 h-3 mr-1" />}
+                            Delete
+                          </button>
+                          <button
+                            onClick={() => setDeleteConfirmId(null)}
+                            className="bg-gray-100 text-gray-700 px-3 py-1 rounded-md text-xs"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setDeleteConfirmId(inst._id)}
+                          className="text-red-600 hover:text-red-800 transition-colors"
+                          title="Remove instructor"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      )}
+                    </div>
+                    
+                    <div className="mt-4 pt-3 border-t border-gray-100">
+                      <div className="text-xs font-medium text-gray-500 uppercase mb-2 flex items-center">
+                        <Clock className="w-3 h-3 mr-1" />
+                        Workload
+                      </div>
+                      {inst.workload.length === 0 ? (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                          No workload
+                        </span>
+                      ) : (
+                        <div className="space-y-2">
+                          {inst.workload.map((wl, index) => (
+                            <div key={`${wl.year}-${wl.semester}-${wl.program}-${index}`} className="flex items-center">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 mr-2">
+                                {wl.year} {wl.semester}
+                              </span>
+                              <span className="text-xs text-gray-600">
+                                {wl.program}: <span className="font-medium">{wl.value} hrs</span>
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           ) : (
             <div className="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">
               <Users className="mx-auto h-12 w-12 text-gray-400" />
@@ -415,8 +486,8 @@ const InstructorManagement = () => {
 
       {/* Add instructor modal */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg overflow-hidden shadow-xl max-w-md w-full mx-4">
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg overflow-hidden shadow-xl max-w-md w-full">
             <div className="px-6 py-4 border-b border-gray-200">
               <h3 className="text-lg font-medium text-gray-900">Add New Instructor</h3>
             </div>
@@ -447,16 +518,10 @@ const InstructorManagement = () => {
               )}
             </div>
             
-            <div className="px-6 py-4 bg-gray-50 flex justify-end space-x-3">
-              <button 
-                onClick={() => setIsAddModalOpen(false)}
-                className="px-4 py-2 bg-white border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
-              >
-                Cancel
-              </button>
+            <div className="px-6 py-4 bg-gray-50 flex flex-col sm:flex-row-reverse gap-2">
               <button
                 onClick={handleCreateInstructor}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center"
+                className="w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center justify-center"
                 disabled={!selectedUser || actionLoading}
               >
                 {actionLoading ? (
@@ -470,6 +535,12 @@ const InstructorManagement = () => {
                     Add Instructor
                   </>
                 )}
+              </button>
+              <button 
+                onClick={() => setIsAddModalOpen(false)}
+                className="w-full sm:w-auto px-4 py-2 bg-white border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
               </button>
             </div>
           </div>

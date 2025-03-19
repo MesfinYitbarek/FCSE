@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Search, Loader2, FileText, Calendar, User } from 'lucide-react';
 import api from '../../utils/api';
- // Assuming you have an auth context
 import { useSelector } from 'react-redux';
 
 const PreferenceCH = () => {
@@ -14,7 +13,7 @@ const PreferenceCH = () => {
   const [filters, setFilters] = useState({
     year: currentYear,
     semester: 'Regular 1',
-    chair: user?.chair || '' // Use the user's chair attribute
+    chair: user?.chair || '' 
   });
 
   // Update chair filter when user data changes
@@ -58,15 +57,15 @@ const PreferenceCH = () => {
   };
 
   return (
-    <div className="p-6 max-w-6xl mx-auto bg-white rounded-xl shadow-sm">
+    <div className="p-4 sm:p-6 max-w-6xl mx-auto bg-white rounded-xl shadow-sm">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Teaching Preferences</h1>
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Teaching Preferences</h1>
         <p className="text-gray-500">View instructor course preferences by semester</p>
       </div>
       
-      <div className="bg-gray-50 p-5 rounded-xl mb-8">
+      <div className="bg-gray-50 p-4 sm:p-5 rounded-xl mb-8">
         <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700">
                 <div className="flex items-center gap-2">
@@ -107,7 +106,6 @@ const PreferenceCH = () => {
           </div>
           
           <div className="flex-none">
-            {/* Display chair info but don't allow editing (using user's chair attribute) */}
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700">
                 <div className="flex items-center gap-2">
@@ -125,7 +123,7 @@ const PreferenceCH = () => {
             <button
               type="submit"
               disabled={loading}
-              className="flex items-center justify-center px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-300 transition-colors shadow-sm"
+              className="flex items-center justify-center px-4 sm:px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-300 transition-colors shadow-sm"
             >
               {loading ? (
                 <Loader2 className="w-5 h-5 mr-2 animate-spin" />
@@ -139,7 +137,7 @@ const PreferenceCH = () => {
       </div>
 
       {error && (
-        <div className="bg-red-50 text-red-600 p-4 rounded-lg mb-6 border border-red-200 flex items-start">
+        <div className="bg-red-50 text-red-600 p-4 rounded-lg mb-6 border border-red-200 flex flex-col sm:flex-row items-start">
           <svg className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
             <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd"></path>
           </svg>
@@ -158,8 +156,8 @@ const PreferenceCH = () => {
 
       {preferences && preferences.preferences && preferences.preferences.length > 0 ? (
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-gray-800">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-800">
               Preferences for {filters.semester} {filters.year}
             </h2>
             <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-1 rounded-full">
@@ -167,7 +165,8 @@ const PreferenceCH = () => {
             </span>
           </div>
           
-          <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 rounded-lg">
+          {/* Desktop table view */}
+          <div className="hidden md:block overflow-hidden shadow ring-1 ring-black ring-opacity-5 rounded-lg">
             <div className="overflow-x-auto">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
@@ -215,6 +214,39 @@ const PreferenceCH = () => {
                 </tbody>
               </table>
             </div>
+          </div>
+          
+          {/* Mobile card view */}
+          <div className="md:hidden space-y-4">
+            {preferences.preferences.map((pref, index) => (
+              <div key={index} className="bg-white border border-gray-200 rounded-lg shadow-sm p-4">
+                <div className="mb-3 pb-2 border-b border-gray-100">
+                  <div className="font-medium text-gray-900">{pref.instructorId.fullName}</div>
+                  <div className="text-xs text-gray-500 mt-1">
+                    Submitted: {new Date(pref.submittedAt).toLocaleDateString(undefined, {
+                      year: 'numeric', 
+                      month: 'short', 
+                      day: 'numeric'
+                    })}
+                  </div>
+                </div>
+                <div>
+                  <h4 className="text-xs font-medium text-gray-500 uppercase mb-2">Preferences (Ranked)</h4>
+                  <ul className="space-y-2">
+                    {pref.preferences
+                      .sort((a, b) => a.rank - b.rank)
+                      .map((p, idx) => (
+                        <li key={idx} className="flex items-start">
+                          <span className="flex-shrink-0 flex items-center justify-center w-5 h-5 bg-blue-100 text-blue-800 text-xs font-medium rounded-full mr-2">
+                            {idx + 1}
+                          </span>
+                          <span className="text-sm">{p.courseId.code} - {p.courseId.name}</span>
+                        </li>
+                      ))}
+                  </ul>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       ) : preferences && !loading && (
