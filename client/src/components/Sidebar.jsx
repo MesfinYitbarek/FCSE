@@ -1,3 +1,4 @@
+// Layout.jsx
 import { useState, useEffect, useRef } from "react";
 import { NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -45,7 +46,8 @@ const Layout = () => {
   const [expandedGroups, setExpandedGroups] = useState({
     courses: true,
     assignments: true,
-    reports: true
+    reports: true,
+    preferences: true
   });
   const [notifications, setNotifications] = useState([
     { id: 1, type: "announcement", message: "New announcement posted", read: false, link: "/announcementsView", time: "2 hours ago" },
@@ -75,8 +77,6 @@ const Layout = () => {
       setWindowWidth(window.innerWidth);
       if (window.innerWidth < 768) {
         setIsSidebarOpen(false);
-      } else {
-        setIsSidebarOpen(true);
       }
     };
 
@@ -243,8 +243,14 @@ const Layout = () => {
   const subNavItemClass = `flex items-center gap-3 py-2 px-4 ml-4 rounded-md transition-colors font-medium text-gray-300 hover:bg-indigo-600/20 hover:text-white border-l border-gray-700/50`;
 
   const sidebarVariants = {
-    open: { width: windowWidth < 640 ? "100%" : "280px", transition: { duration: 0.3 } },
-    closed: { width: windowWidth < 640 ? "0" : "80px", transition: { duration: 0.3 } }
+    open: { 
+      width: windowWidth < 768 ? "250px" : "280px", 
+      transition: { duration: 0.3 } 
+    },
+    closed: { 
+      width: windowWidth < 768 ? "0" : "80px", 
+      transition: { duration: 0.3 } 
+    }
   };
 
   const NavItem = ({ to, icon: Icon, children }) => (
@@ -253,6 +259,7 @@ const Layout = () => {
       className={({ isActive }) =>
         `${navItemClass} ${isActive ? "bg-indigo-600/30 text-white" : ""}`
       }
+      onClick={() => windowWidth < 768 && setIsSidebarOpen(false)}
     >
       <Icon size={20} className="flex-shrink-0" />
       {isSidebarOpen && <span className="truncate">{children}</span>}
@@ -265,6 +272,7 @@ const Layout = () => {
       className={({ isActive }) =>
         `${subNavItemClass} ${isActive ? "bg-indigo-600/30 text-white" : ""}`
       }
+      onClick={() => windowWidth < 768 && setIsSidebarOpen(false)}
     >
       <div className="w-1.5 h-1.5 rounded-full bg-gray-500"></div>
       {isSidebarOpen && <span className="truncate">{children}</span>}
@@ -442,7 +450,7 @@ const Layout = () => {
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50 font-sans">
       {/* Overlay for mobile sidebar */}
-      {windowWidth < 640 && isSidebarOpen && (
+      {windowWidth < 768 && isSidebarOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-10"
           onClick={() => setIsSidebarOpen(false)}
@@ -451,11 +459,12 @@ const Layout = () => {
 
       {/* Sidebar */}
       <motion.aside
-        initial={windowWidth < 640 ? "closed" : "open"}
+        initial={windowWidth < 768 ? "closed" : "open"}
         animate={isSidebarOpen ? "open" : "closed"}
         variants={sidebarVariants}
-        className={`fixed left-0 top-0 h-full bg-gray-900 shadow-lg shadow-gray-900/10 z-20 transition-all duration-300 ${windowWidth < 640 && !isSidebarOpen ? "w-0" : ""
-          }`}
+        className={`fixed left-0 top-0 h-full bg-gray-900 shadow-lg shadow-gray-900/10 z-20 overflow-hidden ${
+          windowWidth < 768 && !isSidebarOpen ? "w-0" : ""
+        }`}
       >
         <div className="flex items-center justify-between p-4 border-b border-gray-800">
           {isSidebarOpen && (
@@ -492,15 +501,20 @@ const Layout = () => {
       </motion.aside>
 
       <div
-        className={`flex-1 transition-all duration-300 ${windowWidth >= 640
+        className={`flex-1 transition-all duration-300 ${
+          windowWidth >= 768
             ? (isSidebarOpen ? "ml-[280px]" : "ml-[80px]")
             : "ml-0"
-          }`}
+        }`}
       >
         <header className="bg-white shadow-md h-16 fixed top-0 right-0 z-10 w-full">
-          <div className="flex items-center justify-between h-full px-4 md:px-6">
+          <div className={`flex items-center justify-between h-full px-4 md:px-6 ${
+            windowWidth >= 768 
+              ? (isSidebarOpen ? "ml-[280px]" : "ml-[80px]") 
+              : "ml-0"
+          }`}>
             {/* Mobile menu button - only shown on mobile */}
-            {windowWidth < 640 && (
+            {windowWidth < 768 && (
               <button
                 onClick={() => setIsSidebarOpen(!isSidebarOpen)}
                 className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
@@ -511,7 +525,7 @@ const Layout = () => {
             )}
 
             {/* Logo shown on mobile */}
-            {windowWidth < 640 && (
+            {windowWidth < 768 && (
               <div className="flex items-center space-x-2">
                 <span className="bg-gradient-to-r from-indigo-500 to-purple-500 p-1 rounded text-white font-bold">
                   FC
@@ -782,11 +796,11 @@ const Layout = () => {
                       )}
                     </div>
 
-                    <div className="flex justify-end pt-4">
+                    <div className="flex flex-col sm:flex-row justify-end pt-4 gap-2">
                       <button
                         type="button"
                         onClick={() => setIsChangePasswordOpen(false)}
-                        className="px-4 py-2.5 mr-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
+                        className="px-4 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2"
                       >
                         Cancel
                       </button>
