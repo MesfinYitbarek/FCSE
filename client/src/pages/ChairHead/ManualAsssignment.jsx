@@ -146,24 +146,24 @@ const ManualAssignment = ({ fetchAssignments, filters }) => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
+    <div className="bg-white rounded-lg shadow-lg p-3 sm:p-6 max-w-7xl mx-auto">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-gray-800">Course Assignment Dashboard</h2>
-          <p className="text-gray-600 mt-1">
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Course Assignment Dashboard</h2>
+          <p className="text-gray-600 mt-1 text-sm">
             {filters.semester} Semester, {filters.year}
           </p>
         </div>
         
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 bg-blue-50 px-4 py-2 rounded-lg">
-            <Users size={20} className="text-blue-600" />
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 bg-blue-50 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-sm">
+            <Users size={18} className="text-blue-600" />
             <span className="text-blue-700 font-medium">
               {instructors.length} Instructors
             </span>
           </div>
-          <div className="flex items-center gap-2 bg-green-50 px-4 py-2 rounded-lg">
-            <BookOpen size={20} className="text-green-600" />
+          <div className="flex items-center gap-2 bg-green-50 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-sm">
+            <BookOpen size={18} className="text-green-600" />
             <span className="text-green-700 font-medium">
               {courses.length} Courses
             </span>
@@ -172,15 +172,15 @@ const ManualAssignment = ({ fetchAssignments, filters }) => {
       </div>
 
       {loading && (
-        <div className="flex items-center justify-center p-4 bg-blue-50 rounded-lg mb-4">
-          <Loader className="animate-spin mr-2 text-blue-600" size={20} />
+        <div className="flex items-center justify-center p-3 sm:p-4 bg-blue-50 rounded-lg mb-4 text-sm">
+          <Loader className="animate-spin mr-2 text-blue-600" size={18} />
           <span className="text-blue-700">Processing assignments...</span>
         </div>
       )}
 
       {error && (
-        <div className="flex items-center p-4 bg-red-50 rounded-lg mb-4">
-          <AlertCircle className="text-red-600 mr-2" size={20} />
+        <div className="flex items-center p-3 sm:p-4 bg-red-50 rounded-lg mb-4 text-sm">
+          <AlertCircle className="text-red-600 mr-2 flex-shrink-0" size={18} />
           <span className="text-red-700">{error}</span>
         </div>
       )}
@@ -189,22 +189,22 @@ const ManualAssignment = ({ fetchAssignments, filters }) => {
         {preferences.map((pref) => (
           <div key={pref.instructorId._id} className="border rounded-lg overflow-hidden">
             <div 
-              className="flex items-center justify-between p-4 bg-gray-50 cursor-pointer"
+              className="flex items-center justify-between p-3 sm:p-4 bg-gray-50 cursor-pointer"
               onClick={() => setExpandedInstructor(
                 expandedInstructor === pref.instructorId._id ? null : pref.instructorId._id
               )}
             >
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
                   <span className="text-blue-600 font-bold">
                     {pref.instructorId.fullName.charAt(0)}
                   </span>
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-800">
+                  <h3 className="font-semibold text-gray-800 text-sm sm:text-base">
                     {pref.instructorId.fullName}
                   </h3>
-                  <p className="text-sm text-gray-600">
+                  <p className="text-xs sm:text-sm text-gray-600">
                     {getAssignmentStatus(pref.instructorId._id)} courses assigned
                   </p>
                 </div>
@@ -213,22 +213,23 @@ const ManualAssignment = ({ fetchAssignments, filters }) => {
                 className={`transition-transform ${
                   expandedInstructor === pref.instructorId._id ? 'rotate-180' : ''
                 }`}
+                size={20}
               />
             </div>
 
             {expandedInstructor === pref.instructorId._id && (
-              <div className="p-4">
-                <div className="grid grid-cols-3 gap-4">
+              <div className="p-3 sm:p-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                   {sortCoursesByPreference(courses, pref.instructorId._id).map((course) => (
                     <div 
                       key={course._id} 
-                      className={`p-4 rounded-lg border ${
+                      className={`p-3 sm:p-4 rounded-lg border ${
                         selectedAssignments[pref.instructorId._id]?.[course._id]
                           ? 'border-blue-500 bg-blue-50'
                           : 'border-gray-200'
                       }`}
                     >
-                      <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center justify-between mb-3 flex-wrap gap-1">
                         <label className="flex items-center gap-2">
                           <input
                             type="checkbox"
@@ -243,7 +244,7 @@ const ManualAssignment = ({ fetchAssignments, filters }) => {
                               )
                             }
                           />
-                          <span className="font-medium">{course.code}</span>
+                          <span className="font-medium text-sm">{course.code}</span>
                         </label>
                         <div className={`px-2 py-1 rounded text-xs ${
                           getPreferenceRank(pref.instructorId, course) !== Infinity
@@ -258,7 +259,7 @@ const ManualAssignment = ({ fetchAssignments, filters }) => {
                         <div className="space-y-2">
                           <input
                             type="text"
-                            className="w-full p-2 border rounded"
+                            className="w-full p-2 border rounded text-sm"
                             placeholder="Section"
                             value={selectedAssignments[pref.instructorId._id][course._id].section}
                             onChange={(e) =>
@@ -271,7 +272,7 @@ const ManualAssignment = ({ fetchAssignments, filters }) => {
                             }
                           />
                           <select
-                            className="w-full p-2 border rounded"
+                            className="w-full p-2 border rounded text-sm"
                             value={selectedAssignments[pref.instructorId._id][course._id].labDivision}
                             onChange={(e) =>
                               handleAssignmentSelection(
@@ -301,21 +302,22 @@ const ManualAssignment = ({ fetchAssignments, filters }) => {
           onClick={handleBulkAssign}
           disabled={loading}
           className={`
-            flex items-center gap-2 px-6 py-3 rounded-lg text-white font-medium
+            flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 rounded-lg text-white font-medium
             ${loading 
               ? 'bg-gray-400 cursor-not-allowed' 
               : 'bg-blue-600 hover:bg-blue-700 transform transition-transform hover:scale-105'
             }
+            w-full sm:w-auto
           `}
         >
           {loading ? (
             <>
-              <Loader className="animate-spin" size={20} />
+              <Loader className="animate-spin" size={18} />
               <span>Assigning...</span>
             </>
           ) : (
             <>
-              <Check size={20} />
+              <Check size={18} />
               <span>Confirm Assignments</span>
             </>
           )}

@@ -1,4 +1,3 @@
-// RegularAssignmentCH.jsx - Modified to pass filters to AssignedCourses
 import { useEffect, useState } from "react";
 import api from "../../utils/api";
 import { useSelector } from "react-redux";
@@ -93,18 +92,18 @@ const RegularAssignmentCH = () => {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+    <div className="p-3 sm:p-6 w-full max-w-7xl mx-auto">
+      <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6 mb-6">
         <div className="mb-6">
-          <h1 className="text-2xl font-bold text-gray-800">Regular Course Assignment</h1>
-          <p className="text-gray-500 mt-1">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Regular Course Assignment</h1>
+          <p className="text-gray-500 text-sm mt-1">
             Assign regular courses to instructors based on preferences and workload
           </p>
         </div>
 
         {/* Search (Filtering Mechanism) */}
         <div className="space-y-5">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700">
                 <div className="flex items-center gap-2">
@@ -117,7 +116,7 @@ const RegularAssignmentCH = () => {
                 name="year"
                 value={filters.year}
                 onChange={handleFilterChange}
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                className="w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
               />
             </div>
             
@@ -132,7 +131,7 @@ const RegularAssignmentCH = () => {
                 name="semester"
                 value={filters.semester}
                 onChange={handleFilterChange}
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none"
+                className="w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none"
               >
                 <option value="Regular 1">Regular 1</option>
                 <option value="Regular 2">Regular 2</option>
@@ -148,7 +147,7 @@ const RegularAssignmentCH = () => {
                   <span>Department Chair</span>
                 </div>
               </label>
-              <div className="px-4 py-2.5 bg-gray-100 border border-gray-200 rounded-lg text-gray-700">
+              <div className="px-3 sm:px-4 py-2 sm:py-2.5 bg-gray-100 border border-gray-200 rounded-lg text-gray-700 text-sm">
                 {user?.chair || 'Loading chair information...'}
               </div>
             </div>
@@ -158,7 +157,7 @@ const RegularAssignmentCH = () => {
             <button
               onClick={handleSearch}
               disabled={loading}
-              className="flex items-center justify-center px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-300 transition-colors shadow-sm"
+              className="flex items-center justify-center px-4 sm:px-6 py-2 sm:py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-300 transition-colors shadow-sm w-full sm:w-auto"
             >
               {loading ? (
                 <Loader2 className="w-5 h-5 mr-2 animate-spin" />
@@ -172,20 +171,20 @@ const RegularAssignmentCH = () => {
 
         {/* Error message */}
         {error && (
-          <div className="mt-6 bg-red-50 text-red-700 p-4 rounded-lg border border-red-200 flex items-center">
-            <AlertCircle className="w-5 h-5 mr-3" />
-            <span>{error}</span>
+          <div className="mt-6 bg-red-50 text-red-700 p-3 sm:p-4 rounded-lg border border-red-200 flex items-start sm:items-center flex-wrap">
+            <AlertCircle className="w-5 h-5 mr-2 flex-shrink-0" />
+            <span className="text-sm">{error}</span>
           </div>
         )}
         
         {/* Preferences summary */}
         {preferences && preferences.preferences && preferences.preferences.length > 0 && (
-          <div className="mt-6 p-4 bg-blue-50 border border-blue-100 rounded-lg">
-            <div className="flex items-center text-blue-700">
-              <BookOpen className="w-5 h-5 mr-2" />
-              <span className="font-medium">Found {preferences.preferences.length} instructor preference submissions for {filters.semester} {filters.year}</span>
+          <div className="mt-6 p-3 sm:p-4 bg-blue-50 border border-blue-100 rounded-lg">
+            <div className="flex items-center text-blue-700 flex-wrap">
+              <BookOpen className="w-5 h-5 mr-2 flex-shrink-0" />
+              <span className="font-medium text-sm sm:text-base">Found {preferences.preferences.length} instructor preference submissions for {filters.semester} {filters.year}</span>
             </div>
-            <p className="mt-1 text-sm text-blue-600">
+            <p className="mt-1 text-xs sm:text-sm text-blue-600">
               You can now proceed to assign courses manually or automatically
             </p>
           </div>
@@ -193,48 +192,48 @@ const RegularAssignmentCH = () => {
       </div>
 
       {showOptions && (
-        <div className="bg-white rounded-xl shadow-sm p-6">
+        <div className="bg-white rounded-xl shadow-sm p-4 sm:p-6">
           {/* Tabs */}
-          <div className="border-b border-gray-200 mb-6">
-            <nav className="flex -mb-px space-x-8">
+          <div className="border-b border-gray-200 mb-6 overflow-x-auto">
+            <nav className="flex -mb-px space-x-4 sm:space-x-8 min-w-max">
               <button
                 onClick={() => setActiveTab("manual")}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                className={`py-3 sm:py-4 px-1 border-b-2 font-medium text-xs sm:text-sm ${
                   activeTab === "manual"
                     ? "border-blue-500 text-blue-600"
                     : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                 }`}
               >
                 <div className="flex items-center">
-                  <User className="w-5 h-5 mr-2" />
+                  <User className="w-4 h-4 mr-1 sm:mr-2" />
                   <span>Manual Assignment</span>
                 </div>
               </button>
               
               <button
                 onClick={() => setActiveTab("automatic")}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                className={`py-3 sm:py-4 px-1 border-b-2 font-medium text-xs sm:text-sm ${
                   activeTab === "automatic"
                     ? "border-blue-500 text-blue-600"
                     : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                 }`}
               >
                 <div className="flex items-center">
-                  <ArrowRight className="w-5 h-5 mr-2" />
+                  <ArrowRight className="w-4 h-4 mr-1 sm:mr-2" />
                   <span>Automatic Assignment</span>
                 </div>
               </button>
               
               <button
                 onClick={() => setActiveTab("assigned")}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                className={`py-3 sm:py-4 px-1 border-b-2 font-medium text-xs sm:text-sm ${
                   activeTab === "assigned"
                     ? "border-blue-500 text-blue-600"
                     : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
                 }`}
               >
                 <div className="flex items-center">
-                  <Filter className="w-5 h-5 mr-2" />
+                  <Filter className="w-4 h-4 mr-1 sm:mr-2" />
                   <span>Assigned Courses</span>
                 </div>
               </button>
