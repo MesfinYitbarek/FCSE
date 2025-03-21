@@ -2,10 +2,7 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useSelector } from "react-redux";
 import {
-  FileSpreadsheet,
   CheckCircle,
-  AlertTriangle,
-  Calendar,
   TrendingUp,
   Clock,
   ChevronRight,
@@ -14,6 +11,7 @@ import {
   Users,
   ClipboardList
 } from "lucide-react";
+import api from "@/utils/api";
 
 const ChairHeadDashboard = () => {
   const { user } = useSelector((state) => state.auth);
@@ -29,24 +27,31 @@ const ChairHeadDashboard = () => {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        // Mock statistics data
-        const statsData = {
-          courses: { total: 24, assigned: 18, unassigned: 6 },
-          instructors: { total: 15, active: 12, inactive: 3 },
-          complaints: { total: 10, resolved: 7, pending: 3 },
-          announcements: { total: 5, recent: 2 }
-        };
+        const chair = user?.chair;
 
-        setStats(statsData);
-        setIsLoading(false);
+        const [coursesRes, instructorsRes, announcementsRes] = await Promise.all([
+          api.get(`/courses/${chair}`),
+          api.get(`/instructors/chair/${chair}`),
+          api.get(`/announcements/publisher`)
+        ]);
+
+        const courses = coursesRes.data;
+        const instructors = instructorsRes.data;
+        const announcements = announcementsRes.data;
+
+        setStats({
+          courses: { total: courses.length, assigned: courses.filter(c => c.assigned).length, unassigned: courses.filter(c => !c.assigned).length },
+          instructors: { total: instructors.length, active: instructors.filter(i => i.active).length, inactive: instructors.filter(i => !i.active).length },
+          announcements: { total: announcements.length, recent: announcements.length }
+        });
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
-        setIsLoading(false);
       }
+      setIsLoading(false);
     };
 
     fetchDashboardData();
-  }, []);
+  }, [user]);
 
   // Calculate completion percentage
   const calculateCompletion = (completed, total) => {

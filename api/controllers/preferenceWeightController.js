@@ -38,3 +38,17 @@ export const updatePreferenceWeight = async (req, res) => {
     res.status(500).json({ message: "Error updating preference weight settings", error });
   }
 };
+
+export const deletePreferenceWeight = async (req, res) => {
+  try {
+    const report = await PreferenceWeight.findByIdAndDelete(req.params.id);
+    
+    if (!report) {
+      return res.status(404).json({ message: "Preference Weight not found" });
+    }
+    
+    res.status(200).json({ message: "Preference Weight deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Error deleting PreferenceWeight", error: error.message });
+  }
+};

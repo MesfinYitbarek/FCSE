@@ -1,5 +1,5 @@
 import express from "express";
-import { createPreferenceForm, updatePreferenceForm, getActivePreferenceForm, getChairPreferenceForm, getFilteredPreferenceForms } from "../controllers/preferenceFormController.js";
+import { createPreferenceForm, updatePreferenceForm, getActivePreferenceForm, getChairPreferenceForm, getFilteredPreferenceForms, deletePreferenceForm } from "../controllers/preferenceFormController.js";
 import { authenticate, authorize } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
@@ -10,6 +10,7 @@ router.post("/", authenticate, authorize(["ChairHead"]), createPreferenceForm);
 // Chair Head updates an existing preference form
 router.put("/:formId", authenticate, authorize(["ChairHead"]), updatePreferenceForm);
 
+router.delete("/:id", authenticate,authorize(["ChairHead"]), deletePreferenceForm)
 // Get the active preference form (for instructors)
 router.get("/active", authenticate, getActivePreferenceForm);
 

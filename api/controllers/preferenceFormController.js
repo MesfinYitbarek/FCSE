@@ -117,3 +117,19 @@ export const getChairPreferenceForm = async (req, res) => {
     res.status(500).json({ message: "Error fetching preference form", error });
   }
 };
+
+//Delete preference Form
+
+export const deletePreferenceForm = async (req, res) => {
+  try {
+    const report = await PreferenceForm.findByIdAndDelete(req.params.id);
+    
+    if (!report) {
+      return res.status(404).json({ message: "Preference Form not found" });
+    }
+    
+    res.status(200).json({ message: "Preference Form deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Error deleting preference form", error: error.message });
+  }
+};

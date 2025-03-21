@@ -382,7 +382,7 @@ const Layout = () => {
             <NavItem to="/dashboard" icon={Home}>Dashboard</NavItem>
 
             <NavGroup
-              title="Courses"
+              title="Courses and Instructors"
               icon={Book}
               expanded={expandedGroups.courses}
               onToggle={() => toggleGroup('courses')}

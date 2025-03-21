@@ -1,6 +1,7 @@
 import express from "express";
 import { 
   createPreferenceWeight, 
+  deletePreferenceWeight, 
   getPreferenceWeights, 
   updatePreferenceWeight 
 } from "../controllers/preferenceWeightController.js";
@@ -17,7 +18,7 @@ const router = express.Router();
 router.post("/", authenticate, authorize(["HeadOfFaculty"]), createPreferenceWeight);
 router.get("/", authenticate, getPreferenceWeights);
 router.put("/:id", authenticate, authorize(["HeadOfFaculty"]), updatePreferenceWeight); // Update preference weight
-
+router.delete("/:id", authenticate, deletePreferenceWeight)
 // Course Experience Weight Routes
 router.post("/", authenticate, authorize(["HeadOfFaculty"]), createCourseExperienceWeight);
 router.get("/", authenticate, getCourseExperienceWeights);
