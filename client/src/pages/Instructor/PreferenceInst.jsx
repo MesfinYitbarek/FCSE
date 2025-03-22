@@ -34,10 +34,10 @@ const PreferencesInst = () => {
       const { data } = await api.get(`/preference-forms/active?year=${year}&semester=${semester}&chair=${user.chair}`);
       if (data) {
         setPreferenceForm(data);
-        
+
         // Now we use the courses array directly from the preference form
         setCourses(data.courses);
-        
+
         const currentDate = new Date();
         const start = new Date(data.submissionStart);
         const end = new Date(data.submissionEnd);
@@ -68,7 +68,14 @@ const PreferencesInst = () => {
 
   const fetchPreferences = async () => {
     try {
-      const { data } = await api.get(`/preferences/${user._id}`);
+      const { data } = await api.get(`/preferences/${user._id}`, {
+        params: {
+          year: year,
+          semester: semester,
+          chair: user.chair,
+        },
+      });
+
       if (data.preferences && data.preferences.length > 0) {
         setPreferences(data.preferences);
         setHasSubmitted(true);
@@ -78,6 +85,7 @@ const PreferencesInst = () => {
     }
   };
 
+
   const handleSearch = (e) => {
     e.preventDefault();
     fetchPreferenceForm();
@@ -85,15 +93,15 @@ const PreferencesInst = () => {
 
   const handlePreferenceChange = (courseId, rank) => {
     let updatedPreferences = preferences.filter((p) => p.courseId !== courseId);
-    
+
     // Check if any other course already has this rank
     const existingCourseWithRank = preferences.find(p => p.rank === rank && p.courseId !== courseId);
-    
+
     if (rank > 0) {
       if (existingCourseWithRank) {
         // Swap the ranks
-        updatedPreferences = updatedPreferences.map(p => 
-          p.courseId === existingCourseWithRank.courseId ? {...p, rank: 0} : p
+        updatedPreferences = updatedPreferences.map(p =>
+          p.courseId === existingCourseWithRank.courseId ? { ...p, rank: 0 } : p
         );
       }
       updatedPreferences.push({ courseId, rank });
@@ -102,38 +110,55 @@ const PreferencesInst = () => {
     setPreferences(updatedPreferences);
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (preferences.length === 0) {
-      setErrorMessage("Please select at least one course preference.");
-      return;
-    }
-    setLoading(true);
-    setErrorMessage("");
-    try {
-      await api.post("/preferences", {
+// Add a new state variable to track whether we're in update mode
+const [isUpdating, setIsUpdating] = useState(false);
+
+// Modify your handleUpdate function
+const handleUpdate = () => {
+  setIsUpdating(true); // Set to update mode instead of changing hasSubmitted
+};
+
+// Update your handleSubmit function to use the correct HTTP method
+const handleSubmit = async (e) => {
+  e.preventDefault();
+  if (preferences.length === 0) {
+    setErrorMessage("Please select at least one course preference.");
+    return;
+  }
+  setLoading(true);
+  setErrorMessage("");
+  try {
+    // Use isUpdating or hasSubmitted to determine the method
+    const method = isUpdating || hasSubmitted ? "put" : "post";
+    
+    await api({
+      method: method,
+      url: "/preferences", // Simplified - same endpoint for both
+      data: {
         instructorId: user._id,
         preferenceFormId: preferenceForm._id,
         preferences,
-      });
-      setHasSubmitted(true);
-      setSubmitSuccess(true);
-      setTimeout(() => setSubmitSuccess(false), 5000);
-    } catch (error) {
-      console.error("Error submitting preferences:", error);
-      setErrorMessage("Failed to submit preferences. Please try again.");
-    }
-    setLoading(false);
-  };
-
-  const handleUpdate = () => {
-    setHasSubmitted(false);
-  };
+      }
+    });
+    
+    setHasSubmitted(true);
+    setIsUpdating(false); // Reset update mode after successful submission
+    setSubmitSuccess(true);
+    setTimeout(() => setSubmitSuccess(false), 5000);
+  } catch (error) {
+    console.error("Error submitting preferences:", error);
+    setErrorMessage(isUpdating || hasSubmitted 
+      ? "Failed to update preferences. Please try again."
+      : "Failed to submit preferences. Please try again."
+    );
+  }
+  setLoading(false);
+};
 
   // Filter courses based on search query and chair
   const filteredCourses = courses.filter((course) => {
     const matchesSearch = course.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          course.code.toLowerCase().includes(searchQuery.toLowerCase());
+      course.code.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesChair = filterChair ? course.chair === filterChair : true;
     return matchesSearch && matchesChair;
   });
@@ -206,7 +231,7 @@ const PreferencesInst = () => {
                   className="w-full p-3 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
                 />
               </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Semester</label>
                 <select
@@ -220,7 +245,7 @@ const PreferencesInst = () => {
                   <option value="Extension">Extension</option>
                 </select>
               </div>
-              
+
               <div className="flex items-end">
                 <button
                   type="submit"
@@ -269,14 +294,14 @@ const PreferencesInst = () => {
                         Submission Period: {new Date(preferenceForm.submissionStart).toLocaleDateString()} - {new Date(preferenceForm.submissionEnd).toLocaleDateString()}
                       </span>
                     </div>
-    
+
                     {/* Search and Filter Bar */}
                     {!hasSubmitted && (
                       <div className="grid md:grid-cols-2 gap-4 mb-6">
                         <div className="relative">
                           <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                             <svg className="w-4 h-4 text-gray-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
-                              <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z"/>
+                              <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z" />
                             </svg>
                           </div>
                           <input
@@ -299,8 +324,8 @@ const PreferencesInst = () => {
                         </select>
                       </div>
                     )}
-    
-                    {hasSubmitted ? (
+
+                    {(hasSubmitted && !isUpdating)  ? (
                       <div>
                         <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center">
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -321,35 +346,45 @@ const PreferencesInst = () => {
                             <tbody>
                               {preferences
                                 .sort((a, b) => a.rank - b.rank)
-                                .map((pref) => {
-                                  const course = courses.find((c) => c._id === pref.courseId);
-                                  return (
-                                    <tr key={pref.courseId} className="hover:bg-slate-50">
-                                      <td className="p-3 border-b border-slate-200">
-                                        <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-medium">{pref.rank}</span>
-                                      </td>
-                                      <td className="p-3 border-b border-slate-200">{course?.name}</td>
-                                      <td className="p-3 border-b border-slate-200">
-                                        <span className="text-slate-500">{course?.code}</span>
-                                      </td>
-                                      <td className="p-3 border-b border-slate-200">
-                                        <span className="text-slate-500">{course?.chair}</span>
-                                      </td>
-                                    </tr>
-                                  );
-                                })}
+                                .map((pref) => (
+                                  <tr key={pref.courseId._id} className="hover:bg-slate-50">
+                                    <td className="p-3 border-b border-slate-200">
+                                      <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-medium">
+                                        {pref.rank}
+                                      </span>
+                                    </td>
+                                    <td className="p-3 border-b border-slate-200">{pref.courseId.name}</td>
+                                    <td className="p-3 border-b border-slate-200">
+                                      <span className="text-slate-500">{pref.courseId.code}</span>
+                                    </td>
+                                    <td className="p-3 border-b border-slate-200">
+                                      <span className="text-slate-500">{pref.courseId.chair}</span>
+                                    </td>
+                                  </tr>
+                                ))}
+
                             </tbody>
                           </table>
                         </div>
-                        <button
-                          onClick={handleUpdate}
-                          className="mt-6 inline-flex items-center bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition shadow-md"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                          </svg>
-                          Update Preferences
-                        </button>
+                        {submissionAllowed && (
+                          <button
+                            onClick={handleUpdate}
+                            className="mt-6 inline-flex items-center bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition shadow-md"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                            Update Preferences
+                          </button>
+                        )}
+                        {!submissionAllowed && (
+                          <div className="mt-6 p-3 bg-yellow-50 border border-yellow-200 rounded-md text-yellow-700 flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                            </svg>
+                            Submission period is closed. You cannot update your preferences at this time.
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <form onSubmit={handleSubmit}>
@@ -412,7 +447,7 @@ const PreferencesInst = () => {
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                                 </svg>
-                                Submit Preferences
+                                {isUpdating ? "Update Preferences" : "Submit Preferences"}
                               </>
                             )}
                           </button>
