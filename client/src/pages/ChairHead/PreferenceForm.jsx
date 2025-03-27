@@ -1,40 +1,24 @@
 import { useEffect, useState } from "react";
 import api from "../../utils/api";
 import { useSelector } from "react-redux";
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  Button,
-  TextField,
-  Select,
-  MenuItem,
-  Checkbox,
-  FormControlLabel,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Grid,
-  Typography,
-  Box,
-  Card,
-  CardContent,
-  CircularProgress,
-  Chip,
-  Tooltip,
-  FormControl,
-  InputLabel,
-  Divider,
-  useTheme,
-} from "@mui/material";
+import { 
+  Calendar, 
+  Plus, 
+  Filter, 
+  Trash2, 
+  Edit, 
+  X, 
+  RefreshCw, 
+  Search,
+  ChevronDown,
+  Save,
+  Book,
+  Users,
+  Loader,
+  Info
+} from 'lucide-react';
 
 const PreferenceForm = () => {
-  const theme = useTheme();
   const { user } = useSelector((state) => state.auth);
   const [preferenceForms, setPreferenceForms] = useState([]);
   const [formData, setFormData] = useState({
@@ -224,104 +208,99 @@ const PreferenceForm = () => {
   };
 
   return (
-    <Box sx={{ p: 3 }}>
-      <Typography variant="h4" component="h1" gutterBottom>
-        Course Preference Forms
-      </Typography>
-      <Divider sx={{ mb: 3 }} />
+    <div className="max-w-7xl mx-auto p-4 md:p-6">
+      <div className="mb-8">
+        <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-white mb-2">Course Preference Forms</h1>
+        <p className="text-gray-600 dark:text-gray-300">Create and manage preference forms for instructors to submit their course preferences.</p>
+      </div>
       
       {/* Search and Filter Section */}
-      <Card 
-        elevation={2} 
-        sx={{ 
-          mb: 4, 
-          p: 3, 
-          background: `linear-gradient(to right, ${theme.palette.primary.light}11, ${theme.palette.background.paper})` 
-        }}
-      >
-        <Typography variant="h6" component="h2" gutterBottom>
-          Filter Preference Forms
-        </Typography>
+      <div className="mb-8 bg-gradient-to-r from-blue-50 to-white dark:from-slate-800 dark:to-slate-900 border-l-4 border-blue-500 rounded-lg shadow-sm p-5">
+        <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-800 dark:text-white mb-4">
+          <Filter size={18} className="text-blue-500" /> Filter Preference Forms
+        </h2>
         
-        <Grid container spacing={3} alignItems="flex-end">
-          <Grid item xs={12} sm={6} md={3}>
-            <FormControl fullWidth variant="outlined">
-              <InputLabel>Academic Year</InputLabel>
-              <Select
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Academic Year</label>
+            <div className="relative">
+              <select
                 value={filterYear}
                 onChange={(e) => setFilterYear(e.target.value)}
-                label="Academic Year"
+                className="block w-full bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-md shadow-sm py-2 px-3 pr-8 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
               >
                 {availableYears.map(year => (
-                  <MenuItem key={year} value={year}>{year}</MenuItem>
+                  <option key={year} value={year}>{year}</option>
                 ))}
-              </Select>
-            </FormControl>
-          </Grid>
+              </select>
+              <ChevronDown size={16} className="absolute right-3 top-2.5 text-gray-500 pointer-events-none" />
+            </div>
+          </div>
           
-          <Grid item xs={12} sm={6} md={3}>
-            <FormControl fullWidth variant="outlined">
-              <InputLabel>Semester</InputLabel>
-              <Select
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Semester</label>
+            <div className="relative">
+              <select
                 value={filterSemester}
                 onChange={(e) => setFilterSemester(e.target.value)}
-                label="Semester"
+                className="block w-full bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-md shadow-sm py-2 px-3 pr-8 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
               >
-                <MenuItem value="">All Semesters</MenuItem>
-                <MenuItem value="Regular 1">Regular 1</MenuItem>
-                <MenuItem value="Regular 2">Regular 2</MenuItem>
-                <MenuItem value="Summer">Summer</MenuItem>
-                <MenuItem value="Extension">Extension</MenuItem>
-              </Select>
-            </FormControl>
-          </Grid>
+                <option value="">All Semesters</option>
+                <option value="Regular 1">Regular 1</option>
+                <option value="Regular 2">Regular 2</option>
+                <option value="Summer">Summer</option>
+                <option value="Extension">Extension</option>
+              </select>
+              <ChevronDown size={16} className="absolute right-3 top-2.5 text-gray-500 pointer-events-none" />
+            </div>
+          </div>
           
           {user.role === "admin" && (
-            <Grid item xs={12} sm={6} md={3}>
-              <FormControl fullWidth variant="outlined">
-                <InputLabel>Department</InputLabel>
-                <Select
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Department</label>
+              <div className="relative">
+                <select
                   value={filterChair}
                   onChange={(e) => setFilterChair(e.target.value)}
-                  label="Department"
+                  className="block w-full bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-md shadow-sm py-2 px-3 pr-8 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                 >
                   {chairs.map(chair => (
-                    <MenuItem key={chair._id} value={chair._id}>{chair.name}</MenuItem>
+                    <option key={chair._id} value={chair._id}>{chair.name}</option>
                   ))}
-                </Select>
-              </FormControl>
-            </Grid>
+                </select>
+                <ChevronDown size={16} className="absolute right-3 top-2.5 text-gray-500 pointer-events-none" />
+              </div>
+            </div>
           )}
           
-          <Grid item xs={12} sm={6} md={user.role === "admin" ? 3 : 6}>
-            <Box sx={{ display: 'flex', gap: 1 }}>
-              <Button 
-                variant="contained" 
-                color="primary" 
-                fullWidth 
-                onClick={handleSearch}
-                disabled={fetchingData}
-              >
-                {fetchingData ? <CircularProgress size={24} /> : "Search"}
-              </Button>
-              
-              <Button 
-                variant="outlined" 
-                color="secondary" 
-                onClick={resetFilters}
-              >
-                Reset
-              </Button>
-            </Box>
-          </Grid>
-        </Grid>
-      </Card>
+          <div className={`${user.role === "admin" ? '' : 'sm:col-span-2'} flex items-end space-x-2`}>
+            <button 
+              onClick={handleSearch}
+              disabled={fetchingData}
+              className="flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md shadow-sm text-sm font-medium transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-60"
+            >
+              {fetchingData ? (
+                <Loader size={16} className="animate-spin" />
+              ) : (
+                <Search size={16} />
+              )}
+              Search
+            </button>
+            
+            <button 
+              onClick={resetFilters}
+              className="flex items-center justify-center gap-2 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300 py-2 px-4 rounded-md shadow-sm text-sm font-medium transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              <RefreshCw size={16} />
+              Reset
+            </button>
+          </div>
+        </div>
+      </div>
       
       {/* Action buttons */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-        <Button 
-          variant="contained" 
-          color="primary" 
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+        <button 
           onClick={() => {
             setSelectedForm(null);
             setFormData({
@@ -335,257 +314,298 @@ const PreferenceForm = () => {
             });
             setOpenModal(true);
           }}
+          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md shadow-sm text-sm font-medium transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
         >
-          Create Preference Form
-        </Button>
+          <Plus size={16} /> Create Preference Form
+        </button>
         
         {isFiltered && (
-          <Chip 
-            label={`Showing ${preferenceForms.length} forms`} 
-            color="primary" 
-            variant="outlined"
-          />
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-gray-300 border border-gray-200 dark:border-slate-700">
+            Found {preferenceForms.length} forms
+          </span>
         )}
-      </Box>
+      </div>
 
       {/* Preference Forms Table */}
       {isFiltered && (
-        <Card elevation={2}>
-          <CardContent sx={{ p: 0 }}>
-            {fetchingData ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-                <CircularProgress />
-              </Box>
-            ) : preferenceForms.length > 0 ? (
-              <TableContainer>
-                <Table>
-                  <TableHead>
-                    <TableRow sx={{ backgroundColor: theme.palette.primary.light + '22' }}>
-                      <TableCell><Typography fontWeight="bold">Year</Typography></TableCell>
-                      <TableCell><Typography fontWeight="bold">Semester</Typography></TableCell>
-                      <TableCell><Typography fontWeight="bold">Max Preferences</Typography></TableCell>
-                      <TableCell><Typography fontWeight="bold">Submission Period</Typography></TableCell>
-                      <TableCell><Typography fontWeight="bold">Status</Typography></TableCell>
-                      <TableCell><Typography fontWeight="bold">Actions</Typography></TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {preferenceForms.map((form) => {
-                      const now = new Date();
-                      const startDate = new Date(form.submissionStart);
-                      const endDate = new Date(form.submissionEnd);
-                      let status = "Upcoming";
-                      
-                      if (now > endDate) status = "Closed";
-                      else if (now >= startDate) status = "Active";
-                      
-                      return (
-                        <TableRow key={form._id} hover>
-                          <TableCell>{form.year}</TableCell>
-                          <TableCell>{form.semester}</TableCell>
-                          <TableCell>{form.maxPreferences}</TableCell>
-                          <TableCell>
-                            <Typography variant="body2">
-                              {new Date(form.submissionStart).toLocaleDateString()} - {new Date(form.submissionEnd).toLocaleDateString()}
-                            </Typography>
-                          </TableCell>
-                          <TableCell>
-                            <Chip 
-                              label={status} 
-                              color={
-                                status === "Active" ? "success" : 
-                                status === "Upcoming" ? "info" : "error"
-                              }
-                              size="small"
-                            />
-                          </TableCell>
-                          <TableCell>
-                            <Button
-                              variant="outlined"
-                              color="primary"
+        <div className="bg-white dark:bg-slate-900 rounded-lg shadow-sm overflow-hidden">
+          {fetchingData ? (
+            <div className="flex justify-center items-center p-12">
+              <Loader size={24} className="animate-spin text-blue-500" />
+            </div>
+          ) : preferenceForms.length > 0 ? (
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
+                <thead className="bg-gray-50 dark:bg-slate-800">
+                  <tr>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Year</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Semester</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Max Preferences</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Submission Period</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-slate-800">
+                  {preferenceForms.map((form) => {
+                    const now = new Date();
+                    const startDate = new Date(form.submissionStart);
+                    const endDate = new Date(form.submissionEnd);
+                    let status = "Upcoming";
+                    let statusClass = "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
+                    
+                    if (now > endDate) {
+                      status = "Closed";
+                      statusClass = "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
+                    } else if (now >= startDate) {
+                      status = "Active";
+                      statusClass = "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
+                    }
+                    
+                    return (
+                      <tr key={form._id} className="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{form.year}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{form.semester}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{form.maxPreferences}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
+                          <div className="flex items-center gap-1.5">
+                            <Calendar size={14} className="text-gray-500" />
+                            <span>{new Date(form.submissionStart).toLocaleDateString()} - {new Date(form.submissionEnd).toLocaleDateString()}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusClass}`}>
+                            {status}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <div className="flex items-center gap-2">
+                            <button
                               onClick={() => openEditFormModal(form)}
-                              size="small"
-                              sx={{ mr: 1 }}
+                              className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
                             >
-                              Edit
-                            </Button>
-                            <Button
-                              variant="outlined"
-                              color="error"
+                              <Edit size={14} />
+                              <span>Edit</span>
+                            </button>
+                            <button
                               onClick={() => openDeleteFormModal(form)}
-                              size="small"
+                              className="ml-3 inline-flex items-center gap-1 text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300 transition-colors"
                             >
-                              Delete
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            ) : (
-              <Box sx={{ p: 4, textAlign: 'center' }}>
-                <Typography variant="body1" color="textSecondary">
-                  No preference forms found for the selected filters.
-                </Typography>
-              </Box>
-            )}
-          </CardContent>
-        </Card>
+                              <Trash2 size={14} />
+                              <span>Delete</span>
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-16 px-4 text-center">
+              <Info size={48} className="text-gray-300 dark:text-gray-700 mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-1">No preference forms found</h3>
+              <p className="text-gray-500 dark:text-gray-400 max-w-md">
+                No preference forms match your current filter criteria. Try adjusting your filters or create a new form.
+              </p>
+            </div>
+          )}
+        </div>
       )}
 
       {/* Form Creation/Edit Dialog */}
-      <Dialog 
-        open={openModal} 
-        onClose={() => setOpenModal(false)}
-        fullWidth
-        maxWidth="md"
-      >
-        <DialogTitle>
-          {selectedForm ? "Edit Preference Form" : "Create Preference Form"}
-        </DialogTitle>
-        <DialogContent dividers>
-          <Grid container spacing={3}>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                fullWidth
-                margin="dense"
-                label="Year"
-                name="year"
-                type="number"
-                value={formData.year}
-                onChange={handleChange}
-                required
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth margin="dense">
-                <InputLabel>Semester</InputLabel>
-                <Select
-                  name="semester"
-                  value={formData.semester}
-                  onChange={handleChange}
-                  label="Semester"
-                  required
-                >
-                  <MenuItem value="Regular 1">Regular 1</MenuItem>
-                  <MenuItem value="Regular 2">Regular 2</MenuItem>
-                  <MenuItem value="Summer">Summer</MenuItem>
-                  <MenuItem value="Extension">Extension</MenuItem>
-                </Select>
-              </FormControl>
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <TextField
-                fullWidth
-                margin="dense"
-                label="Max Preferences"
-                name="maxPreferences"
-                type="number"
-                value={formData.maxPreferences}
-                onChange={handleChange}
-                required
-                inputProps={{ min: 1 }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <TextField
-                fullWidth
-                margin="dense"
-                label="Submission Start Date"
-                name="submissionStart"
-                type="datetime-local"
-                value={formData.submissionStart}
-                onChange={handleChange}
-                required
-                InputLabelProps={{ shrink: true }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={4}>
-              <TextField
-                fullWidth
-                margin="dense"
-                label="Submission End Date"
-                name="submissionEnd"
-                type="datetime-local"
-                value={formData.submissionEnd}
-                onChange={handleChange}
-                required
-                InputLabelProps={{ shrink: true }}
-              />
-            </Grid>
-            
-            <Grid item xs={12}>
-              <Divider sx={{ my: 2 }} />
-              <Typography variant="h6" component="h3" gutterBottom>
-                Select Courses
-              </Typography>
-              <Box sx={{ maxHeight: '200px', overflowY: 'auto', p: 1 }}>
-                <Grid container spacing={1}>
-                  {courses.map((course) => (
-                    <Grid item xs={12} sm={6} md={4} key={course._id}>
-                      <FormControlLabel
-                        control={
-                          <Checkbox
+      {openModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            {/* Background overlay */}
+            <div 
+              className="fixed inset-0 bg-gray-500 bg-opacity-75 dark:bg-slate-900 dark:bg-opacity-75 transition-opacity" 
+              aria-hidden="true"
+              onClick={() => setOpenModal(false)}
+            />
+
+            {/* Modal panel */}
+            <div className="inline-block align-bottom bg-white dark:bg-slate-900 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full">
+              {/* Header */}
+              <div className="bg-white dark:bg-slate-900 px-4 pt-5 pb-4 sm:p-6 sm:pb-4 border-b border-gray-200 dark:border-slate-700">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white" id="modal-title">
+                    {selectedForm ? "Edit Preference Form" : "Create Preference Form"}
+                  </h3>
+                  <button
+                    type="button"
+                    className="bg-white dark:bg-slate-900 rounded-md text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    onClick={() => setOpenModal(false)}
+                  >
+                    <span className="sr-only">Close</span>
+                    <X size={20} />
+                  </button>
+                </div>
+              </div>
+              
+              {/* Content */}
+              <div className="bg-white dark:bg-slate-900 px-4 pt-5 pb-4 sm:p-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Year</label>
+                    <input
+                      type="number"
+                      name="year"
+                      value={formData.year}
+                      onChange={handleChange}
+                      min={currentYear - 2}
+                      max={currentYear + 2}
+                      required
+                      className="block w-full bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    />
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Semester</label>
+                    <div className="relative">
+                      <select
+                        name="semester"
+                        value={formData.semester}
+                        onChange={handleChange}
+                        required
+                        className="block w-full bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-md shadow-sm py-2 px-3 pr-8 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                      >
+                        <option value="Regular 1">Regular 1</option>
+                        <option value="Regular 2">Regular 2</option>
+                        <option value="Summer">Summer</option>
+                        <option value="Extension">Extension</option>
+                      </select>
+                      <ChevronDown size={16} className="absolute right-3 top-2.5 text-gray-500 pointer-events-none" />
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Max Preferences</label>
+                    <input
+                      type="number"
+                      name="maxPreferences"
+                      value={formData.maxPreferences}
+                      onChange={handleChange}
+                      min={1}
+                      max={10}
+                      required
+                      className="block w-full bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    />
+                  </div>
+                  
+                  <div className="space-y-1 md:col-span-3 lg:col-span-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Submission Start Date</label>
+                    <input
+                      type="datetime-local"
+                      name="submissionStart"
+                      value={formData.submissionStart}
+                      onChange={handleChange}
+                      required
+                      className="block w-full bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    />
+                  </div>
+                  
+                  <div className="space-y-1 md:col-span-3 lg:col-span-1">
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Submission End Date</label>
+                    <input
+                      type="datetime-local"
+                      name="submissionEnd"
+                      value={formData.submissionEnd}
+                      onChange={handleChange}
+                      required
+                      className="block w-full bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                    />
+                  </div>
+                </div>
+                
+                <hr className="my-6 border-gray-200 dark:border-slate-700" />
+                
+                <div className="mb-6">
+                  <h4 className="flex items-center gap-2 text-base font-medium text-gray-900 dark:text-white mb-3">
+                    <Book size={16} className="text-blue-500" /> Available Courses
+                  </h4>
+                  <div className="max-h-48 overflow-y-auto p-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-md">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                      {courses.length > 0 ? courses.map((course) => (
+                        <div key={course._id} className="flex items-center">
+                          <input
+                            id={`course-${course._id}`}
+                            type="checkbox"
                             checked={formData.courses.includes(course._id)}
                             onChange={() => handleCourseSelection(course._id)}
+                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                           />
-                        }
-                        label={course.name}
-                      />
-                    </Grid>
-                  ))}
-                </Grid>
-              </Box>
-            </Grid>
-            
-            <Grid item xs={12}>
-              <Divider sx={{ my: 2 }} />
-              <Typography variant="h6" component="h3" gutterBottom>
-                Select Instructors
-              </Typography>
-              <Box sx={{ maxHeight: '200px', overflowY: 'auto', p: 1 }}>
-                <Grid container spacing={1}>
-                  {instructors.map((instructor) => (
-                    <Grid item xs={12} sm={6} md={4} key={instructor._id}>
-                      <FormControlLabel
-                        control={
-                          <Checkbox
+                          <label htmlFor={`course-${course._id}`} className="ml-2 block text-sm text-gray-700 dark:text-gray-300 truncate">
+                            {course.name}
+                          </label>
+                        </div>
+                      )) : (
+                        <p className="text-gray-500 dark:text-gray-400 col-span-full text-center py-4">
+                          No courses available
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                
+                <div>
+                  <h4 className="flex items-center gap-2 text-base font-medium text-gray-900 dark:text-white mb-3">
+                    <Users size={16} className="text-blue-500" /> Available Instructors
+                  </h4>
+                  <div className="max-h-48 overflow-y-auto p-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-md">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                      {instructors.length > 0 ? instructors.map((instructor) => (
+                        <div key={instructor._id} className="flex items-center">
+                          <input
+                            id={`instructor-${instructor._id}`}
+                            type="checkbox"
                             checked={formData.instructors.includes(instructor._id)}
                             onChange={() => handleInstructorSelection(instructor._id)}
+                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                           />
-                        }
-                        label={instructor.fullName}
-                      />
-                    </Grid>
-                  ))}
-                </Grid>
-              </Box>
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenModal(false)} color="inherit">
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleSubmit} 
-            color="primary" 
-            variant="contained" 
-            disabled={loading}
-          >
-            {loading ? (
-              <CircularProgress size={24} />
-            ) : selectedForm ? (
-              "Update Form"
-            ) : (
-              "Create Form"
-            )}
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </Box>
+                          <label htmlFor={`instructor-${instructor._id}`} className="ml-2 block text-sm text-gray-700 dark:text-gray-300 truncate">
+                            {instructor.fullName}
+                          </label>
+                        </div>
+                      )) : (
+                        <p className="text-gray-500 dark:text-gray-400 col-span-full text-center py-4">
+                          No instructors available
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Footer */}
+              <div className="bg-gray-50 dark:bg-slate-800 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={loading}
+                  className="w-full inline-flex justify-center items-center gap-2 rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm disabled:opacity-70"
+                >
+                  {loading ? (
+                    <Loader size={16} className="animate-spin" />
+                  ) : (
+                    <Save size={16} />
+                  )}
+                  {selectedForm ? "Update Form" : "Create Form"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOpenModal(false)}
+                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-slate-600 shadow-sm px-4 py-2 bg-white dark:bg-slate-700 text-base font-medium text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 

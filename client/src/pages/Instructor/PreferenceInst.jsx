@@ -2,6 +2,10 @@ import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import api from "../../utils/api";
 import Spinner from "../../components/Spinner";
+import { 
+  Search, FileText, Calendar, CheckCircle, AlertCircle, 
+  Edit, Send, Info, Lock, Award, Filter, BookOpen, Code
+} from "lucide-react";
 
 const PreferencesInst = () => {
   const { user } = useSelector((state) => state.auth);
@@ -18,6 +22,8 @@ const PreferencesInst = () => {
   const [filterChair, setFilterChair] = useState("");
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [expandedCourse, setExpandedCourse] = useState(null);
 
   useEffect(() => {
     if (user?.role === "Instructor") {
@@ -79,16 +85,21 @@ const PreferencesInst = () => {
       if (data.preferences && data.preferences.length > 0) {
         setPreferences(data.preferences);
         setHasSubmitted(true);
+      } else {
+        setPreferences([]);
+        setHasSubmitted(false);
       }
     } catch (error) {
       console.error("Error fetching preferences:", error);
+      setPreferences([]);
+      setHasSubmitted(false);
     }
   };
-
 
   const handleSearch = (e) => {
     e.preventDefault();
     fetchPreferenceForm();
+    fetchPreferences(); // Also fetch preferences again when searching
   };
 
   const handlePreferenceChange = (courseId, rank) => {
@@ -110,50 +121,49 @@ const PreferencesInst = () => {
     setPreferences(updatedPreferences);
   };
 
-// Add a new state variable to track whether we're in update mode
-const [isUpdating, setIsUpdating] = useState(false);
+  const handleUpdate = () => {
+    setIsUpdating(true);
+  };
 
-// Modify your handleUpdate function
-const handleUpdate = () => {
-  setIsUpdating(true); // Set to update mode instead of changing hasSubmitted
-};
-
-// Update your handleSubmit function to use the correct HTTP method
-const handleSubmit = async (e) => {
-  e.preventDefault();
-  if (preferences.length === 0) {
-    setErrorMessage("Please select at least one course preference.");
-    return;
-  }
-  setLoading(true);
-  setErrorMessage("");
-  try {
-    // Use isUpdating or hasSubmitted to determine the method
-    const method = isUpdating || hasSubmitted ? "put" : "post";
-    
-    await api({
-      method: method,
-      url: "/preferences", // Simplified - same endpoint for both
-      data: {
-        instructorId: user._id,
-        preferenceFormId: preferenceForm._id,
-        preferences,
-      }
-    });
-    
-    setHasSubmitted(true);
-    setIsUpdating(false); // Reset update mode after successful submission
-    setSubmitSuccess(true);
-    setTimeout(() => setSubmitSuccess(false), 5000);
-  } catch (error) {
-    console.error("Error submitting preferences:", error);
-    setErrorMessage(isUpdating || hasSubmitted 
-      ? "Failed to update preferences. Please try again."
-      : "Failed to submit preferences. Please try again."
-    );
-  }
-  setLoading(false);
-};
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (preferences.length === 0) {
+      setErrorMessage("Please select at least one course preference.");
+      return;
+    }
+    setLoading(true);
+    setErrorMessage("");
+    try {
+      // Use isUpdating or hasSubmitted to determine the method
+      const method = isUpdating || hasSubmitted ? "put" : "post";
+      
+      await api({
+        method: method,
+        url: "/preferences", // Simplified - same endpoint for both
+        data: {
+          instructorId: user._id,
+          preferenceFormId: preferenceForm._id,
+          preferences,
+        }
+      });
+      
+      setHasSubmitted(true);
+      setIsUpdating(false); // Reset update mode after successful submission
+      setSubmitSuccess(true);
+      
+      // Refresh preferences to ensure we display the correct data
+      await fetchPreferences();
+      
+      setTimeout(() => setSubmitSuccess(false), 5000);
+    } catch (error) {
+      console.error("Error submitting preferences:", error);
+      setErrorMessage(isUpdating || hasSubmitted 
+        ? "Failed to update preferences. Please try again."
+        : "Failed to submit preferences. Please try again."
+      );
+    }
+    setLoading(false);
+  };
 
   // Filter courses based on search query and chair
   const filteredCourses = courses.filter((course) => {
@@ -166,16 +176,20 @@ const handleSubmit = async (e) => {
   // Get unique chairs for filter dropdown
   const chairs = [...new Set(courses.map(course => course.chair))];
 
+  // Format date for better display
+  const formatDate = (dateString) => {
+    const options = { year: 'numeric', month: 'short', day: 'numeric' };
+    return new Date(dateString).toLocaleDateString(undefined, options);
+  };
+
   if (user?.role !== "Instructor") {
     return (
-      <div className="p-8 bg-gradient-to-br from-slate-100 to-slate-200 min-h-screen">
-        <div className="max-w-4xl mx-auto bg-white p-8 rounded-lg shadow-lg">
-          <div className="flex items-center space-x-4 text-red-500">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
+      <div className="p-4 md:p-8 bg-gradient-to-br from-slate-100 to-slate-200 min-h-screen">
+        <div className="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-lg">
+          <div className="flex flex-col md:flex-row md:items-center md:space-x-4 text-red-500">
+            <AlertCircle size={36} className="mb-2 md:mb-0" />
             <div>
-              <h1 className="text-2xl font-bold">Access Denied</h1>
+              <h1 className="text-xl md:text-2xl font-bold">Access Denied</h1>
               <p className="text-gray-600">Only instructors can access this page.</p>
             </div>
           </div>
@@ -185,43 +199,35 @@ const handleSubmit = async (e) => {
   }
 
   return (
-    <div className="p-8 bg-gradient-to-br from-slate-100 to-slate-200 min-h-screen">
+    <div className="p-4 md:p-8 bg-gradient-to-br from-slate-100 to-slate-200 min-h-screen">
       <div className="max-w-6xl mx-auto">
-        <div className="bg-white p-8 rounded-lg shadow-lg">
-          <h1 className="text-3xl font-bold text-slate-800 mb-8 border-b pb-4 flex items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 mr-3 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
+        <div className="bg-white p-4 md:p-8 rounded-lg shadow-lg">
+          <h1 className="text-2xl md:text-3xl font-bold text-slate-800 mb-6 border-b pb-4 flex items-center">
+            <FileText className="h-7 w-7 mr-3 text-blue-600" />
             Course Preferences
           </h1>
 
           {submitSuccess && (
             <div className="mb-6 p-4 rounded-lg bg-green-100 text-green-800 flex items-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-              Preferences submitted successfully!
+              <CheckCircle className="h-5 w-5 mr-2 flex-shrink-0" />
+              <span>Preferences submitted successfully!</span>
             </div>
           )}
 
           {errorMessage && (
             <div className="mb-6 p-4 rounded-lg bg-red-100 text-red-800 flex items-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              {errorMessage}
+              <AlertCircle className="h-5 w-5 mr-2 flex-shrink-0" />
+              <span>{errorMessage}</span>
             </div>
           )}
 
-          <div className="bg-slate-50 p-6 rounded-lg mb-8">
-            <h2 className="text-xl font-semibold text-slate-700 mb-4 flex items-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
+          <div className="bg-slate-50 p-4 md:p-6 rounded-lg mb-8">
+            <h2 className="text-lg md:text-xl font-semibold text-slate-700 mb-4 flex items-center">
+              <Search className="h-5 w-5 mr-2 text-blue-600" />
               Search Preference Form
             </h2>
 
-            <form onSubmit={handleSearch} className="grid md:grid-cols-3 gap-6">
+            <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Academic Year</label>
                 <input
@@ -249,14 +255,12 @@ const handleSubmit = async (e) => {
               <div className="flex items-end">
                 <button
                   type="submit"
-                  className="w-full bg-blue-600 text-white py-3 px-6 rounded-md hover:bg-blue-700 transition shadow-md flex items-center justify-center space-x-2 disabled:bg-slate-400"
+                  className="w-full bg-blue-600 text-white py-3 px-4 md:px-6 rounded-md hover:bg-blue-700 transition shadow-md flex items-center justify-center space-x-2 disabled:bg-slate-400"
                   disabled={loading}
                 >
                   {loading ? <Spinner /> : (
                     <>
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                      </svg>
+                      <Search className="h-5 w-5" />
                       <span>Search</span>
                     </>
                   )}
@@ -272,37 +276,31 @@ const handleSubmit = async (e) => {
           ) : preferenceForm ? (
             isEligible ? (
               submissionAllowed ? (
-                <div className="bg-white rounded-lg">
-                  <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4 rounded-t-lg flex justify-between items-center">
+                <div className="bg-white rounded-lg transition-all">
+                  <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4 rounded-t-lg flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                     <h2 className="text-lg font-semibold flex items-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                      </svg>
-                      {preferenceForm.semester} - {preferenceForm.year} Preference Form
+                      <Calendar className="h-5 w-5 mr-2 flex-shrink-0" />
+                      <span>{preferenceForm.semester} - {preferenceForm.year} Preference Form</span>
                     </h2>
-                    <div className="text-sm">
-                      <span className="bg-blue-800 px-2 py-1 rounded">Max Preferences: {preferenceForm.maxPreferences}</span>
+                    <div className="text-sm bg-blue-800 px-3 py-1.5 rounded-full shadow-sm">
+                      Max Preferences: {preferenceForm.maxPreferences}
                     </div>
                   </div>
 
-                  <div className="p-6 border-b">
-                    <div className="flex items-center text-sm text-slate-600 mb-4">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
+                  <div className="p-4 md:p-6 border-b">
+                    <div className="flex items-center text-sm text-slate-600 mb-6 bg-blue-50 p-3 rounded-md">
+                      <Calendar className="h-5 w-5 mr-2 text-blue-600 flex-shrink-0" />
                       <span>
-                        Submission Period: {new Date(preferenceForm.submissionStart).toLocaleDateString()} - {new Date(preferenceForm.submissionEnd).toLocaleDateString()}
+                        Submission Period: {formatDate(preferenceForm.submissionStart)} - {formatDate(preferenceForm.submissionEnd)}
                       </span>
                     </div>
 
                     {/* Search and Filter Bar */}
-                    {!hasSubmitted && (
-                      <div className="grid md:grid-cols-2 gap-4 mb-6">
+                    {(!hasSubmitted || isUpdating) && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                         <div className="relative">
                           <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                            <svg className="w-4 h-4 text-gray-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
-                              <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m19 19-4-4m0-7A7 7 0 1 1 1 8a7 7 0 0 1 14 0Z" />
-                            </svg>
+                            <Search className="w-4 h-4 text-gray-500" />
                           </div>
                           <input
                             type="text"
@@ -312,28 +310,33 @@ const handleSubmit = async (e) => {
                             className="block w-full p-3 pl-10 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
                           />
                         </div>
-                        <select
-                          value={filterChair}
-                          onChange={(e) => setFilterChair(e.target.value)}
-                          className="p-3 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                        >
-                          <option value="">All Chairs</option>
-                          {chairs.map(chair => (
-                            <option key={chair} value={chair}>{chair}</option>
-                          ))}
-                        </select>
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                            <Filter className="w-4 h-4 text-gray-500" />
+                          </div>
+                          <select
+                            value={filterChair}
+                            onChange={(e) => setFilterChair(e.target.value)}
+                            className="block w-full p-3 pl-10 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                          >
+                            <option value="">All Chairs</option>
+                            {chairs.map(chair => (
+                              <option key={chair} value={chair}>{chair}</option>
+                            ))}
+                          </select>
+                        </div>
                       </div>
                     )}
 
-                    {(hasSubmitted && !isUpdating)  ? (
+                    {(hasSubmitted && !isUpdating) ? (
                       <div>
                         <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
+                          <CheckCircle className="h-5 w-5 mr-2 text-green-600" />
                           Your Submitted Preferences
                         </h3>
-                        <div className="overflow-x-auto">
+                        
+                        {/* Desktop view */}
+                        <div className="hidden md:block overflow-x-auto rounded-lg border border-slate-200">
                           <table className="w-full border-collapse">
                             <thead>
                               <tr className="bg-slate-100">
@@ -349,46 +352,85 @@ const handleSubmit = async (e) => {
                                 .map((pref) => (
                                   <tr key={pref.courseId._id} className="hover:bg-slate-50">
                                     <td className="p-3 border-b border-slate-200">
-                                      <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full font-medium">
+                                      <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-medium">
                                         {pref.rank}
                                       </span>
                                     </td>
                                     <td className="p-3 border-b border-slate-200">{pref.courseId.name}</td>
                                     <td className="p-3 border-b border-slate-200">
-                                      <span className="text-slate-500">{pref.courseId.code}</span>
+                                      <span className="text-slate-500 flex items-center">
+                                        <Code className="h-4 w-4 mr-1 text-slate-400" />
+                                        {pref.courseId.code}
+                                      </span>
                                     </td>
                                     <td className="p-3 border-b border-slate-200">
                                       <span className="text-slate-500">{pref.courseId.chair}</span>
                                     </td>
                                   </tr>
                                 ))}
-
+                              {preferences.length === 0 && (
+                                <tr>
+                                  <td colSpan="4" className="p-4 text-center text-slate-500">No preferences found</td>
+                                </tr>
+                              )}
                             </tbody>
                           </table>
                         </div>
+                        
+                        {/* Mobile view - cards */}
+                        <div className="md:hidden space-y-3">
+                          {preferences
+                            .sort((a, b) => a.rank - b.rank)
+                            .map((pref) => (
+                              <div 
+                                key={pref.courseId._id} 
+                                className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50"
+                              >
+                                <div className="flex justify-between items-center mb-2">
+                                  <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-medium">
+                                    Rank {pref.rank}
+                                  </span>
+                                  <span className="text-sm text-slate-500">{pref.courseId.chair}</span>
+                                </div>
+                                <h4 className="font-medium mb-1">{pref.courseId.name}</h4>
+                                <div className="flex items-center text-slate-500 text-sm">
+                                  <Code className="h-4 w-4 mr-1 text-slate-400" />
+                                  {pref.courseId.code}
+                                </div>
+                              </div>
+                            ))}
+                          {preferences.length === 0 && (
+                            <div className="p-4 text-center text-slate-500 border border-slate-200 rounded-lg">
+                              No preferences found
+                            </div>
+                          )}
+                        </div>
+                        
                         {submissionAllowed && (
                           <button
                             onClick={handleUpdate}
                             className="mt-6 inline-flex items-center bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition shadow-md"
                           >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                            </svg>
+                            <Edit className="h-5 w-5 mr-2" />
                             Update Preferences
                           </button>
                         )}
                         {!submissionAllowed && (
-                          <div className="mt-6 p-3 bg-yellow-50 border border-yellow-200 rounded-md text-yellow-700 flex items-center">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                            </svg>
-                            Submission period is closed. You cannot update your preferences at this time.
+                          <div className="mt-6 p-3 bg-yellow-50 border border-yellow-200 rounded-md text-yellow-700 flex items-start space-x-3">
+                            <Lock className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                            <div>
+                              <p className="font-medium">Submission period is closed</p>
+                              <p className="text-sm mt-1">You cannot update your preferences at this time.</p>
+                            </div>
                           </div>
                         )}
                       </div>
                     ) : (
                       <form onSubmit={handleSubmit}>
-                        <div className="overflow-x-auto rounded-lg border border-slate-200">
+                        {/* Course selection table/cards */}
+                        
+                        {/* Desktop view */}
+                        <div className="hidden md:block overflow-x-auto rounded-lg border border-slate-200">
                           <table className="w-full border-collapse">
                             <thead>
                               <tr className="bg-slate-100">
@@ -408,7 +450,12 @@ const handleSubmit = async (e) => {
                                 filteredCourses.map((course) => (
                                   <tr key={course._id} className="hover:bg-slate-50">
                                     <td className="p-3 border-b border-slate-200">{course.name}</td>
-                                    <td className="p-3 border-b border-slate-200 text-slate-500">{course.code}</td>
+                                    <td className="p-3 border-b border-slate-200 text-slate-500">
+                                      <div className="flex items-center">
+                                        <Code className="h-4 w-4 mr-1 text-slate-400" />
+                                        {course.code}
+                                      </div>
+                                    </td>
                                     <td className="p-3 border-b border-slate-200 text-slate-500">{course.chair}</td>
                                     <td className="p-3 border-b border-slate-200 text-slate-500">
                                       Year {course.year}, Sem {course.semester}
@@ -433,20 +480,73 @@ const handleSubmit = async (e) => {
                             </tbody>
                           </table>
                         </div>
-                        <div className="mt-6 flex justify-between items-center">
-                          <div className="text-sm text-slate-600">
-                            Selected preferences: {preferences.length}/{preferenceForm.maxPreferences}
+                        
+                        {/* Mobile view - cards */}
+                        <div className="md:hidden space-y-3">
+                          {filteredCourses.length === 0 ? (
+                            <div className="p-4 text-center text-slate-500 border border-slate-200 rounded-lg">
+                              No courses match your search criteria
+                            </div>
+                          ) : (
+                            filteredCourses.map((course) => (
+                              <div 
+                                key={course._id} 
+                                className="border border-slate-200 rounded-lg overflow-hidden"
+                              >
+                                <div 
+                                  className="p-4 flex justify-between cursor-pointer hover:bg-slate-50"
+                                  onClick={() => setExpandedCourse(expandedCourse === course._id ? null : course._id)}
+                                >
+                                  <div>
+                                    <h4 className="font-medium">{course.name}</h4>
+                                    <div className="flex items-center text-slate-500 text-sm mt-1">
+                                      <Code className="h-4 w-4 mr-1 text-slate-400" />
+                                      {course.code}
+                                    </div>
+                                  </div>
+                                  <div className="min-w-fit">
+                                    <select
+                                      value={preferences.find((p) => p.courseId === course._id)?.rank || 0}
+                                      onChange={(e) => handlePreferenceChange(course._id, parseInt(e.target.value))}
+                                      className="p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <option value="0">Not Selected</option>
+                                      {[...Array(preferenceForm.maxPreferences).keys()].map((i) => (
+                                        <option key={i + 1} value={i + 1}>
+                                          {i + 1}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                </div>
+                                
+                                {expandedCourse === course._id && (
+                                  <div className="p-4 pt-0 bg-slate-50 text-sm">
+                                    <div className="pt-3 border-t mt-3">
+                                      <p><span className="font-medium">Chair:</span> {course.chair}</p>
+                                      <p><span className="font-medium">Year/Semester:</span> Year {course.year}, Sem {course.semester}</p>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ))
+                          )}
+                        </div>
+                        
+                        <div className="mt-6 flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
+                          <div className="text-sm flex items-center bg-blue-50 px-3 py-2 rounded-md text-slate-700">
+                            <Award className="h-4 w-4 mr-2 text-blue-600" />
+                            <span>Selected preferences: <span className="font-semibold">{preferences.length}/{preferenceForm.maxPreferences}</span></span>
                           </div>
                           <button
                             type="submit"
                             disabled={loading}
-                            className="inline-flex items-center bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700 transition shadow-md disabled:bg-slate-400"
+                            className="w-full sm:w-auto inline-flex items-center justify-center bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700 transition shadow-md disabled:bg-slate-400"
                           >
                             {loading ? <Spinner /> : (
                               <>
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                </svg>
+                                <Send className="h-5 w-5 mr-2" />
                                 {isUpdating ? "Update Preferences" : "Submit Preferences"}
                               </>
                             )}
@@ -457,24 +557,20 @@ const handleSubmit = async (e) => {
                   </div>
                 </div>
               ) : (
-                <div className="bg-orange-100 text-orange-800 p-6 rounded-lg flex items-start space-x-4">
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
+                <div className="bg-orange-100 text-orange-800 p-4 md:p-6 rounded-lg flex flex-col md:flex-row md:items-start md:space-x-4">
+                  <AlertCircle className="h-6 w-6 mb-2 md:mb-0 md:mt-0.5 flex-shrink-0" />
                   <div>
                     <h3 className="font-semibold">Submission Period Closed</h3>
                     <p>The submission period for this preference form is not currently active.</p>
                     <p className="text-sm mt-2">
-                      Submission period: {new Date(preferenceForm.submissionStart).toLocaleDateString()} - {new Date(preferenceForm.submissionEnd).toLocaleDateString()}
+                      Submission period: {formatDate(preferenceForm.submissionStart)} - {formatDate(preferenceForm.submissionEnd)}
                     </p>
                   </div>
                 </div>
               )
             ) : (
-              <div className="bg-red-100 text-red-800 p-6 rounded-lg flex items-start space-x-4">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+              <div className="bg-red-100 text-red-800 p-4 md:p-6 rounded-lg flex flex-col md:flex-row md:items-start md:space-x-4">
+                <AlertCircle className="h-6 w-6 mb-2 md:mb-0 md:mt-0.5 flex-shrink-0" />
                 <div>
                   <h3 className="font-semibold">Not Eligible</h3>
                   <p>You are not eligible to submit preferences for this form.</p>
@@ -482,10 +578,8 @@ const handleSubmit = async (e) => {
               </div>
             )
           ) : (
-            <div className="bg-slate-100 text-slate-700 p-6 rounded-lg flex items-start space-x-4">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
+            <div className="bg-slate-100 text-slate-700 p-4 md:p-6 rounded-lg flex flex-col md:flex-row md:items-start md:space-x-4">
+              <Info className="h-6 w-6 mb-2 md:mb-0 md:mt-0.5 flex-shrink-0" />
               <div>
                 <p>Please search for a preference form using the fields above.</p>
               </div>
