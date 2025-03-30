@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../../utils/api';
-import { Search, Eye, Edit, Trash2, Filter, Loader2 } from 'lucide-react';
+import { Search, Eye, Edit, Trash2, Filter, Loader2, PlusCircle } from 'lucide-react';
 
 const ReportList = ({ reports = [], loading, error, onDeleteSuccess }) => {
   const [searchTerm, setSearchTerm] = useState('');
