@@ -113,35 +113,6 @@ const ChairHeadDashboard = () => {
               <BookOpen size={24} className="text-indigo-600" />
             </div>
           </div>
-
-          <div className="mt-4 space-y-3">
-            <div>
-              <div className="flex justify-between text-sm mb-1">
-                <span className="font-medium">Assigned Courses</span>
-                <span className="text-gray-600">{stats.courses.assigned} / {stats.courses.total}</span>
-              </div>
-              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-indigo-500 rounded-full"
-                  style={{ width: `${calculateCompletion(stats.courses.assigned, stats.courses.total)}%` }}
-                ></div>
-              </div>
-            </div>
-
-            <div>
-              <div className="flex justify-between text-sm mb-1">
-                <span className="font-medium">Unassigned Courses</span>
-                <span className="text-gray-600">{stats.courses.unassigned} / {stats.courses.total}</span>
-              </div>
-              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-purple-500 rounded-full"
-                  style={{ width: `${calculateCompletion(stats.courses.unassigned, stats.courses.total)}%` }}
-                ></div>
-              </div>
-            </div>
-          </div>
-
           <Link
             to="/courses"
             className="mt-5 text-sm text-indigo-600 hover:text-indigo-800 font-medium inline-flex items-center"
@@ -162,29 +133,6 @@ const ChairHeadDashboard = () => {
               <Users size={24} className="text-green-600" />
             </div>
           </div>
-
-          <div className="mt-6 grid grid-cols-2 gap-3">
-            <div className="bg-green-50 rounded-lg p-3 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
-                <CheckCircle size={18} className="text-green-600" />
-              </div>
-              <div>
-                <p className="text-xs text-green-700 font-medium">Active</p>
-                <p className="text-lg font-bold text-green-800">{stats.instructors.active}</p>
-              </div>
-            </div>
-
-            <div className="bg-orange-50 rounded-lg p-3 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center">
-                <Clock size={18} className="text-orange-600" />
-              </div>
-              <div>
-                <p className="text-xs text-orange-700 font-medium">Inactive</p>
-                <p className="text-lg font-bold text-orange-800">{stats.instructors.inactive}</p>
-              </div>
-            </div>
-          </div>
-
           <Link
             to="/instructorManagement"
             className="mt-5 text-sm text-indigo-600 hover:text-indigo-800 font-medium inline-flex items-center"
