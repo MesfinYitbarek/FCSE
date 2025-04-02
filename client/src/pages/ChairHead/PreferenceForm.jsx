@@ -245,7 +245,7 @@ const PreferenceForm = () => {
                   <option key={year} value={year}>{year}</option>
                 ))}
               </select>
-              <ChevronDown size={16} className="absolute right-3 top-2.5 text-gray-500 pointer-events-none" />
+              
             </div>
           </div>
           
@@ -263,7 +263,7 @@ const PreferenceForm = () => {
                 <option value="Summer">Summer</option>
                 <option value="Extension">Extension</option>
               </select>
-              <ChevronDown size={16} className="absolute right-3 top-2.5 text-gray-500 pointer-events-none" />
+              
             </div>
           </div>
           

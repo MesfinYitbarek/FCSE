@@ -1,8 +1,19 @@
-// CoursesCH.jsx
 import { useEffect, useState } from "react";
 import api from "../../utils/api";
 import { useSelector } from "react-redux";
-import { Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField } from "@mui/material";
+import { 
+  Plus, 
+  Edit, 
+  Trash2, 
+  Search, 
+  ChevronLeft, 
+  ChevronRight, 
+  ChevronsLeft, 
+  ChevronsRight,
+  Loader2,
+  X,
+  Check
+} from "lucide-react";
 
 const CoursesCH = () => {
   const { user } = useSelector((state) => state.auth);
@@ -31,6 +42,10 @@ const CoursesCH = () => {
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [filters, setFilters] = useState({
+    year: "all",
+    semester: "all"
+  });
 
   // Track window width for responsive design
   useEffect(() => {
@@ -70,6 +85,12 @@ const CoursesCH = () => {
   // Handle form input change
   const handleChange = (e) => {
     setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  // Handle filter change
+  const handleFilterChange = (e) => {
+    setFilters({ ...filters, [e.target.name]: e.target.value });
+    setCurrentPage(1); // Reset to first page when filters change
   };
 
   // Handle adding or updating a course
@@ -146,14 +167,18 @@ const CoursesCH = () => {
     setLoading(false);
   };
 
-  // Filter courses based on search term
+  // Filter courses based on search term and filters
   const filteredCourses = courses.filter((course) => {
     const matchesSearchTerm =
       course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       course.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
       course.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
       course.category.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesSearchTerm;
+    
+    const matchesYear = filters.year === "all" || course.year.toString() === filters.year;
+    const matchesSemester = filters.semester === "all" || course.semester.toString() === filters.semester;
+    
+    return matchesSearchTerm && matchesYear && matchesSemester;
   });
 
   // Pagination logic
@@ -165,316 +190,483 @@ const CoursesCH = () => {
   
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
-  // Reset to first page when search changes
+  // Reset to first page when search or filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm]);
+  }, [searchTerm, filters]);
+
+  // Get unique years and semesters for filter dropdowns
+  const uniqueYears = [...new Set(courses.map(course => course.year))].sort();
+  const uniqueSemesters = [...new Set(courses.map(course => course.semester))].sort();
 
   return (
     <div className="p-2 sm:p-6">
       <div className="mb-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-800">Course Management</h1>
-        <Button 
-          variant="contained" 
-          color="primary" 
+        <button 
           onClick={() => setOpenAddModal(true)}
-          className="w-full sm:w-auto"
+          className="w-full sm:w-auto flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded-lg transition-colors"
         >
+          <Plus size={18} />
           Add New Course
-        </Button>
+        </button>
       </div>
 
-      {/* Search Section */}
-      <div className="mb-6">
-        <TextField
-          fullWidth
-          variant="outlined"
-          placeholder="Search by course name, code, department or category..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          size={windowWidth < 640 ? "small" : "medium"}
-        />
+      {/* Search and Filter Section */}
+      <div className="mb-6 space-y-4">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
+          <input
+            type="text"
+            placeholder="Search by course name, code, department or category..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+          />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="year" className="block text-sm font-medium text-gray-700 mb-1">Year</label>
+            <select
+              id="year"
+              name="year"
+              value={filters.year}
+              onChange={handleFilterChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+            >
+              <option value="all">All Years</option>
+              {uniqueYears.map(year => (
+                <option key={year} value={year}>Year {year}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label htmlFor="semester" className="block text-sm font-medium text-gray-700 mb-1">Semester</label>
+            <select
+              id="semester"
+              name="semester"
+              value={filters.semester}
+              onChange={handleFilterChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+            >
+              <option value="all">All Semesters</option>
+              {uniqueSemesters.map(semester => (
+                <option key={semester} value={semester}>Semester {semester}</option>
+              ))}
+            </select>
+          </div>
+        </div>
       </div>
 
       {/* Add Course Modal */}
-      <Dialog 
-        open={openAddModal} 
-        onClose={() => setOpenAddModal(false)}
-        fullWidth
-        maxWidth="sm"
-      >
-        <DialogTitle>Add New Course</DialogTitle>
-        <DialogContent>
-          <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <TextField
-              fullWidth
-              margin="dense"
-              label="Course Name"
-              name="name"
-              value={form.name}
-              onChange={handleChange}
-              required
-            />
-            <TextField
-              fullWidth
-              margin="dense"
-              label="Course Code"
-              name="code"
-              value={form.code}
-              onChange={handleChange}
-              required
-            />
-            <TextField
-              fullWidth
-              margin="dense"
-              label="Course Department"
-              name="department"
-              value={form.department}
-              onChange={handleChange}
-              required
-            />
-            <TextField
-              fullWidth
-              margin="dense"
-              label="Course Category"
-              name="category"
-              value={form.category}
-              onChange={handleChange}
-              required
-            />
-            <TextField
-              fullWidth
-              margin="dense"
-              label="Year"
-              name="year"
-              type="number"
-              value={form.year}
-              onChange={handleChange}
-              required
-            />
-            <TextField
-              fullWidth
-              margin="dense"
-              label="Semester"
-              name="semester"
-              type="number"
-              value={form.semester}
-              onChange={handleChange}
-              required
-            />
-            <TextField
-              fullWidth
-              margin="dense"
-              label="Credit Hour"
-              name="creditHour"
-              type="number"
-              value={form.creditHour}
-              onChange={handleChange}
-              required
-            />
-            <TextField
-              fullWidth
-              margin="dense"
-              label="Lecture Hours"
-              name="lecture"
-              type="number"
-              value={form.lecture}
-              onChange={handleChange}
-              required
-            />
-            <TextField
-              fullWidth
-              margin="dense"
-              label="Lab Hours"
-              name="lab"
-              type="number"
-              value={form.lab}
-              onChange={handleChange}
-            />
-            <TextField
-              fullWidth
-              margin="dense"
-              label="Tutorial Hours"
-              name="tutorial"
-              type="number"
-              value={form.tutorial}
-              onChange={handleChange}
-            />
+      {openAddModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold text-gray-800">Add New Course</h2>
+                <button 
+                  onClick={() => setOpenAddModal(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+              
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">Course Name</label>
+                    <input
+                      type="text"
+                      id="name"
+                      name="name"
+                      value={form.name}
+                      onChange={handleChange}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="code" className="block text-sm font-medium text-gray-700 mb-1">Course Code</label>
+                    <input
+                      type="text"
+                      id="code"
+                      name="code"
+                      value={form.code}
+                      onChange={handleChange}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="department" className="block text-sm font-medium text-gray-700 mb-1">Department</label>
+                    <input
+                      type="text"
+                      id="department"
+                      name="department"
+                      value={form.department}
+                      onChange={handleChange}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                    <input
+                      type="text"
+                      id="category"
+                      name="category"
+                      value={form.category}
+                      onChange={handleChange}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="year" className="block text-sm font-medium text-gray-700 mb-1">Year</label>
+                    <input
+                      type="number"
+                      id="year"
+                      name="year"
+                      value={form.year}
+                      onChange={handleChange}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="semester" className="block text-sm font-medium text-gray-700 mb-1">Semester</label>
+                    <input
+                      type="number"
+                      id="semester"
+                      name="semester"
+                      value={form.semester}
+                      onChange={handleChange}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="creditHour" className="block text-sm font-medium text-gray-700 mb-1">Credit Hour</label>
+                    <input
+                      type="number"
+                      id="creditHour"
+                      name="creditHour"
+                      value={form.creditHour}
+                      onChange={handleChange}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="lecture" className="block text-sm font-medium text-gray-700 mb-1">Lecture Hours</label>
+                    <input
+                      type="number"
+                      id="lecture"
+                      name="lecture"
+                      value={form.lecture}
+                      onChange={handleChange}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="lab" className="block text-sm font-medium text-gray-700 mb-1">Lab Hours</label>
+                    <input
+                      type="number"
+                      id="lab"
+                      name="lab"
+                      value={form.lab}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="tutorial" className="block text-sm font-medium text-gray-700 mb-1">Tutorial Hours</label>
+                    <input
+                      type="number"
+                      id="tutorial"
+                      name="tutorial"
+                      value={form.tutorial}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <label htmlFor="likeness" className="block text-sm font-medium text-gray-700 mb-1">Likeness (comma-separated)</label>
+                  <input
+                    type="text"
+                    id="likeness"
+                    name="likeness"
+                    value={form.likeness}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                  />
+                </div>
+                
+                <div>
+                  <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                  <input
+                    type="text"
+                    id="location"
+                    name="location"
+                    value={form.location}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                  />
+                </div>
+                
+                <div className="flex justify-end gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setOpenAddModal(false)}
+                    className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-70 flex items-center gap-2"
+                  >
+                    {loading ? <Loader2 className="animate-spin" size={18} /> : <Plus size={18} />}
+                    Add Course
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-          <TextField
-            fullWidth
-            margin="dense"
-            label="Likeness (comma-separated)"
-            name="likeness"
-            value={form.likeness}
-            onChange={handleChange}
-          />
-          <TextField
-            fullWidth
-            margin="dense"
-            label="Location"
-            name="location"
-            value={form.location}
-            onChange={handleChange}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenAddModal(false)}>Cancel</Button>
-          <Button onClick={handleSubmit} color="primary" disabled={loading}>
-            {loading ? "Saving..." : "Add Course"}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        </div>
+      )}
 
       {/* Edit Course Modal */}
-      <Dialog 
-        open={openEditModal} 
-        onClose={() => setOpenEditModal(false)}
-        fullWidth
-        maxWidth="sm"
-      >
-        <DialogTitle>Edit Course</DialogTitle>
-        <DialogContent>
-          <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <TextField
-              fullWidth
-              margin="dense"
-              label="Course Name"
-              name="name"
-              value={form.name}
-              onChange={handleChange}
-              required
-            />
-            <TextField
-              fullWidth
-              margin="dense"
-              label="Course Code"
-              name="code"
-              value={form.code}
-              onChange={handleChange}
-              required
-            />
-            <TextField
-              fullWidth
-              margin="dense"
-              label="Course Department"
-              name="department"
-              value={form.department}
-              onChange={handleChange}
-              required
-            />
-            <TextField
-              fullWidth
-              margin="dense"
-              label="Course Category"
-              name="category"
-              value={form.category}
-              onChange={handleChange}
-              required
-            />
-            <TextField
-              fullWidth
-              margin="dense"
-              label="Year"
-              name="year"
-              type="number"
-              value={form.year}
-              onChange={handleChange}
-              required
-            />
-            <TextField
-              fullWidth
-              margin="dense"
-              label="Semester"
-              name="semester"
-              type="number"
-              value={form.semester}
-              onChange={handleChange}
-              required
-            />
-            <TextField
-              fullWidth
-              margin="dense"
-              label="Credit Hour"
-              name="creditHour"
-              type="number"
-              value={form.creditHour}
-              onChange={handleChange}
-              required
-            />
-            <TextField
-              fullWidth
-              margin="dense"
-              label="Lecture Hours"
-              name="lecture"
-              type="number"
-              value={form.lecture}
-              onChange={handleChange}
-              required
-            />
-            <TextField
-              fullWidth
-              margin="dense"
-              label="Lab Hours"
-              name="lab"
-              type="number"
-              value={form.lab}
-              onChange={handleChange}
-            />
-            <TextField
-              fullWidth
-              margin="dense"
-              label="Tutorial Hours"
-              name="tutorial"
-              type="number"
-              value={form.tutorial}
-              onChange={handleChange}
-            />
+      {openEditModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold text-gray-800">Edit Course</h2>
+                <button 
+                  onClick={() => setOpenEditModal(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+              
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">Course Name</label>
+                    <input
+                      type="text"
+                      id="name"
+                      name="name"
+                      value={form.name}
+                      onChange={handleChange}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="code" className="block text-sm font-medium text-gray-700 mb-1">Course Code</label>
+                    <input
+                      type="text"
+                      id="code"
+                      name="code"
+                      value={form.code}
+                      onChange={handleChange}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="department" className="block text-sm font-medium text-gray-700 mb-1">Department</label>
+                    <input
+                      type="text"
+                      id="department"
+                      name="department"
+                      value={form.department}
+                      onChange={handleChange}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="category" className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                    <input
+                      type="text"
+                      id="category"
+                      name="category"
+                      value={form.category}
+                      onChange={handleChange}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="year" className="block text-sm font-medium text-gray-700 mb-1">Year</label>
+                    <input
+                      type="number"
+                      id="year"
+                      name="year"
+                      value={form.year}
+                      onChange={handleChange}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="semester" className="block text-sm font-medium text-gray-700 mb-1">Semester</label>
+                    <input
+                      type="number"
+                      id="semester"
+                      name="semester"
+                      value={form.semester}
+                      onChange={handleChange}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="creditHour" className="block text-sm font-medium text-gray-700 mb-1">Credit Hour</label>
+                    <input
+                      type="number"
+                      id="creditHour"
+                      name="creditHour"
+                      value={form.creditHour}
+                      onChange={handleChange}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="lecture" className="block text-sm font-medium text-gray-700 mb-1">Lecture Hours</label>
+                    <input
+                      type="number"
+                      id="lecture"
+                      name="lecture"
+                      value={form.lecture}
+                      onChange={handleChange}
+                      required
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="lab" className="block text-sm font-medium text-gray-700 mb-1">Lab Hours</label>
+                    <input
+                      type="number"
+                      id="lab"
+                      name="lab"
+                      value={form.lab}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="tutorial" className="block text-sm font-medium text-gray-700 mb-1">Tutorial Hours</label>
+                    <input
+                      type="number"
+                      id="tutorial"
+                      name="tutorial"
+                      value={form.tutorial}
+                      onChange={handleChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <label htmlFor="likeness" className="block text-sm font-medium text-gray-700 mb-1">Likeness (comma-separated)</label>
+                  <input
+                    type="text"
+                    id="likeness"
+                    name="likeness"
+                    value={form.likeness}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                  />
+                </div>
+                
+                <div>
+                  <label htmlFor="location" className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                  <input
+                    type="text"
+                    id="location"
+                    name="location"
+                    value={form.location}
+                    onChange={handleChange}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition"
+                  />
+                </div>
+                
+                <div className="flex justify-end gap-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setOpenEditModal(false)}
+                    className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-70 flex items-center gap-2"
+                  >
+                    {loading ? <Loader2 className="animate-spin" size={18} /> : <Check size={18} />}
+                    Update Course
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-          <TextField
-            fullWidth
-            margin="dense"
-            label="Likeness (comma-separated)"
-            name="likeness"
-            value={form.likeness}
-            onChange={handleChange}
-          />
-          <TextField
-            fullWidth
-            margin="dense"
-            label="Location"
-            name="location"
-            value={form.location}
-            onChange={handleChange}
-          />
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenEditModal(false)}>Cancel</Button>
-          <Button onClick={handleSubmit} color="primary" disabled={loading}>
-            {loading ? "Updating..." : "Update Course"}
-          </Button>
-        </DialogActions>
-      </Dialog>
+        </div>
+      )}
 
       {/* Delete Confirmation Modal */}
-      <Dialog 
-        open={openDeleteModal} 
-        onClose={() => setOpenDeleteModal(false)}
-        fullWidth
-        maxWidth="xs"
-      >
-        <DialogTitle>Delete Course</DialogTitle>
-        <DialogContent>
-          <p>Are you sure you want to delete the course "{selectedCourse?.name}"?</p>
-          <p className="text-red-500 text-sm mt-2">This action cannot be undone.</p>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setOpenDeleteModal(false)}>Cancel</Button>
-          <Button onClick={handleDeleteCourse} color="error" disabled={loading}>
-            {loading ? "Deleting..." : "Delete"}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      {openDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold text-gray-800">Delete Course</h2>
+                <button 
+                  onClick={() => setOpenDeleteModal(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+              
+              <div className="space-y-4">
+                <p>Are you sure you want to delete the course "{selectedCourse?.name}"?</p>
+                <p className="text-red-500 text-sm">This action cannot be undone.</p>
+                
+                <div className="flex justify-end gap-3 pt-4">
+                  <button
+                    onClick={() => setOpenDeleteModal(false)}
+                    className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleDeleteCourse}
+                    disabled={loading}
+                    className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-70 flex items-center gap-2"
+                  >
+                    {loading ? <Loader2 className="animate-spin" size={18} /> : <Trash2 size={18} />}
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Course List */}
       <div className="mt-6 bg-white p-4 sm:p-6 rounded-lg shadow-lg">
@@ -482,13 +674,13 @@ const CoursesCH = () => {
         
         {loading && (
           <div className="flex justify-center my-8">
-            <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-indigo-500"></div>
+            <Loader2 className="animate-spin text-indigo-600" size={32} />
           </div>
         )}
         
         {!loading && filteredCourses.length === 0 ? (
           <div className="text-center py-8">
-            <p className="text-gray-500">No courses found. {searchTerm && 'Try adjusting your search.'}</p>
+            <p className="text-gray-500">No courses found. {searchTerm && 'Try adjusting your search or filters.'}</p>
           </div>
         ) : (
           <>
@@ -535,15 +727,17 @@ const CoursesCH = () => {
                   
                   <div className="flex gap-2 mt-3">
                     <button
-                      className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2 px-3 rounded-lg text-sm transition duration-200"
+                      className="flex-1 bg-blue-500 hover:bg-blue-600 text-white py-2 px-3 rounded-lg text-sm transition duration-200 flex items-center justify-center gap-1"
                       onClick={() => openEditCourseModal(course)}
                     >
+                      <Edit size={16} />
                       Edit
                     </button>
                     <button
-                      className="flex-1 bg-red-500 hover:bg-red-600 text-white py-2 px-3 rounded-lg text-sm transition duration-200"
+                      className="flex-1 bg-red-500 hover:bg-red-600 text-white py-2 px-3 rounded-lg text-sm transition duration-200 flex items-center justify-center gap-1"
                       onClick={() => openDeleteCourseModal(course)}
                     >
+                      <Trash2 size={16} />
                       Delete
                     </button>
                   </div>
@@ -583,15 +777,17 @@ const CoursesCH = () => {
                       <td className="py-3 px-4 text-left">{course.creditHour}</td>
                       <td className="py-3 px-4 flex space-x-2">
                         <button
-                          className="bg-blue-500 hover:bg-blue-600 text-white py-1 px-3 rounded-lg text-sm transition duration-200"
+                          className="bg-blue-500 hover:bg-blue-600 text-white py-1 px-3 rounded-lg text-sm transition duration-200 flex items-center gap-1"
                           onClick={() => openEditCourseModal(course)}
                         >
+                          <Edit size={16} />
                           Edit
                         </button>
                         <button
-                          className="bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded-lg text-sm transition duration-200"
+                          className="bg-red-500 hover:bg-red-600 text-white py-1 px-3 rounded-lg text-sm transition duration-200 flex items-center gap-1"
                           onClick={() => openDeleteCourseModal(course)}
                         >
+                          <Trash2 size={16} />
                           Delete
                         </button>
                       </td>
@@ -606,15 +802,29 @@ const CoursesCH = () => {
               <div className="flex justify-center mt-6">
                 <nav className="flex items-center space-x-1">
                   <button
-                    onClick={() => paginate(Math.max(1, currentPage - 1))}
+                    onClick={() => paginate(1)}
                     disabled={currentPage === 1}
-                    className={`px-3 py-1 rounded-md ${
+                    className={`p-2 rounded-md ${
                       currentPage === 1 
                         ? "text-gray-400 cursor-not-allowed" 
                         : "text-gray-700 hover:bg-gray-200"
                     }`}
+                    title="First Page"
                   >
-                    Previous
+                    <ChevronsLeft size={18} />
+                  </button>
+                  
+                  <button
+                    onClick={() => paginate(Math.max(1, currentPage - 1))}
+                    disabled={currentPage === 1}
+                    className={`p-2 rounded-md ${
+                      currentPage === 1 
+                        ? "text-gray-400 cursor-not-allowed" 
+                        : "text-gray-700 hover:bg-gray-200"
+                    }`}
+                    title="Previous Page"
+                  >
+                    <ChevronLeft size={18} />
                   </button>
                   
                   {[...Array(totalPages)].map((_, index) => {
@@ -650,13 +860,27 @@ const CoursesCH = () => {
                   <button
                     onClick={() => paginate(Math.min(totalPages, currentPage + 1))}
                     disabled={currentPage === totalPages}
-                    className={`px-3 py-1 rounded-md ${
+                    className={`p-2 rounded-md ${
                       currentPage === totalPages 
                         ? "text-gray-400 cursor-not-allowed" 
                         : "text-gray-700 hover:bg-gray-200"
                     }`}
+                    title="Next Page"
                   >
-                    Next
+                    <ChevronRight size={18} />
+                  </button>
+                  
+                  <button
+                    onClick={() => paginate(totalPages)}
+                    disabled={currentPage === totalPages}
+                    className={`p-2 rounded-md ${
+                      currentPage === totalPages 
+                        ? "text-gray-400 cursor-not-allowed" 
+                        : "text-gray-700 hover:bg-gray-200"
+                    }`}
+                    title="Last Page"
+                  >
+                    <ChevronsRight size={18} />
                   </button>
                 </nav>
               </div>
