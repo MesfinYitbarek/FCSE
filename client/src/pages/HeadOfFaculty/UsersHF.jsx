@@ -1,14 +1,13 @@
 import { useEffect, useState, useMemo } from "react";
 import api from "../../utils/api";
-import { useSelector } from "react-redux";
-import { toast } from "react-toastify";
+// import { useSelector } from "react-redux";
 import "react-toastify/dist/ReactToastify.css";
 import { 
-  Box, Paper, Typography, Grid, Card, CardContent, Button, TextField, IconButton,
-  InputAdornment, Dialog, DialogTitle, DialogContent, DialogActions, Divider,
+  Box, Paper, Typography, Grid, Button, TextField, IconButton,
+  InputAdornment, Dialog, DialogTitle, DialogContent, DialogActions, 
   Avatar, Chip, FormControl, InputLabel, Select, MenuItem, Tooltip, Tabs, Tab,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow, TablePagination,
-  Badge, CircularProgress, Alert, Snackbar, Skeleton, useMediaQuery, useTheme,
+ CircularProgress, Alert, Snackbar, Skeleton,  useTheme,
   Accordion, AccordionSummary, AccordionDetails,
   TableSortLabel
 } from "@mui/material";
@@ -21,7 +20,6 @@ import {
   FilterAlt as FilterAltIcon,
   Refresh as RefreshIcon,
   Person as PersonIcon,
-  School as SchoolIcon,
   Work as WorkIcon,
   Phone as PhoneIcon,
   Email as EmailIcon,
@@ -37,8 +35,7 @@ import { motion } from "framer-motion";
 
 const UsersHF = () => {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
-  const { user } = useSelector((state) => state.auth);
+  // const { user } = useSelector((state) => state.auth);
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
   const [newUser, setNewUser] = useState({
@@ -87,7 +84,7 @@ const UsersHF = () => {
           fetchPositions(),
         ]);
       } catch (error) {
-        showNotification("Failed to initialize data", "error");
+        showNotification("Failed to initialize data", error);
       } finally {
         setLoading(false);
       }
