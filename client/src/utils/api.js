@@ -33,7 +33,7 @@ api.interceptors.response.use(
       alert("Session expired. Please log in again.");
       localStorage.removeItem("token");
       localStorage.removeItem("user");
-      window.location.href = "/login";
+      window.location.href = "/";
     } else if (error.response?.status === 500) {
       alert("Something went wrong on the server. Please try again later.");
     }
