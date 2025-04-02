@@ -2,14 +2,9 @@ import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useSelector } from "react-redux";
 import {
-  FileSpreadsheet,
   CheckCircle,
-  AlertTriangle,
-  Calendar,
-  TrendingUp,
   Clock,
   ChevronRight,
-  BookOpen,
   Megaphone,
   Users,
   Circle,
@@ -106,33 +101,7 @@ const DashboardHF = () => {
             </div>
           </div>
 
-          <div className="mt-4 space-y-3">
-            <div>
-              <div className="flex justify-between text-sm mb-1">
-                <span className="font-medium">Active Users</span>
-                <span className="text-gray-600">{stats.users.active}</span>
-              </div>
-              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-indigo-500 rounded-full"
-                  style={{ width: `${(stats.users.active / stats.users.total) * 100}%` }}
-                ></div>
-              </div>
-            </div>
 
-            <div>
-              <div className="flex justify-between text-sm mb-1">
-                <span className="font-medium">Inactive Users</span>
-                <span className="text-gray-600">{stats.users.inactive}</span>
-              </div>
-              <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gray-300 rounded-full"
-                  style={{ width: `${(stats.users.inactive / stats.users.total) * 100}%` }}
-                ></div>
-              </div>
-            </div>
-          </div>
 
           <Link
             to="/users"
@@ -155,27 +124,7 @@ const DashboardHF = () => {
             </div>
           </div>
 
-          <div className="mt-6 grid grid-cols-2 gap-3">
-            <div className="bg-green-50 rounded-lg p-3 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center">
-                <CheckCircle size={18} className="text-green-600" />
-              </div>
-              <div>
-                <p className="text-xs text-green-700 font-medium">Active</p>
-                <p className="text-lg font-bold text-green-800">{stats.chairs.active}</p>
-              </div>
-            </div>
 
-            <div className="bg-orange-50 rounded-lg p-3 flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center">
-                <Clock size={18} className="text-orange-600" />
-              </div>
-              <div>
-                <p className="text-xs text-orange-700 font-medium">Inactive</p>
-                <p className="text-lg font-bold text-orange-800">{stats.chairs.inactive}</p>
-              </div>
-            </div>
-          </div>
 
           <Link
             to="/chairs"
