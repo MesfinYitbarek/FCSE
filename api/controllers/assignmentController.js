@@ -302,7 +302,7 @@ export const autoAssignCommonCourses = async (req, res) => {
           };
         })
       );
-
+   console.log(instructorWorkloads)
       instructorWorkloads.sort(
         (a, b) =>
           a.workload + a.locationPriority - (b.workload + b.locationPriority)

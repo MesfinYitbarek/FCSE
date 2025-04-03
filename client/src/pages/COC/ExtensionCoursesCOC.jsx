@@ -10,7 +10,6 @@ import {
   Users,
   Calendar,
   School,
-  ChevronDown,
   Filter,
   X
 } from "lucide-react";

@@ -10,7 +10,6 @@ import {
   Users,
   Calendar,
   School,
-  ChevronDown,
   Filter,
   X,
   Edit,
@@ -809,7 +808,8 @@ const SummerCoursesCOC = () => {
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">
-                        {filteredAssignments.map((assignment) => (
+                        {filteredAssignments.flatMap((assignment) =>
+                          assignment.assignments.map((assignment) => (
                           <motion.tr
                             key={assignment._id}
                             initial={{ opacity: 0 }}
@@ -849,7 +849,7 @@ const SummerCoursesCOC = () => {
                               </div>
                             </td>
                           </motion.tr>
-                        ))}
+                        )))}
                       </tbody>
                     </table>
                   </div>
