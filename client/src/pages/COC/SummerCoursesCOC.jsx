@@ -113,12 +113,19 @@ const SummerCoursesCOC = () => {
   const fetchAssignments = async () => {
     try {
       setLoading(true);
-      const { data } = await api.get("/assignments");
-      setAssignments(data);
-      setLoading(false);
+      const queryParams = new URLSearchParams({
+        year: selectedYear,
+        semester: "Summer",
+        program: "Summer",
+        assignedBy: "COC",
+      }).toString();
+      
+      const { data } = await api.get(`/assignments/automatic?${queryParams}`);
+      setAssignments(data.assignments);
     } catch (error) {
       console.error("Error fetching assignments:", error);
       setError("Failed to load assignments.");
+    } finally {
       setLoading(false);
     }
   };

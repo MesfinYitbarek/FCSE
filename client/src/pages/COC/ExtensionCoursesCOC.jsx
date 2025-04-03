@@ -125,12 +125,19 @@ const ExtensionCoursesCOC = () => {
   const fetchAssignments = async () => {
     try {
       setLoading(true);
-      const { data } = await api.get("/assignments");
-      setAssignments(data);
-      setLoading(false);
+      const queryParams = new URLSearchParams({
+        year: selectedYear,
+        semester: selectedSemester,
+        program: "Extension",
+        assignedBy: "COC",
+      }).toString();
+
+      const { data } = await api.get(`/assignments/automatic?${queryParams}`);
+      setAssignments(data.assignments);
     } catch (error) {
       console.error("Error fetching assignments:", error);
       setError("Failed to load assignments.");
+    } finally {
       setLoading(false);
     }
   };
@@ -327,7 +334,7 @@ const ExtensionCoursesCOC = () => {
                   ))}
                 </select>
               </div>
-              
+
               <div className="space-y-3">
                 <label className="text-sm font-medium text-gray-700">Semester</label>
                 <select

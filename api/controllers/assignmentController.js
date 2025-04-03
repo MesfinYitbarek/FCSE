@@ -920,11 +920,16 @@ export const getAutomaticAssignments = async (req, res) => {
 
     const { year, semester, program, assignedBy } = req.query;
 
+    let assignedByFilter = assignedBy;
+    if (assignedBy === "COC") {
+      assignedByFilter = { $in: ["Programming", "Software", "Database", "Networking","COC"] };
+    }
+
     const assignments = await Assignment.find({
       year: Number(year),
       semester,
       program,
-      assignedBy,
+      assignedBy: assignedByFilter,
     })
       .populate({
         path: "assignments.instructorId",

@@ -125,19 +125,27 @@ const CommonCoursesCOC = () => {
     }
   };
 
-  // Fetch current assignments
-  const fetchAssignments = async () => {
-    try {
-      setLoading(true);
-      const { data } = await api.get("/assignments");
-      setAssignments(data);
-      setLoading(false);
-    } catch (error) {
-      console.error("Error fetching assignments:", error);
-      setError("Failed to load assignments.");
-      setLoading(false);
-    }
-  };
+ // Fetch current assignments
+const fetchAssignments = async () => {
+  try {
+    setLoading(true);
+    const queryParams = new URLSearchParams({
+      year: selectedYear,
+      semester: selectedSemester,
+      program: "Regular",
+      assignedBy: "COC",
+    }).toString();
+    
+    const { data } = await api.get(`/assignments/automatic?${queryParams}`);
+    setAssignments(data.assignments);
+  } catch (error) {
+    console.error("Error fetching assignments:", error);
+    setError("Failed to load assignments.");
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   // Add assignment to local state
   const addAssignment = () => {
@@ -316,7 +324,7 @@ const CommonCoursesCOC = () => {
               <Calendar className="mr-2" size={20} />
               Select Academic Period
             </h2>
-
+                 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-3">
                 <label className="text-sm font-medium text-gray-700">Academic Year</label>
