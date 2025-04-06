@@ -43,9 +43,18 @@ export const createReport = async (req, res) => {
 };
 
 // Get all reports
+// Updated getAllReports to filter by year, semester, and program
 export const getAllReports = async (req, res) => {
   try {
-    const reports = await Report.find()
+    const { year, semester, program } = req.query;
+    
+    // Build filter object based on provided query parameters
+    const filter = {};
+    if (year) filter.year = parseInt(year);
+    if (semester) filter.semester = semester;
+    if (program) filter.program = program;
+    
+    const reports = await Report.find(filter)
       .populate("generatedBy", "name email")
       .sort({ createdAt: -1 });
       

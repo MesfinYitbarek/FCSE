@@ -11,7 +11,9 @@ import {
   Calendar,
   School,
   Filter,
-  X
+  X,
+  Edit,
+  MoreVertical
 } from "lucide-react";
 import api from "../../utils/api";
 
@@ -26,8 +28,11 @@ const ExtensionCoursesCOC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingAssignment, setEditingAssignment] = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
 
-  // New state for year selection
+  // State for year selection
   const [years, setYears] = useState([]);
   const [semesters, setSemesters] = useState([
     "Extension 1", "Extension 2"
@@ -133,7 +138,17 @@ const ExtensionCoursesCOC = () => {
       }).toString();
 
       const { data } = await api.get(`/assignments/automatic?${queryParams}`);
-      setAssignments(data.assignments);
+      // Flatten the assignments array to make it easier to work with
+      const flattenedAssignments = data.assignments.flatMap(assignment =>
+        assignment.assignments.map(subAssignment => ({
+          ...subAssignment,
+          parentId: assignment._id, // Store the parent ID for reference
+          year: assignment.year,
+          semester: assignment.semester,
+          program: assignment.program
+        }))
+      );
+      setAssignments(flattenedAssignments);
     } catch (error) {
       console.error("Error fetching assignments:", error);
       setError("Failed to load assignments.");
@@ -161,6 +176,91 @@ const ExtensionCoursesCOC = () => {
     setManualAssignments(updatedAssignments);
   };
 
+  // Edit assignment
+  const handleEditAssignment = (assignment) => {
+    setIsEditing(true);
+    setEditingAssignment({
+      id: assignment._id,
+      instructorId: assignment.instructorId?._id || "",
+      courseId: assignment.courseId?._id || "",
+      section: assignment.section || "",
+      labDivision: assignment.labDivision || "No"
+    });
+    setShowAssignmentForm(true);
+  };
+
+  // Cancel editing
+  const cancelEditing = () => {
+    setIsEditing(false);
+    setEditingAssignment(null);
+  };
+
+  // Handle update form input change
+  const handleUpdateInputChange = (field, value) => {
+    setEditingAssignment({
+      ...editingAssignment,
+      [field]: value
+    });
+  };
+
+  // Update assignment
+  const handleUpdateAssignment = async (e) => {
+    e.preventDefault();
+    if (!editingAssignment.instructorId || !editingAssignment.courseId) {
+      setError("Please select both instructor and course.");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      await api.put(`/assignments/${editingAssignment.id}`, {
+        instructorId: editingAssignment.instructorId,
+        courseId: editingAssignment.courseId,
+        section: editingAssignment.section,
+        labDivision: editingAssignment.labDivision,
+        year: selectedYear,
+        semester: selectedSemester,
+        program: "Extension"
+      });
+
+      await fetchAssignments();
+      setSuccess("Assignment updated successfully!");
+      setIsEditing(false);
+      setEditingAssignment(null);
+      setShowAssignmentForm(false);
+    } catch (error) {
+      console.error("Error updating assignment:", error);
+      setError(error.response?.data?.message || "Failed to update assignment.");
+    }
+
+    setLoading(false);
+  };
+
+  // Delete assignment
+  const confirmDeleteAssignment = (assignmentId) => {
+    setDeleteConfirm(assignmentId);
+  };
+
+  const handleDeleteAssignment = async (assignmentId) => {
+    setLoading(true);
+    setError(null);
+    setSuccess(null);
+
+    try {
+      await api.delete(`/assignments/${assignmentId}`);
+      await fetchAssignments();
+      setSuccess("Assignment deleted successfully!");
+      setDeleteConfirm(null);
+    } catch (error) {
+      console.error("Error deleting assignment:", error);
+      setError(error.response?.data?.message || "Failed to delete assignment.");
+    }
+
+    setLoading(false);
+  };
   // Submit bulk manual assignments
   const handleManualAssign = async (e) => {
     e.preventDefault();
@@ -174,7 +274,7 @@ const ExtensionCoursesCOC = () => {
     setSuccess(null);
 
     try {
-      await api.post("/assignments/common/manual", {
+      await api.post("/assignments/extension/manual", {
         assignments: manualAssignments,
         year: selectedYear,
         semester: selectedSemester,
@@ -187,7 +287,7 @@ const ExtensionCoursesCOC = () => {
       setShowAssignmentForm(false);
     } catch (error) {
       console.error("Error assigning manually:", error);
-      setError("Failed to assign manually.");
+      setError(error.response?.data?.message || "Failed to assign manually.");
     }
     setLoading(false);
   };
@@ -248,7 +348,7 @@ const ExtensionCoursesCOC = () => {
       setShowAssignmentForm(false);
     } catch (error) {
       console.error("Error in automatic assignment:", error);
-      setError("Failed to complete automatic assignment.");
+      setError(error.response?.data?.message || "Failed to complete automatic assignment.");
     }
 
     setLoading(false);
@@ -306,6 +406,32 @@ const ExtensionCoursesCOC = () => {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Delete Confirmation Dialog */}
+        {deleteConfirm && (
+          <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">Confirm Deletion</h3>
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to delete this assignment? This action cannot be undone.
+              </p>
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => setDeleteConfirm(null)}
+                  className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => handleDeleteAssignment(deleteConfirm)}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md"
+                >
+                  {loading ? "Deleting..." : "Delete"}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Year Selection Section */}
         {!isSelectionComplete ? (
@@ -403,7 +529,11 @@ const ExtensionCoursesCOC = () => {
                 <h2 className="text-xl font-semibold text-gray-900 mb-6">Assignment Options</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <button
-                    onClick={() => setShowAssignmentForm(!showAssignmentForm)}
+                    onClick={() => {
+                      setShowAssignmentForm(!showAssignmentForm);
+                      setIsEditing(false);
+                      setEditingAssignment(null);
+                    }}
                     className="flex flex-col items-center justify-center p-6 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl border border-blue-200 hover:shadow-md transition-all"
                   >
                     <div className="w-16 h-16 flex items-center justify-center bg-blue-600 text-white rounded-full mb-4">
@@ -418,6 +548,8 @@ const ExtensionCoursesCOC = () => {
                   <button
                     onClick={() => {
                       setShowAssignmentForm(true);
+                      setIsEditing(false);
+                      setEditingAssignment(null);
                       setTimeout(() => {
                         document.getElementById('autoAssignSection')?.scrollIntoView({ behavior: 'smooth' });
                       }, 100);
@@ -445,104 +577,79 @@ const ExtensionCoursesCOC = () => {
                   exit={{ opacity: 0, height: 0 }}
                   className="mb-6"
                 >
-                  {/* Manual Assignment Section */}
-                  <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 overflow-hidden">
-                    <div className="p-6 border-b border-gray-200">
-                      <div className="flex items-center justify-between mb-4">
-                        <h2 className="text-xl font-semibold text-gray-900">Manual Assignment</h2>
-                        <div className="flex space-x-3">
+                  {/* Edit Assignment Form */}
+                  {isEditing && editingAssignment && (
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 overflow-hidden">
+                      <div className="p-6 border-b border-gray-200">
+                        <div className="flex items-center justify-between mb-4">
+                          <h2 className="text-xl font-semibold text-gray-900">Edit Assignment</h2>
                           <button
-                            onClick={addAssignment}
-                            className="inline-flex items-center px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-md transition-colors"
-                          >
-                            <PlusCircle className="mr-2" size={18} />
-                            Add Assignment
-                          </button>
-                          <button
-                            onClick={() => setShowAssignmentForm(false)}
+                            onClick={cancelEditing}
                             className="inline-flex items-center px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md transition-colors"
                           >
                             <X className="mr-2" size={18} />
                             Cancel
                           </button>
                         </div>
-                      </div>
 
-                      <form onSubmit={handleManualAssign} className="space-y-4">
-                        <AnimatePresence>
-                          {manualAssignments.map((assignment, index) => (
-                            <motion.div
-                              key={index}
-                              initial={{ opacity: 0, height: 0 }}
-                              animate={{ opacity: 1, height: "auto" }}
-                              exit={{ opacity: 0, height: 0 }}
-                              className="grid grid-cols-1 md:grid-cols-5 gap-4 p-4 bg-gray-50 rounded-lg relative"
-                            >
-                              <div className="space-y-2">
-                                <label className="text-sm font-medium text-gray-700">Instructor</label>
-                                <select
-                                  onChange={(e) => handleInputChange(index, "instructorId", e.target.value)}
-                                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                >
-                                  <option value="">Select Instructor</option>
-                                  {instructors.map((inst) => (
-                                    <option key={inst._id} value={inst._id}>
-                                      {inst.fullName} - {inst.location}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
+                        <form onSubmit={handleUpdateAssignment} className="space-y-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium text-gray-700">Instructor</label>
+                              <select
+                                value={editingAssignment.instructorId}
+                                onChange={(e) => handleUpdateInputChange("instructorId", e.target.value)}
+                                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                              >
+                                <option value="">Select Instructor</option>
+                                {instructors.map((inst) => (
+                                  <option key={inst._id} value={inst._id}>
+                                    {inst.fullName} - {inst.location}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
 
-                              <div className="space-y-2">
-                                <label className="text-sm font-medium text-gray-700">Course</label>
-                                <select
-                                  onChange={(e) => handleInputChange(index, "courseId", e.target.value)}
-                                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                >
-                                  <option value="">Select Course</option>
-                                  {courses.map((course) => (
-                                    <option key={course._id} value={course._id}>
-                                      {course.name} ({course.code})
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium text-gray-700">Course</label>
+                              <select
+                                value={editingAssignment.courseId}
+                                onChange={(e) => handleUpdateInputChange("courseId", e.target.value)}
+                                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                              >
+                                <option value="">Select Course</option>
+                                {courses.map((course) => (
+                                  <option key={course._id} value={course._id}>
+                                    {course.name} ({course.code})
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
 
-                              <div className="space-y-2">
-                                <label className="text-sm font-medium text-gray-700">Section</label>
-                                <input
-                                  type="text"
-                                  placeholder="Enter section"
-                                  onChange={(e) => handleInputChange(index, "section", e.target.value)}
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                />
-                              </div>
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium text-gray-700">Section</label>
+                              <input
+                                type="text"
+                                placeholder="Enter section"
+                                value={editingAssignment.section}
+                                onChange={(e) => handleUpdateInputChange("section", e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                              />
+                            </div>
 
-                              <div className="space-y-2">
-                                <label className="text-sm font-medium text-gray-700">Lab Division</label>
-                                <select
-                                  onChange={(e) => handleInputChange(index, "labDivision", e.target.value)}
-                                  className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                                >
-                                  <option value="No">No</option>
-                                  <option value="Yes">Yes</option>
-                                </select>
-                              </div>
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium text-gray-700">Lab Division</label>
+                              <select
+                                value={editingAssignment.labDivision}
+                                onChange={(e) => handleUpdateInputChange("labDivision", e.target.value)}
+                                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                              >
+                                <option value="No">No</option>
+                                <option value="Yes">Yes</option>
+                              </select>
+                            </div>
+                          </div>
 
-                              <div className="flex items-end">
-                                <button
-                                  type="button"
-                                  onClick={() => removeAssignment(index)}
-                                  className="px-3 py-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-md flex items-center justify-center w-full"
-                                >
-                                  <Trash2 size={18} />
-                                </button>
-                              </div>
-                            </motion.div>
-                          ))}
-                        </AnimatePresence>
-
-                        {manualAssignments.length > 0 && (
                           <div className="flex justify-end pt-4">
                             <button
                               type="submit"
@@ -554,111 +661,232 @@ const ExtensionCoursesCOC = () => {
                               ) : (
                                 <CheckCircle className="mr-2" size={18} />
                               )}
-                              {loading ? "Assigning..." : "Assign Courses"}
+                              {loading ? "Updating..." : "Update Assignment"}
                             </button>
                           </div>
-                        )}
-                      </form>
+                        </form>
+                      </div>
                     </div>
-                  </div>
+                  )}
+
+                  {/* Manual Assignment Section */}
+                  {!isEditing && (
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 overflow-hidden">
+                      <div className="p-6 border-b border-gray-200">
+                        <div className="flex items-center justify-between mb-4">
+                          <h2 className="text-xl font-semibold text-gray-900">Manual Assignment</h2>
+                          <div className="flex space-x-3">
+                            <button
+                              onClick={addAssignment}
+                              className="inline-flex items-center px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-md transition-colors"
+                            >
+                              <PlusCircle className="mr-2" size={18} />
+                              Add Assignment
+                            </button>
+                            <button
+                              onClick={() => setShowAssignmentForm(false)}
+                              className="inline-flex items-center px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md transition-colors"
+                            >
+                              <X className="mr-2" size={18} />
+                              Cancel
+                            </button>
+                          </div>
+                        </div>
+
+                        <form onSubmit={handleManualAssign} className="space-y-4">
+                          <AnimatePresence>
+                            {manualAssignments.map((assignment, index) => (
+                              <motion.div
+                                key={index}
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: "auto" }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="grid grid-cols-1 md:grid-cols-5 gap-4 p-4 bg-gray-50 rounded-lg relative"
+                              >
+                                <div className="space-y-2">
+                                  <label className="text-sm font-medium text-gray-700">Instructor</label>
+                                  <select
+                                    onChange={(e) => handleInputChange(index, "instructorId", e.target.value)}
+                                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                  >
+                                    <option value="">Select Instructor</option>
+                                    {instructors.map((inst) => (
+                                      <option key={inst._id} value={inst._id}>
+                                        {inst.fullName} - {inst.location}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+
+                                <div className="space-y-2">
+                                  <label className="text-sm font-medium text-gray-700">Course</label>
+                                  <select
+                                    onChange={(e) => handleInputChange(index, "courseId", e.target.value)}
+                                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                  >
+                                    <option value="">Select Course</option>
+                                    {courses.map((course) => (
+                                      <option key={course._id} value={course._id}>
+                                        {course.name} ({course.code})
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+
+                                <div className="space-y-2">
+                                  <label className="text-sm font-medium text-gray-700">Section</label>
+                                  <input
+                                    type="text"
+                                    placeholder="Enter section"
+                                    onChange={(e) => handleInputChange(index, "section", e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                  />
+                                </div>
+
+                                <div className="space-y-2">
+                                  <label className="text-sm font-medium text-gray-700">Lab Division</label>
+                                  <select
+                                    onChange={(e) => handleInputChange(index, "labDivision", e.target.value)}
+                                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                  >
+                                    <option value="No">No</option>
+                                    <option value="Yes">Yes</option>
+                                  </select>
+                                </div>
+
+                                <div className="flex items-end">
+                                  <button
+                                    type="button"
+                                    onClick={() => removeAssignment(index)}
+                                    className="px-3 py-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-md flex items-center justify-center w-full"
+                                  >
+                                    <Trash2 size={18} />
+                                  </button>
+                                </div>
+                              </motion.div>
+                            ))}
+                          </AnimatePresence>
+
+                          {manualAssignments.length > 0 && (
+                            <div className="flex justify-end pt-4">
+                              <button
+                                type="submit"
+                                disabled={loading}
+                                className="inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors disabled:opacity-50"
+                              >
+                                {loading ? (
+                                  <Loader className="animate-spin mr-2" size={18} />
+                                ) : (
+                                  <CheckCircle className="mr-2" size={18} />
+                                )}
+                                {loading ? "Assigning..." : "Assign Courses"}
+                              </button>
+                            </div>
+                          )}
+                        </form>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Auto Assignment Section */}
-                  <div id="autoAssignSection" className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
-                    <div className="p-6">
-                      <div className="flex items-center justify-between mb-6">
-                        <h2 className="text-xl font-semibold text-gray-900">Automatic Assignment</h2>
-                        <button
-                          onClick={() => setShowAssignmentForm(false)}
-                          className="inline-flex items-center px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md transition-colors"
-                        >
-                          <X className="mr-2" size={18} />
-                          Cancel
-                        </button>
-                      </div>
+                  {!isEditing && (
+                    <div id="autoAssignSection" className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
+                      <div className="p-6">
+                        <div className="flex items-center justify-between mb-6">
+                          <h2 className="text-xl font-semibold text-gray-900">Automatic Assignment</h2>
+                          <button
+                            onClick={() => setShowAssignmentForm(false)}
+                            className="inline-flex items-center px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md transition-colors"
+                          >
+                            <X className="mr-2" size={18} />
+                            Cancel
+                          </button>
+                        </div>
 
-                      {/* Instructor Selection */}
-                      <div className="space-y-2">
-                        <label className="text-sm font-medium text-gray-700 flex items-center">
-                          <Users className="mr-2" size={18} />
-                          Select Instructors
-                        </label>
-                        <select
-                          multiple
-                          onChange={handleInstructorSelection}
-                          className="w-full h-48 px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                        >
-                          {instructors.map((inst) => (
-                            <option key={inst._id} value={inst._id}>
-                              {inst.fullName} - {inst.location}
-                            </option>
-                          ))}
-                        </select>
-                        <p className="text-xs text-gray-500">Selected: {selectedInstructors.length} instructors</p>
-                      </div>
+                        {/* Instructor Selection */}
+                        <div className="space-y-2">
+                          <label className="text-sm font-medium text-gray-700 flex items-center">
+                            <Users className="mr-2" size={18} />
+                            Select Instructors
+                          </label>
+                          <select
+                            multiple
+                            onChange={handleInstructorSelection}
+                            className="w-full h-48 px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                          >
+                            {instructors.map((inst) => (
+                              <option key={inst._id} value={inst._id}>
+                                {inst.fullName} - {inst.location}
+                              </option>
+                            ))}
+                          </select>
+                          <p className="text-xs text-gray-500">Selected: {selectedInstructors.length} instructors</p>
+                        </div>
 
-                      {/* Course Selection with Section and Lab Division Inputs */}
-                      <div className="mt-6 space-y-4">
-                        <label className="text-sm font-medium text-gray-700 flex items-center">
-                          <BookOpen className="mr-2" size={18} />
-                          Select Courses and Set Section & Lab Division
-                        </label>
+                        {/* Course Selection with Section and Lab Division Inputs */}
+                        <div className="mt-6 space-y-4">
+                          <label className="text-sm font-medium text-gray-700 flex items-center">
+                            <BookOpen className="mr-2" size={18} />
+                            Select Courses and Set Section & Lab Division
+                          </label>
 
-                        {courses.map((course) => (
-                          <div key={course._id} className="p-4 border border-gray-300 rounded-lg">
-                            <div className="flex items-center space-x-4">
-                              <input
-                                type="checkbox"
-                                value={course._id}
-                                onChange={(e) => handleCourseSelection(e, course)}
-                                checked={selectedCourses.some((c) => c.courseId === course._id)}
-                                className="w-5 h-5 text-purple-600 border-gray-300 rounded"
-                              />
-                              <span className="text-sm">{course.name} ({course.code})</span>
-                            </div>
-
-                            {selectedCourses.some((c) => c.courseId === course._id) && (
-                              <div className="mt-3 space-y-2">
-                                {/* Section Input */}
+                          {courses.map((course) => (
+                            <div key={course._id} className="p-4 border border-gray-300 rounded-lg">
+                              <div className="flex items-center space-x-4">
                                 <input
-                                  type="text"
-                                  placeholder="Enter section"
-                                  value={selectedCourses.find((c) => c.courseId === course._id)?.section || ""}
-                                  onChange={(e) => handleCourseDetailChange(course._id, "section", e.target.value)}
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
+                                  type="checkbox"
+                                  value={course._id}
+                                  onChange={(e) => handleCourseSelection(e, course)}
+                                  checked={selectedCourses.some((c) => c.courseId === course._id)}
+                                  className="w-5 h-5 text-purple-600 border-gray-300 rounded"
                                 />
-
-                                {/* Lab Division Selection */}
-                                <select
-                                  value={selectedCourses.find((c) => c.courseId === course._id)?.labDivision || "No"}
-                                  onChange={(e) => handleCourseDetailChange(course._id, "labDivision", e.target.value)}
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
-                                >
-                                  <option value="No">No Lab</option>
-                                  <option value="Yes">Yes (With Lab)</option>
-                                </select>
+                                <span className="text-sm">{course.name} ({course.code})</span>
                               </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
 
-                      {/* Submit Button */}
-                      <div className="mt-6 flex justify-end">
-                        <button
-                          onClick={handleAutoAssign}
-                          disabled={loading}
-                          className="inline-flex items-center px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors disabled:opacity-50"
-                        >
-                          {loading ? (
-                            <Loader className="animate-spin mr-2" size={18} />
-                          ) : (
-                            <School className="mr-2" size={18} />
-                          )}
-                          {loading ? "Processing..." : "Start Automatic Assignment"}
-                        </button>
+                              {selectedCourses.some((c) => c.courseId === course._id) && (
+                                <div className="mt-3 space-y-2">
+                                  {/* Section Input */}
+                                  <input
+                                    type="text"
+                                    placeholder="Enter section"
+                                    value={selectedCourses.find((c) => c.courseId === course._id)?.section || ""}
+                                    onChange={(e) => handleCourseDetailChange(course._id, "section", e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
+                                  />
+
+                                  {/* Lab Division Selection */}
+                                  <select
+                                    value={selectedCourses.find((c) => c.courseId === course._id)?.labDivision || "No"}
+                                    onChange={(e) => handleCourseDetailChange(course._id, "labDivision", e.target.value)}
+                                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
+                                  >
+                                    <option value="No">No Lab</option>
+                                    <option value="Yes">Yes (With Lab)</option>
+                                  </select>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Submit Button */}
+                        <div className="mt-6 flex justify-end">
+                          <button
+                            onClick={handleAutoAssign}
+                            disabled={loading}
+                            className="inline-flex items-center px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors disabled:opacity-50"
+                          >
+                            {loading ? (
+                              <Loader className="animate-spin mr-2" size={18} />
+                            ) : (
+                              <School className="mr-2" size={18} />
+                            )}
+                            {loading ? "Processing..." : "Start Automatic Assignment"}
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -722,39 +950,56 @@ const ExtensionCoursesCOC = () => {
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Workload
                           </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Actions
+                          </th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200">
-                        {filteredAssignments.flatMap((assignment) =>
-                          assignment.assignments.map((subAssignment) => (
-                            <motion.tr
-                              key={subAssignment._id}
-                              initial={{ opacity: 0 }}
-                              animate={{ opacity: 1 }}
-                              whileHover={{ backgroundColor: "rgba(249, 250, 251, 0.5)" }}
-                              className="transition-colors"
-                            >
-                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                {subAssignment.instructorId?.fullName || "Unassigned"}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {subAssignment.courseId?.name || "N/A"}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {subAssignment.courseId?.code || "N/A"}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {subAssignment.section || "N/A"}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {subAssignment.labDivision}
-                              </td>
-                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                {subAssignment.workload?.toFixed(2) || "N/A"}
-                              </td>
-                            </motion.tr>
-                          ))
-                        )}
+                        {filteredAssignments.map((assignment) => (
+                          <motion.tr
+                            key={assignment._id}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            whileHover={{ backgroundColor: "rgba(249, 250, 251, 0.5)" }}
+                            className="transition-colors"
+                          >
+                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                              {assignment.instructorId?.fullName || "Unassigned"}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {assignment.courseId?.name || "N/A"}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {assignment.courseId?.code || "N/A"}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {assignment.section || "N/A"}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {assignment.labDivision}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {assignment.workload?.toFixed(2) || "N/A"}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 flex space-x-2">
+                              <button
+                                onClick={() => handleEditAssignment(assignment)}
+                                className="p-1 rounded-md text-blue-600 hover:bg-blue-50"
+                                title="Edit"
+                              >
+                                <Edit size={16} />
+                              </button>
+                              <button
+                                onClick={() => confirmDeleteAssignment(assignment._id)}
+                                className="p-1 rounded-md text-red-600 hover:bg-red-50"
+                                title="Delete"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </td>
+                          </motion.tr>
+                        ))}
                       </tbody>
                     </table>
                   </div>

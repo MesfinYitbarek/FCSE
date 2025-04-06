@@ -46,6 +46,7 @@ import NotFound from "@/pages/NotFound";
 import PreferenceCH from "@/pages/ChairHead/PreferencesCH";
 import COCDashboard from "@/pages/COC/COCDashboard";
 import InstructorDashboard from "@/pages/Instructor/InstructorDashboard.jsx";
+import ReportsDetail from "@/components/ReportsHOF/ReportsDetail";
 
 const AppRoutes = () => {
   const { user, isLoading } = useSelector((state) => state.auth);
@@ -92,6 +93,7 @@ const AppRoutes = () => {
               <Route path="/positions" element={<PositionsHF />} />
               <Route path="/rules" element={<RulesHF />} />
               <Route path="/reports" element={<ReportsHF />} />
+              <Route path="/reports/:reportId" element={<ReportsDetail />} />
               <Route path="/weights" element={<ManageWeights />} />
               <Route path="/announcementsView" element={<AnnouncementsView />} />
             </Route>
@@ -106,7 +108,8 @@ const AppRoutes = () => {
               <Route path="/assignments" element={<CourseAssignment />} />
               <Route path="/assignmentsCH" element={<ViewAssignmentsCH />} />
               <Route path="/complaintsCH" element={<ComplaintsCH />} />
-              <Route path="/reportsCH" element={<ReportsCH />} />
+              <Route path="/reportsCH" element={<ReportsHF />} />
+              <Route path="/reportsCH/:reportId" element={<ReportsDetail />} />
               <Route path="/announcementsCH" element={<AnnouncementsCH />} />
             </Route>
 
