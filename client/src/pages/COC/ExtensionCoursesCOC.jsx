@@ -89,7 +89,7 @@ const ExtensionCoursesCOC = () => {
     if (selectedYear && selectedSemester) {
       setIsSelectionComplete(true);
     } else {
-      setError("Please select a year");
+      setError("Please select both year and semester");
     }
   };
 
@@ -138,17 +138,9 @@ const ExtensionCoursesCOC = () => {
       }).toString();
 
       const { data } = await api.get(`/assignments/automatic?${queryParams}`);
-      // Flatten the assignments array to make it easier to work with
-      const flattenedAssignments = data.assignments.flatMap(assignment =>
-        assignment.assignments.map(subAssignment => ({
-          ...subAssignment,
-          parentId: assignment._id, // Store the parent ID for reference
-          year: assignment.year,
-          semester: assignment.semester,
-          program: assignment.program
-        }))
-      );
-      setAssignments(flattenedAssignments);
+      console.log("Fetched assignments:", data.assignments);
+      
+      setAssignments(data.assignments);
     } catch (error) {
       console.error("Error fetching assignments:", error);
       setError("Failed to load assignments.");
@@ -176,15 +168,17 @@ const ExtensionCoursesCOC = () => {
     setManualAssignments(updatedAssignments);
   };
 
-  // Edit assignment
-  const handleEditAssignment = (assignment) => {
+  // Edit assignment with the correct nested structure
+  const handleEditAssignment = (subAssignment, parentId) => {
+    console.log("Editing assignment:", subAssignment._id, "from parent:", parentId);
     setIsEditing(true);
     setEditingAssignment({
-      id: assignment._id,
-      instructorId: assignment.instructorId?._id || "",
-      courseId: assignment.courseId?._id || "",
-      section: assignment.section || "",
-      labDivision: assignment.labDivision || "No"
+      parentId: parentId, // Store the parent assignment ID
+      subId: subAssignment._id, // Store the sub-assignment ID
+      instructorId: subAssignment.instructorId?._id || "",
+      courseId: subAssignment.courseId?._id || "",
+      section: subAssignment.section || "",
+      labDivision: subAssignment.labDivision || "No"
     });
     setShowAssignmentForm(true);
   };
@@ -203,7 +197,7 @@ const ExtensionCoursesCOC = () => {
     });
   };
 
-  // Update assignment
+  // Update assignment with nested structure
   const handleUpdateAssignment = async (e) => {
     e.preventDefault();
     if (!editingAssignment.instructorId || !editingAssignment.courseId) {
@@ -216,7 +210,10 @@ const ExtensionCoursesCOC = () => {
     setSuccess(null);
 
     try {
-      await api.put(`/assignments/${editingAssignment.id}`, {
+      console.log("Updating sub-assignment:", editingAssignment.subId, "in parent:", editingAssignment.parentId);
+      
+      // Use the new custom endpoint that can handle nested assignments
+      await api.put(`/assignments/sub/${editingAssignment.parentId}/${editingAssignment.subId}`, {
         instructorId: editingAssignment.instructorId,
         courseId: editingAssignment.courseId,
         section: editingAssignment.section,
@@ -232,35 +229,44 @@ const ExtensionCoursesCOC = () => {
       setEditingAssignment(null);
       setShowAssignmentForm(false);
     } catch (error) {
-      console.error("Error updating assignment:", error);
-      setError(error.response?.data?.message || "Failed to update assignment.");
+      console.error("Error updating assignment:", error.response?.data || error);
+      setError(error.response?.data?.message || "Failed to update assignment. Make sure your backend supports updating nested assignments.");
     }
 
     setLoading(false);
   };
 
-  // Delete assignment
-  const confirmDeleteAssignment = (assignmentId) => {
-    setDeleteConfirm(assignmentId);
+  // Delete assignment - Modified to handle nested structure
+  const confirmDeleteAssignment = (subId, parentId) => {
+    console.log("Confirming delete for sub-assignment ID:", subId, "from parent:", parentId);
+    setDeleteConfirm({ subId, parentId });
   };
 
-  const handleDeleteAssignment = async (assignmentId) => {
+  const handleDeleteAssignment = async () => {
+    if (!deleteConfirm) return;
+    
+    const { subId, parentId } = deleteConfirm;
     setLoading(true);
     setError(null);
     setSuccess(null);
 
     try {
-      await api.delete(`/assignments/${assignmentId}`);
+      console.log("Deleting sub-assignment:", subId, "from parent:", parentId);
+      
+      // Use the new custom endpoint that can handle nested assignments
+      await api.delete(`/assignments/sub/${parentId}/${subId}`);
+      
       await fetchAssignments();
       setSuccess("Assignment deleted successfully!");
       setDeleteConfirm(null);
     } catch (error) {
-      console.error("Error deleting assignment:", error);
-      setError(error.response?.data?.message || "Failed to delete assignment.");
+      console.error("Error deleting assignment:", error.response?.data || error);
+      setError(error.response?.data?.message || "Failed to delete assignment. Make sure your backend supports deleting nested assignments.");
     }
-
+    
     setLoading(false);
   };
+
   // Submit bulk manual assignments
   const handleManualAssign = async (e) => {
     e.preventDefault();
@@ -361,7 +367,7 @@ const ExtensionCoursesCOC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
         {/* Header Section */}
         <motion.div
@@ -369,8 +375,8 @@ const ExtensionCoursesCOC = () => {
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <h1 className="text-3xl font-bold text-gray-900">Extension Course Assignments</h1>
-          <p className="mt-2 text-gray-600">Manage and assign extension courses to instructors</p>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Extension Course Assignments</h1>
+          <p className="mt-2 text-gray-600 dark:text-gray-400">Manage and assign extension courses to instructors</p>
         </motion.div>
 
         {/* Notifications */}
@@ -378,13 +384,13 @@ const ExtensionCoursesCOC = () => {
           {error && (
             <motion.div
               {...fadeIn}
-              className="flex items-center p-4 bg-red-50 border-l-4 border-red-500 rounded-md mb-6"
+              className="flex items-center p-4 bg-red-50 dark:bg-red-900/30 border-l-4 border-red-500 rounded-md mb-6"
             >
-              <AlertCircle className="text-red-500 mr-3" size={20} />
-              <p className="text-red-700">{error}</p>
+              <AlertCircle className="text-red-500 dark:text-red-400 mr-3" size={20} />
+              <p className="text-red-700 dark:text-red-300">{error}</p>
               <button
                 onClick={() => setError(null)}
-                className="ml-auto text-red-500 hover:text-red-700"
+                className="ml-auto text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
               >
                 <X size={18} />
               </button>
@@ -393,13 +399,13 @@ const ExtensionCoursesCOC = () => {
           {success && (
             <motion.div
               {...fadeIn}
-              className="flex items-center p-4 bg-green-50 border-l-4 border-green-500 rounded-md mb-6"
+              className="flex items-center p-4 bg-green-50 dark:bg-green-900/30 border-l-4 border-green-500 rounded-md mb-6"
             >
-              <CheckCircle className="text-green-500 mr-3" size={20} />
-              <p className="text-green-700">{success}</p>
+              <CheckCircle className="text-green-500 dark:text-green-400 mr-3" size={20} />
+              <p className="text-green-700 dark:text-green-300">{success}</p>
               <button
                 onClick={() => setSuccess(null)}
-                className="ml-auto text-green-500 hover:text-green-700"
+                className="ml-auto text-green-500 dark:text-green-400 hover:text-green-700 dark:hover:text-green-300"
               >
                 <X size={18} />
               </button>
@@ -410,20 +416,20 @@ const ExtensionCoursesCOC = () => {
         {/* Delete Confirmation Dialog */}
         {deleteConfirm && (
           <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Confirm Deletion</h3>
-              <p className="text-gray-600 mb-6">
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Confirm Deletion</h3>
+              <p className="text-gray-600 dark:text-gray-300 mb-6">
                 Are you sure you want to delete this assignment? This action cannot be undone.
               </p>
               <div className="flex justify-end space-x-3">
                 <button
                   onClick={() => setDeleteConfirm(null)}
-                  className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md"
+                  className="px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-md"
                 >
                   Cancel
                 </button>
                 <button
-                  onClick={() => handleDeleteAssignment(deleteConfirm)}
+                  onClick={handleDeleteAssignment}
                   className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md"
                 >
                   {loading ? "Deleting..." : "Delete"}
@@ -437,20 +443,20 @@ const ExtensionCoursesCOC = () => {
         {!isSelectionComplete ? (
           <motion.div
             {...fadeIn}
-            className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 p-6"
+            className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 mb-6 p-6"
           >
-            <h2 className="text-xl font-semibold text-gray-900 mb-6 flex items-center">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6 flex items-center">
               <Calendar className="mr-2" size={20} />
               Select Academic Period
             </h2>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-3">
-                <label className="text-sm font-medium text-gray-700">Academic Year</label>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Academic Year</label>
                 <select
                   value={selectedYear}
                   onChange={(e) => setSelectedYear(e.target.value)}
-                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-800"
+                  className="w-full px-4 py-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-800 dark:text-gray-200 text-base"
                 >
                   <option value="">Select Year</option>
                   {years.map((year) => (
@@ -462,11 +468,11 @@ const ExtensionCoursesCOC = () => {
               </div>
 
               <div className="space-y-3">
-                <label className="text-sm font-medium text-gray-700">Semester</label>
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Semester</label>
                 <select
                   value={selectedSemester}
                   onChange={(e) => setSelectedSemester(e.target.value)}
-                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-800"
+                  className="w-full px-4 py-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-800 dark:text-gray-200 text-base"
                 >
                   <option value="">Select Semester</option>
                   {semesters.map((semester) => (
@@ -491,25 +497,25 @@ const ExtensionCoursesCOC = () => {
         ) : (
           <motion.div
             {...fadeIn}
-            className="mb-6 flex items-center justify-between bg-indigo-50 p-4 rounded-lg border border-indigo-100"
+            className="mb-6 flex flex-wrap items-center justify-between bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-lg border border-indigo-100 dark:border-indigo-800"
           >
-            <div className="flex items-center space-x-4">
-              <div className="px-4 py-2 bg-indigo-100 rounded-md flex items-center">
-                <Calendar className="text-indigo-600 mr-2" size={18} />
-                <span className="font-medium text-indigo-800">{selectedYear}</span>
+            <div className="flex flex-wrap items-center gap-4 mb-2 sm:mb-0">
+              <div className="px-4 py-2 bg-indigo-100 dark:bg-indigo-800 rounded-md flex items-center">
+                <Calendar className="text-indigo-600 dark:text-indigo-400 mr-2" size={18} />
+                <span className="font-medium text-indigo-800 dark:text-indigo-200">{selectedYear}</span>
               </div>
-              <div className="px-4 py-2 bg-indigo-100 rounded-md flex items-center">
-                <School className="text-indigo-600 mr-2" size={18} />
-                <span className="font-medium text-indigo-800">{selectedSemester}</span>
+              <div className="px-4 py-2 bg-indigo-100 dark:bg-indigo-800 rounded-md flex items-center">
+                <School className="text-indigo-600 dark:text-indigo-400 mr-2" size={18} />
+                <span className="font-medium text-indigo-800 dark:text-indigo-200">{selectedSemester}</span>
               </div>
-              <div className="px-4 py-2 bg-indigo-100 rounded-md flex items-center">
-                <School className="text-indigo-600 mr-2" size={18} />
-                <span className="font-medium text-indigo-800">Extension Program</span>
+              <div className="px-4 py-2 bg-indigo-100 dark:bg-indigo-800 rounded-md flex items-center">
+                <School className="text-indigo-600 dark:text-indigo-400 mr-2" size={18} />
+                <span className="font-medium text-indigo-800 dark:text-indigo-200">Extension Program</span>
               </div>
             </div>
             <button
               onClick={resetSelection}
-              className="text-indigo-600 hover:text-indigo-800 font-medium flex items-center"
+              className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-200 font-medium flex items-center"
             >
               <X className="mr-1" size={16} />
               Change Period
@@ -523,10 +529,10 @@ const ExtensionCoursesCOC = () => {
             {/* Assignment Options */}
             <motion.div
               {...fadeIn}
-              className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6"
+              className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 mb-6"
             >
               <div className="p-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-6">Assignment Options</h2>
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">Assignment Options</h2>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <button
                     onClick={() => {
@@ -534,13 +540,13 @@ const ExtensionCoursesCOC = () => {
                       setIsEditing(false);
                       setEditingAssignment(null);
                     }}
-                    className="flex flex-col items-center justify-center p-6 bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl border border-blue-200 hover:shadow-md transition-all"
+                    className="flex flex-col items-center justify-center p-6 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/40 dark:to-blue-800/40 rounded-xl border border-blue-200 dark:border-blue-800 hover:shadow-md transition-all"
                   >
                     <div className="w-16 h-16 flex items-center justify-center bg-blue-600 text-white rounded-full mb-4">
                       <PlusCircle size={28} />
                     </div>
-                    <h3 className="text-lg font-medium text-gray-900">Manual Assignment</h3>
-                    <p className="text-sm text-gray-600 text-center mt-2">
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-white">Manual Assignment</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 text-center mt-2">
                       Assign specific instructors to specific courses
                     </p>
                   </button>
@@ -554,13 +560,13 @@ const ExtensionCoursesCOC = () => {
                         document.getElementById('autoAssignSection')?.scrollIntoView({ behavior: 'smooth' });
                       }, 100);
                     }}
-                    className="flex flex-col items-center justify-center p-6 bg-gradient-to-br from-green-50 to-green-100 rounded-xl border border-green-200 hover:shadow-md transition-all"
+                    className="flex flex-col items-center justify-center p-6 bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/40 dark:to-green-800/40 rounded-xl border border-green-200 dark:border-green-800 hover:shadow-md transition-all"
                   >
                     <div className="w-16 h-16 flex items-center justify-center bg-green-600 text-white rounded-full mb-4">
                       <School size={28} />
                     </div>
-                    <h3 className="text-lg font-medium text-gray-900">Automatic Assignment</h3>
-                    <p className="text-sm text-gray-600 text-center mt-2">
+                    <h3 className="text-lg font-medium text-gray-900 dark:text-white">Automatic Assignment</h3>
+                    <p className="text-sm text-gray-600 dark:text-gray-400 text-center mt-2">
                       Automatically assign courses based on your selection
                     </p>
                   </button>
@@ -579,13 +585,13 @@ const ExtensionCoursesCOC = () => {
                 >
                   {/* Edit Assignment Form */}
                   {isEditing && editingAssignment && (
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 overflow-hidden">
-                      <div className="p-6 border-b border-gray-200">
+                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 mb-6 overflow-hidden">
+                      <div className="p-6 border-b border-gray-200 dark:border-gray-700">
                         <div className="flex items-center justify-between mb-4">
-                          <h2 className="text-xl font-semibold text-gray-900">Edit Assignment</h2>
+                          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Edit Assignment</h2>
                           <button
                             onClick={cancelEditing}
-                            className="inline-flex items-center px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md transition-colors"
+                            className="inline-flex items-center px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-md transition-colors"
                           >
                             <X className="mr-2" size={18} />
                             Cancel
@@ -595,11 +601,11 @@ const ExtensionCoursesCOC = () => {
                         <form onSubmit={handleUpdateAssignment} className="space-y-4">
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
-                              <label className="text-sm font-medium text-gray-700">Instructor</label>
+                              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Instructor</label>
                               <select
                                 value={editingAssignment.instructorId}
                                 onChange={(e) => handleUpdateInputChange("instructorId", e.target.value)}
-                                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent text-base"
                               >
                                 <option value="">Select Instructor</option>
                                 {instructors.map((inst) => (
@@ -611,11 +617,11 @@ const ExtensionCoursesCOC = () => {
                             </div>
 
                             <div className="space-y-2">
-                              <label className="text-sm font-medium text-gray-700">Course</label>
+                              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Course</label>
                               <select
                                 value={editingAssignment.courseId}
                                 onChange={(e) => handleUpdateInputChange("courseId", e.target.value)}
-                                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent text-base"
                               >
                                 <option value="">Select Course</option>
                                 {courses.map((course) => (
@@ -627,22 +633,22 @@ const ExtensionCoursesCOC = () => {
                             </div>
 
                             <div className="space-y-2">
-                              <label className="text-sm font-medium text-gray-700">Section</label>
+                              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Section</label>
                               <input
                                 type="text"
                                 placeholder="Enter section"
                                 value={editingAssignment.section}
                                 onChange={(e) => handleUpdateInputChange("section", e.target.value)}
-                                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent text-base"
                               />
                             </div>
 
                             <div className="space-y-2">
-                              <label className="text-sm font-medium text-gray-700">Lab Division</label>
+                              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Lab Division</label>
                               <select
                                 value={editingAssignment.labDivision}
                                 onChange={(e) => handleUpdateInputChange("labDivision", e.target.value)}
-                                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent text-base"
                               >
                                 <option value="No">No</option>
                                 <option value="Yes">Yes</option>
@@ -671,11 +677,11 @@ const ExtensionCoursesCOC = () => {
 
                   {/* Manual Assignment Section */}
                   {!isEditing && (
-                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6 overflow-hidden">
-                      <div className="p-6 border-b border-gray-200">
-                        <div className="flex items-center justify-between mb-4">
-                          <h2 className="text-xl font-semibold text-gray-900">Manual Assignment</h2>
-                          <div className="flex space-x-3">
+                    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 mb-6 overflow-hidden">
+                      <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+                        <div className="flex flex-wrap items-center justify-between mb-4 gap-3">
+                          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Manual Assignment</h2>
+                          <div className="flex flex-wrap gap-3">
                             <button
                               onClick={addAssignment}
                               className="inline-flex items-center px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-md transition-colors"
@@ -685,7 +691,7 @@ const ExtensionCoursesCOC = () => {
                             </button>
                             <button
                               onClick={() => setShowAssignmentForm(false)}
-                              className="inline-flex items-center px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md transition-colors"
+                              className="inline-flex items-center px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-md transition-colors"
                             >
                               <X className="mr-2" size={18} />
                               Cancel
@@ -701,13 +707,13 @@ const ExtensionCoursesCOC = () => {
                                 initial={{ opacity: 0, height: 0 }}
                                 animate={{ opacity: 1, height: "auto" }}
                                 exit={{ opacity: 0, height: 0 }}
-                                className="grid grid-cols-1 md:grid-cols-5 gap-4 p-4 bg-gray-50 rounded-lg relative"
+                                className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg relative"
                               >
                                 <div className="space-y-2">
-                                  <label className="text-sm font-medium text-gray-700">Instructor</label>
+                                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Instructor</label>
                                   <select
                                     onChange={(e) => handleInputChange(index, "instructorId", e.target.value)}
-                                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                    className="w-full px-3 py-2 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent text-base"
                                   >
                                     <option value="">Select Instructor</option>
                                     {instructors.map((inst) => (
@@ -719,10 +725,10 @@ const ExtensionCoursesCOC = () => {
                                 </div>
 
                                 <div className="space-y-2">
-                                  <label className="text-sm font-medium text-gray-700">Course</label>
+                                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Course</label>
                                   <select
                                     onChange={(e) => handleInputChange(index, "courseId", e.target.value)}
-                                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                    className="w-full px-3 py-2 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent text-base"
                                   >
                                     <option value="">Select Course</option>
                                     {courses.map((course) => (
@@ -734,20 +740,20 @@ const ExtensionCoursesCOC = () => {
                                 </div>
 
                                 <div className="space-y-2">
-                                  <label className="text-sm font-medium text-gray-700">Section</label>
+                                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Section</label>
                                   <input
                                     type="text"
                                     placeholder="Enter section"
                                     onChange={(e) => handleInputChange(index, "section", e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                    className="w-full px-3 py-2 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent text-base"
                                   />
                                 </div>
 
                                 <div className="space-y-2">
-                                  <label className="text-sm font-medium text-gray-700">Lab Division</label>
+                                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Lab Division</label>
                                   <select
                                     onChange={(e) => handleInputChange(index, "labDivision", e.target.value)}
-                                    className="w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                    className="w-full px-3 py-2 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent text-base"
                                   >
                                     <option value="No">No</option>
                                     <option value="Yes">Yes</option>
@@ -758,7 +764,7 @@ const ExtensionCoursesCOC = () => {
                                   <button
                                     type="button"
                                     onClick={() => removeAssignment(index)}
-                                    className="px-3 py-2 bg-red-100 hover:bg-red-200 text-red-600 rounded-md flex items-center justify-center w-full"
+                                    className="px-3 py-2 bg-red-100 dark:bg-red-900/40 hover:bg-red-200 dark:hover:bg-red-900/60 text-red-600 dark:text-red-400 rounded-md flex items-center justify-center w-full"
                                   >
                                     <Trash2 size={18} />
                                   </button>
@@ -790,13 +796,13 @@ const ExtensionCoursesCOC = () => {
 
                   {/* Auto Assignment Section */}
                   {!isEditing && (
-                    <div id="autoAssignSection" className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
+                    <div id="autoAssignSection" className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 mb-6">
                       <div className="p-6">
                         <div className="flex items-center justify-between mb-6">
-                          <h2 className="text-xl font-semibold text-gray-900">Automatic Assignment</h2>
+                          <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Automatic Assignment</h2>
                           <button
                             onClick={() => setShowAssignmentForm(false)}
-                            className="inline-flex items-center px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md transition-colors"
+                            className="inline-flex items-center px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-md transition-colors"
                           >
                             <X className="mr-2" size={18} />
                             Cancel
@@ -805,14 +811,14 @@ const ExtensionCoursesCOC = () => {
 
                         {/* Instructor Selection */}
                         <div className="space-y-2">
-                          <label className="text-sm font-medium text-gray-700 flex items-center">
+                          <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
                             <Users className="mr-2" size={18} />
                             Select Instructors
                           </label>
                           <select
                             multiple
                             onChange={handleInstructorSelection}
-                            className="w-full h-48 px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                            className="w-full h-48 px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent text-base"
                           >
                             {instructors.map((inst) => (
                               <option key={inst._id} value={inst._id}>
@@ -820,25 +826,25 @@ const ExtensionCoursesCOC = () => {
                               </option>
                             ))}
                           </select>
-                          <p className="text-xs text-gray-500">Selected: {selectedInstructors.length} instructors</p>
+                          <p className="text-xs text-gray-500 dark:text-gray-400">Selected: {selectedInstructors.length} instructors</p>
                         </div>
 
                         {/* Course Selection with Section and Lab Division Inputs */}
                         <div className="mt-6 space-y-4">
-                          <label className="text-sm font-medium text-gray-700 flex items-center">
+                          <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
                             <BookOpen className="mr-2" size={18} />
                             Select Courses and Set Section & Lab Division
                           </label>
 
                           {courses.map((course) => (
-                            <div key={course._id} className="p-4 border border-gray-300 rounded-lg">
+                            <div key={course._id} className="p-4 border border-gray-300 dark:border-gray-600 rounded-lg">
                               <div className="flex items-center space-x-4">
                                 <input
                                   type="checkbox"
                                   value={course._id}
                                   onChange={(e) => handleCourseSelection(e, course)}
                                   checked={selectedCourses.some((c) => c.courseId === course._id)}
-                                  className="w-5 h-5 text-purple-600 border-gray-300 rounded"
+                                  className="w-5 h-5 text-purple-600 border-gray-300 dark:border-gray-600 rounded"
                                 />
                                 <span className="text-sm">{course.name} ({course.code})</span>
                               </div>
@@ -851,14 +857,14 @@ const ExtensionCoursesCOC = () => {
                                     placeholder="Enter section"
                                     value={selectedCourses.find((c) => c.courseId === course._id)?.section || ""}
                                     onChange={(e) => handleCourseDetailChange(course._id, "section", e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
+                                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-base"
                                   />
 
                                   {/* Lab Division Selection */}
                                   <select
                                     value={selectedCourses.find((c) => c.courseId === course._id)?.labDivision || "No"}
                                     onChange={(e) => handleCourseDetailChange(course._id, "labDivision", e.target.value)}
-                                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm"
+                                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-base"
                                   >
                                     <option value="No">No Lab</option>
                                     <option value="Yes">Yes (With Lab)</option>
@@ -894,27 +900,27 @@ const ExtensionCoursesCOC = () => {
             {/* Assignments Table */}
             <motion.div
               {...fadeIn}
-              className="bg-white rounded-xl shadow-sm border border-gray-200"
+              className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700"
             >
               <div className="p-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-6 flex items-center">
+                <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6 flex items-center">
                   <BookOpen className="mr-2" size={20} />
                   Current Assignments
-                  <span className="ml-3 px-3 py-1 bg-indigo-100 text-indigo-800 text-sm rounded-full">
-                    {selectedYear}- {selectedSemester} - Extension Program
+                  <span className="ml-3 px-3 py-1 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-800 dark:text-indigo-200 text-sm rounded-full">
+                    {selectedYear} - {selectedSemester} - Extension Program
                   </span>
                 </h2>
 
                 {loading ? (
                   <div className="flex justify-center items-center py-12">
-                    <Loader className="animate-spin text-indigo-600 mr-3" size={24} />
-                    <p className="text-gray-700">Loading assignments...</p>
+                    <Loader className="animate-spin text-indigo-600 dark:text-indigo-400 mr-3" size={24} />
+                    <p className="text-gray-700 dark:text-gray-300">Loading assignments...</p>
                   </div>
                 ) : filteredAssignments.length === 0 ? (
-                  <div className="text-center py-12 bg-gray-50 rounded-lg">
-                    <School className="mx-auto h-12 w-12 text-gray-400" />
-                    <h3 className="mt-2 text-sm font-medium text-gray-900">No assignments found</h3>
-                    <p className="mt-1 text-sm text-gray-500">
+                  <div className="text-center py-12 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <School className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
+                    <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">No assignments found</h3>
+                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                       There are no assignments for this academic period yet.
                     </p>
                     <div className="mt-6">
@@ -928,78 +934,80 @@ const ExtensionCoursesCOC = () => {
                     </div>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full">
-                      <thead>
-                        <tr className="bg-gray-50">
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <div className="overflow-x-auto -mx-6 px-6">
+                    <table className="w-full min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                      <thead className="bg-gray-50 dark:bg-gray-700">
+                        <tr>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                             Instructor
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                             Course
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                             Code
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                             Section
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                             Lab
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                             Workload
                           </th>
-                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                             Actions
                           </th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-200">
-                        {filteredAssignments.map((assignment) => (
-                          <motion.tr
-                            key={assignment._id}
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            whileHover={{ backgroundColor: "rgba(249, 250, 251, 0.5)" }}
-                            className="transition-colors"
-                          >
-                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                              {assignment.instructorId?.fullName || "Unassigned"}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {assignment.courseId?.name || "N/A"}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {assignment.courseId?.code || "N/A"}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {assignment.section || "N/A"}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {assignment.labDivision}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              {assignment.workload?.toFixed(2) || "N/A"}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 flex space-x-2">
-                              <button
-                                onClick={() => handleEditAssignment(assignment)}
-                                className="p-1 rounded-md text-blue-600 hover:bg-blue-50"
-                                title="Edit"
-                              >
-                                <Edit size={16} />
-                              </button>
-                              <button
-                                onClick={() => confirmDeleteAssignment(assignment._id)}
-                                className="p-1 rounded-md text-red-600 hover:bg-red-50"
-                                title="Delete"
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            </td>
-                          </motion.tr>
-                        ))}
+                      <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                        {filteredAssignments.flatMap((assignment) =>
+                          assignment.assignments.map((subAssignment) => (
+                            <motion.tr
+                              key={subAssignment._id}
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              whileHover={{ backgroundColor: "rgba(249, 250, 251, 0.5)" }}
+                              className="transition-colors"
+                            >
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
+                                {subAssignment.instructorId?.fullName || "Unassigned"}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                {subAssignment.courseId?.name || "N/A"}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                {subAssignment.courseId?.code || "N/A"}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                {subAssignment.section || "N/A"}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                {subAssignment.labDivision}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                                {subAssignment.workload?.toFixed(2) || "N/A"}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 flex space-x-2">
+                                <button
+                                  onClick={() => handleEditAssignment(subAssignment, assignment._id)}
+                                  className="p-1 rounded-md text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30"
+                                  title="Edit"
+                                >
+                                  <Edit size={16} />
+                                </button>
+                                <button
+                                  onClick={() => confirmDeleteAssignment(subAssignment._id, assignment._id)}
+                                  className="p-1 rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30"
+                                  title="Delete"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </td>
+                            </motion.tr>
+                          ))
+                        )}
                       </tbody>
                     </table>
                   </div>

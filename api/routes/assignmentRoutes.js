@@ -22,8 +22,8 @@ router.get("/", authenticate, getAllAssignments);
 router.get("/automatic", getAutomaticAssignments);
 router.post("/automatic", runAutomaticAssignment);
 router.get("/get/:id", authenticate, getAssignmentById);
-router.put("/:id", authenticate, authorize(["ChairHead", "COC"]), updateAssignment);
-router.delete("/:id", authenticate, authorize(["ChairHead", "COC"]), deleteAssignment);
+router.put("/sub/:parentId/:subId", authenticate, authorize(["ChairHead", "COC"]), updateAssignment);
+router.delete("/sub/:parentId/:subId", authenticate, authorize(["ChairHead", "COC"]), deleteAssignment);
 
 
 // ✅ Manual assignment by Chair Head or COC
