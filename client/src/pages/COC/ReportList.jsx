@@ -183,7 +183,7 @@ const ReportList = ({ reports = [], loading, error, onDeleteSuccess }) => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex justify-end space-x-2">
-                      <Link to={`/reports/${report._id}`} className="text-blue-600 hover:text-blue-900">
+                      <Link to={`/reportsCOC/${report._id}`} className="text-blue-600 hover:text-blue-900">
                         <button className="p-1 rounded-full hover:bg-blue-50 transition">
                           <Eye size={18} />
                         </button>

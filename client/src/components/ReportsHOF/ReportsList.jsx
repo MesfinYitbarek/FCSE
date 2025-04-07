@@ -145,11 +145,11 @@ const ReportsList = ({ reports, onViewReport }) => {
                   <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                     <div className="flex items-center">
                       <div className="h-8 w-8 flex-shrink-0 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-medium text-sm">
-                        {report.generatedBy?.name?.charAt(0) || '?'}
+                        {report.generatedBy?.charAt(0) || '?'}
                       </div>
                       <div className="ml-3">
-                        <p className="text-gray-900 whitespace-nowrap">{report.generatedBy?.name || 'N/A'}</p>
-                        <p className="text-gray-500 text-xs">{report.generatedBy?.email || ''}</p>
+                        <p className="text-gray-900 whitespace-nowrap">{report.generatedBy || 'N/A'}</p>
+                        <p className="text-gray-500 text-xs">{report.generatedBy || ''}</p>
                       </div>
                     </div>
                   </td>

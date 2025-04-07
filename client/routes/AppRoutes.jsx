@@ -26,7 +26,6 @@ import RegularAssignmentCH from "@/pages/ChairHead/RegularAssignmentCH";
 import CourseAssignment from "@/pages/ChairHead/CourseAssignment";
 import ViewAssignmentsCH from "@/pages/ChairHead/ViewAssignmentsCH";
 import ComplaintsCH from "@/pages/ChairHead/ComplaintsCH";
-import ReportsCH from "@/pages/ChairHead/ReportsCH";
 import AnnouncementsCH from "@/pages/ChairHead/AnnouncementsCH";
 import CommonCoursesCOC from "@/pages/COC/CommonCoursesCOC";
 import ExtensionCoursesCOC from "@/pages/COC/ExtensionCoursesCOC";
@@ -34,11 +33,9 @@ import SummerCoursesCOC from "@/pages/COC/SummerCoursesCOC";
 import ComplaintsCOC from "@/pages/COC/ComplaintsCOC";
 import ReportDashboard from "@/pages/COC/ReportDashboard";
 import CreateReport from "@/pages/COC/ReportsCOC";
-import ReportDetail from "@/pages/COC/ReportDetail";
 import EditReport from "@/pages/COC/EditReport";
 import AnnouncementsCOC from "@/pages/COC/AnnouncementsCOC";
 import PreferencesInst from "@/pages/Instructor/PreferenceInst";
-import AssignmentsInst from "@/pages/Instructor/AssignmentsInst";
 import ComplaintsInst from "@/pages/Instructor/ComplaintsInst";
 import InstructorReports from "@/pages/Instructor/InstructorReports";
 import LoadingScreen from "@/components/LoadingScreen";
@@ -47,6 +44,7 @@ import PreferenceCH from "@/pages/ChairHead/PreferencesCH";
 import COCDashboard from "@/pages/COC/COCDashboard";
 import InstructorDashboard from "@/pages/Instructor/InstructorDashboard.jsx";
 import ReportsDetail from "@/components/ReportsHOF/ReportsDetail";
+import ReportDetailCOC from "@/pages/COC/ReportDetail";
 
 const AppRoutes = () => {
   const { user, isLoading } = useSelector((state) => state.auth);
@@ -121,7 +119,7 @@ const AppRoutes = () => {
               <Route path="/complaintsCOC" element={<ComplaintsCOC />} />
               <Route path="/reportsCOC" element={<ReportDashboard />} />
               <Route path="/reports/create" element={<CreateReport />} />
-              <Route path="/reports/:id" element={<ReportDetail />} />
+              <Route path="/reportsCOC/:id" element={<ReportDetailCOC />} />
               <Route path="/reports/:id/edit" element={<EditReport />} />
               <Route path="/announcementsCOC" element={<AnnouncementsCOC />} />
             </Route>
@@ -129,10 +127,11 @@ const AppRoutes = () => {
             {/* Instructor Protected Routes */}
             <Route element={<ProtectedRoute allowedRoles={["Instructor"]} />}>
               <Route path="/preferencesInst" element={<PreferencesInst />} />
-              <Route path="/assignmentsInst" element={<AssignmentsInst />} />
               <Route path="/complaintsInst" element={<ComplaintsInst />} />
               <Route path="/announcementsInst" element={<AnnouncementsView />} />
               <Route path="/reportsInst" element={<InstructorReports />} />
+              <Route path="/reportInst" element={<ReportsHF />} />
+              <Route path="/reportInst/:reportId" element={<ReportsDetail />} />
             </Route>
             
             {/* Catch-all route for authenticated users */}

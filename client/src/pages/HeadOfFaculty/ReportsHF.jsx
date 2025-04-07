@@ -74,7 +74,7 @@ const ReportsHF = () => {
 
   // Handle view report detail
   const handleViewReport = (reportId) => {
-    navigate(user.role === "HeadOfFaculty" ? `/reports/${reportId}` : `/reportsCH/${reportId}`);
+    navigate(user.role === "HeadOfFaculty" ? `/reports/${reportId}` : user.role === "Instructor" ? `/reportInst/${reportId}`:`/reportsCH/${reportId}`);
   };
 
   // Prepare CSV data

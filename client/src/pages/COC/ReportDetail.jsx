@@ -14,7 +14,7 @@ import {
   Clock
 } from 'lucide-react';
 
-const ReportDetail = () => {
+const ReportDetailCOC = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   
@@ -418,4 +418,4 @@ const ReportDetail = () => {
   );
 };
 
-export default ReportDetail;
+export default ReportDetailCOC;

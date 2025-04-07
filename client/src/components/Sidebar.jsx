@@ -435,10 +435,10 @@ const Layout = () => {
           <>
             <NavItem to="/dashboard" icon={Home}>Dashboard</NavItem>
             <NavItem to="/preferencesInst" icon={ClipboardList}>Submit Preferences</NavItem>
-            <NavItem to="/assignmentsInst" icon={FileText}>My Assignments</NavItem>
+            <NavItem to="/reportsInst" icon={FileText}>My Assignments</NavItem>
             <NavItem to="/complaintsInst" icon={AlertTriangle}>File Complaint</NavItem>
             <NavItem to="/announcementsInst" icon={Megaphone}>Announcements</NavItem>
-            <NavItem to="/reportsInst" icon={TrendingUp}>Reports</NavItem>
+            <NavItem to="/reportInst" icon={TrendingUp}>Reports</NavItem>
           </>
         );
 
