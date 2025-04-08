@@ -1,5 +1,5 @@
 import express from "express";
-import { submitPreferences, getInstructorPreferences, getPreferencesByParams,updatePreferences } from "../controllers/preferenceController.js";
+import { submitPreferences, getInstructorPreferences, getPreferencesByParams,updatePreferences, deletePreference } from "../controllers/preferenceController.js";
 import { authenticate, authorize } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
@@ -12,4 +12,5 @@ router.get('/search-preferences', getPreferencesByParams);
 router.get("/:instructorId", authenticate, getInstructorPreferences);
 // Update preferences
 router.put('/', authenticate, updatePreferences);
+router.delete("/:id", authenticate,authorize(["ChairHead"]), deletePreference);
 export default router;

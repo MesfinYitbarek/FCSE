@@ -145,3 +145,18 @@ export const updatePreferences = async (req, res) => {
     });
   }
 };
+
+//Delete preference 
+export const deletePreference = async (req, res) => {
+  try {
+    const report = await Preference.findByIdAndDelete(req.params.id);
+    
+    if (!report) {
+      return res.status(404).json({ message: "Preference not found" });
+    }
+    
+    res.status(200).json({ message: "Preference deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Error deleting preference", error: error.message });
+  }
+};

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Loader2, FileText, Calendar, User } from 'lucide-react';
+import { Search, Loader2, FileText, Calendar, User, Trash2, AlertTriangle, X } from 'lucide-react';
 import api from '../../utils/api';
 import { useSelector } from 'react-redux';
 
@@ -15,6 +15,12 @@ const PreferenceCH = () => {
     semester: 'Regular 1',
     chair: user?.chair || '' 
   });
+  
+  // Delete functionality states
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [preferenceToDelete, setPreferenceToDelete] = useState(null);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [notification, setNotification] = useState({ show: false, message: '', type: '' });
 
   // Update chair filter when user data changes
   useEffect(() => {
@@ -25,6 +31,16 @@ const PreferenceCH = () => {
       }));
     }
   }, [user]);
+
+  // Auto-hide notifications after 5 seconds
+  useEffect(() => {
+    if (notification.show) {
+      const timer = setTimeout(() => {
+        setNotification({ ...notification, show: false });
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [notification]);
 
   const fetchPreferences = async () => {
     try {
@@ -55,9 +71,72 @@ const PreferenceCH = () => {
       [name]: value
     }));
   };
+  
+  const openDeleteModal = (preference) => {
+    setPreferenceToDelete(preference);
+    setIsDeleteModalOpen(true);
+  };
+  
+  const closeDeleteModal = () => {
+    setIsDeleteModalOpen(false);
+    setPreferenceToDelete(null);
+  };
+  
+  const handleDeletePreference = async () => {
+    if (!preferenceToDelete?._id) return;
+    
+    try {
+      setDeleteLoading(true);
+      await api.delete(`/preferences/${preferenceToDelete._id}`);
+      
+      // Remove the deleted preference from state
+      setPreferences(prev => {
+        return {
+          ...prev,
+          preferences: prev.preferences.filter(p => p._id !== preferenceToDelete._id)
+        };
+      });
+      
+      setNotification({
+        show: true,
+        message: 'Preference deleted successfully',
+        type: 'success'
+      });
+      
+      closeDeleteModal();
+    } catch (err) {
+      console.error('Delete error:', err);
+      setNotification({
+        show: true,
+        message: err.response?.data?.message || 'Failed to delete preference',
+        type: 'error'
+      });
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
 
   return (
     <div className="p-4 sm:p-6 max-w-6xl mx-auto bg-white rounded-xl shadow-sm">
+      {/* Notification toast */}
+      {notification.show && (
+        <div className={`fixed top-4 right-4 z-50 flex items-center p-4 rounded-lg shadow-lg ${
+          notification.type === 'success' 
+            ? 'bg-green-50 text-green-800 border border-green-200' 
+            : 'bg-red-50 text-red-800 border border-red-200'
+        }`}>
+          <div className="flex-1 mr-2">
+            {notification.message}
+          </div>
+          <button 
+            onClick={() => setNotification({ ...notification, show: false })}
+            className="p-1 rounded-full hover:bg-gray-200"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+      
       <div className="mb-6">
         <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Teaching Preferences</h1>
         <p className="text-gray-500">View instructor course preferences by semester</p>
@@ -180,6 +259,9 @@ const PreferenceCH = () => {
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Submitted
                     </th>
+                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -209,6 +291,15 @@ const PreferenceCH = () => {
                           day: 'numeric'
                         })}
                       </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right">
+                        <button 
+                          onClick={() => openDeleteModal(pref)}
+                          className="text-red-600 hover:text-red-900 focus:outline-none"
+                          title="Delete preference"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -220,15 +311,24 @@ const PreferenceCH = () => {
           <div className="md:hidden space-y-4">
             {preferences.preferences.map((pref, index) => (
               <div key={index} className="bg-white border border-gray-200 rounded-lg shadow-sm p-4">
-                <div className="mb-3 pb-2 border-b border-gray-100">
-                  <div className="font-medium text-gray-900">{pref.instructorId.fullName}</div>
-                  <div className="text-xs text-gray-500 mt-1">
-                    Submitted: {new Date(pref.submittedAt).toLocaleDateString(undefined, {
-                      year: 'numeric', 
-                      month: 'short', 
-                      day: 'numeric'
-                    })}
+                <div className="mb-3 pb-2 border-b border-gray-100 flex justify-between items-start">
+                  <div>
+                    <div className="font-medium text-gray-900">{pref.instructorId.fullName}</div>
+                    <div className="text-xs text-gray-500 mt-1">
+                      Submitted: {new Date(pref.submittedAt).toLocaleDateString(undefined, {
+                        year: 'numeric', 
+                        month: 'short', 
+                        day: 'numeric'
+                      })}
+                    </div>
                   </div>
+                  <button 
+                    onClick={() => openDeleteModal(pref)}
+                    className="text-red-600 hover:text-red-900 focus:outline-none p-1"
+                    title="Delete preference"
+                  >
+                    <Trash2 className="w-5 h-5" />
+                  </button>
                 </div>
                 <div>
                   <h4 className="text-xs font-medium text-gray-500 uppercase mb-2">Preferences (Ranked)</h4>
@@ -258,6 +358,56 @@ const PreferenceCH = () => {
           <p className="mt-1 text-sm text-gray-500">
             No instructors have submitted preferences for {filters.semester} {filters.year}.
           </p>
+        </div>
+      )}
+      
+      {/* Delete Confirmation Modal */}
+      {isDeleteModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="p-5 border-b border-gray-200 flex items-center">
+              <AlertTriangle className="w-6 h-6 text-red-500 mr-2" />
+              <h3 className="text-lg font-medium text-gray-900">Confirm Deletion</h3>
+            </div>
+            
+            <div className="p-5">
+              <p className="text-gray-700 mb-4">
+                Are you sure you want to delete the preference submission from{' '}
+                <span className="font-semibold">
+                  {preferenceToDelete?.instructorId?.fullName}
+                </span>?
+              </p>
+              <p className="text-sm text-gray-500 bg-gray-50 p-3 rounded-md border border-gray-200">
+                This action cannot be undone and will permanently remove the preference submission.
+              </p>
+            </div>
+            
+            <div className="p-4 bg-gray-50 border-t border-gray-200 flex justify-end space-x-3 rounded-b-lg">
+              <button
+                onClick={closeDeleteModal}
+                className="px-4 py-2 bg-white border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeletePreference}
+                disabled={deleteLoading}
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:bg-red-400 disabled:cursor-not-allowed flex items-center"
+              >
+                {deleteLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Deleting...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
