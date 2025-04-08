@@ -998,7 +998,8 @@ export const runAutomaticAssignment = async (req, res) => {
       chair: assignedBy,
       year,
       semester,
-    });
+    }).populate("courses.course");
+
     if (!preferenceForm) {
       return res.status(404).json({
         message:
@@ -1006,7 +1007,19 @@ export const runAutomaticAssignment = async (req, res) => {
       });
     }
 
-    const allowedCourseIds = preferenceForm.courses.map((id) => id.toString());
+    const allowedCourses = preferenceForm.courses.map((c) => ({
+      courseId: c.course._id.toString(),
+      section: c.section,
+      NoOfSections: c.NoOfSections,
+      labDivision: c.labDivision,
+    }));
+
+    console.log("Allowed Courses with metadata:", allowedCourses);
+
+    const getCourseMeta = (courseId) => {
+      return allowedCourses.find((c) => c.courseId === courseId.toString());
+    };
+
     const preferences = await Preference.find({
       preferenceFormId: preferenceForm._id,
     })
@@ -1034,7 +1047,8 @@ export const runAutomaticAssignment = async (req, res) => {
       for (let { courseId, rank } of preference.preferences) {
         if (!mongoose.Types.ObjectId.isValid(courseId)) continue;
         courseId = new mongoose.Types.ObjectId(courseId);
-        if (!allowedCourseIds.includes(courseId.toString())) continue;
+        const meta = getCourseMeta(courseId);
+        if (!meta) continue;
 
         if (!courseAssignments[courseId]) courseAssignments[courseId] = [];
         const instructorId = preference.instructorId._id;
@@ -1093,16 +1107,21 @@ export const runAutomaticAssignment = async (req, res) => {
       const course = await Course.findById(courseId);
       if (!course) continue;
 
-      let workload =
-        course.lecture + (2 / 3) * course.lab + (2 / 3) * course.tutorial;
-      workload = Math.round(workload * 100) / 100;
+      const meta = getCourseMeta(courseId);
+      if (!meta) continue;
+
+      const workload = Math.round(
+        (course.lecture + (2 / 3) * course.lab + (2 / 3) * course.tutorial) * 100
+      ) / 100;
+
+      console.log(`Assigned course ${courseId} with meta:`, meta);
 
       assignmentData.assignments.push({
         instructorId,
         courseId,
-        section: "",
-        NoOfSections: 1,
-        labDivision: "No",
+        section: meta.section || "",
+        NoOfSections: meta.NoOfSections || 1,
+        labDivision: meta.labDivision || "No",
         workload,
       });
 
@@ -1135,3 +1154,5 @@ export const runAutomaticAssignment = async (req, res) => {
     res.status(500).json({ message: "Error in automatic assignment", error });
   }
 };
+
+

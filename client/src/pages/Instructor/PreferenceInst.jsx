@@ -4,7 +4,8 @@ import api from "../../utils/api";
 import Spinner from "../../components/Spinner";
 import { 
   Search, FileText, Calendar, CheckCircle, AlertCircle, 
-  Edit, Send, Info, Lock, Award, Filter, BookOpen, Code
+  Edit, Send, Info, Lock, Award, Filter, BookOpen, Code, 
+  Layers, ClipboardList
 } from "lucide-react";
 
 const PreferencesInst = () => {
@@ -30,7 +31,7 @@ const PreferencesInst = () => {
       fetchPreferences();
       fetchPreferenceForm();
     }
-  }, [user]);
+  }, [user, year, semester]);
 
   const fetchPreferenceForm = async () => {
     setLoading(true);
@@ -41,8 +42,17 @@ const PreferencesInst = () => {
       if (data) {
         setPreferenceForm(data);
 
-        // Now we use the courses array directly from the preference form
-        setCourses(data.courses);
+        // Extract courses from the preference form
+        // Each course item in the array has course (populated), section, NoOfSections, labDivision
+        const extractedCourses = data.courses.map(courseItem => ({
+          ...courseItem.course,
+          courseItemId: courseItem._id, // Store the reference ID for this specific course item
+          section: courseItem.section,
+          NoOfSections: courseItem.NoOfSections,
+          labDivision: courseItem.labDivision
+        }));
+        
+        setCourses(extractedCourses);
 
         const currentDate = new Date();
         const start = new Date(data.submissionStart);
@@ -50,9 +60,10 @@ const PreferencesInst = () => {
         setSubmissionAllowed(currentDate >= start && currentDate <= end);
 
         // Check if the instructor is eligible for this form
-        const isInstructorEligible = data.instructors.some(
-          (instructor) => instructor._id === user._id
-        );
+        const isInstructorEligible = data.allInstructors || 
+          (data.instructors && data.instructors.some(
+            instructor => instructor._id === user._id
+          ));
         setIsEligible(isInstructorEligible);
       } else {
         setPreferenceForm(null);
@@ -99,7 +110,7 @@ const PreferencesInst = () => {
   const handleSearch = (e) => {
     e.preventDefault();
     fetchPreferenceForm();
-    fetchPreferences(); // Also fetch preferences again when searching
+    fetchPreferences();
   };
 
   const handlePreferenceChange = (courseId, rank) => {
@@ -139,7 +150,7 @@ const PreferencesInst = () => {
       
       await api({
         method: method,
-        url: "/preferences", // Simplified - same endpoint for both
+        url: "/preferences", // Same endpoint for both
         data: {
           instructorId: user._id,
           preferenceFormId: preferenceForm._id,
@@ -167,19 +178,24 @@ const PreferencesInst = () => {
 
   // Filter courses based on search query and chair
   const filteredCourses = courses.filter((course) => {
-    const matchesSearch = course.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      course.code.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = course.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      course.code?.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesChair = filterChair ? course.chair === filterChair : true;
     return matchesSearch && matchesChair;
   });
 
   // Get unique chairs for filter dropdown
-  const chairs = [...new Set(courses.map(course => course.chair))];
+  const chairs = [...new Set(courses.filter(course => course.chair).map(course => course.chair))];
 
   // Format date for better display
   const formatDate = (dateString) => {
     const options = { year: 'numeric', month: 'short', day: 'numeric' };
     return new Date(dateString).toLocaleDateString(undefined, options);
+  };
+
+  // Function to get readable lab division text
+  const getLabDivisionText = (labDivision) => {
+    return labDivision === "Yes" ? "Has Lab Sections" : "No Lab Sections";
   };
 
   if (user?.role !== "Instructor") {
@@ -278,10 +294,13 @@ const PreferencesInst = () => {
               submissionAllowed ? (
                 <div className="bg-white rounded-lg transition-all">
                   <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4 rounded-t-lg flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                    <h2 className="text-lg font-semibold flex items-center">
-                      <Calendar className="h-5 w-5 mr-2 flex-shrink-0" />
-                      <span>{preferenceForm.semester} - {preferenceForm.year} Preference Form</span>
-                    </h2>
+                    <div>
+                      <h2 className="text-lg font-semibold flex items-center">
+                        <Calendar className="h-5 w-5 mr-2 flex-shrink-0" />
+                        <span>{preferenceForm.semester} - {preferenceForm.year} Preference Form</span>
+                      </h2>
+                      <p className="text-sm mt-1 text-blue-100">Chair: {preferenceForm.chair}</p>
+                    </div>
                     <div className="text-sm bg-blue-800 px-3 py-1.5 rounded-full shadow-sm">
                       Max Preferences: {preferenceForm.maxPreferences}
                     </div>
@@ -343,34 +362,49 @@ const PreferencesInst = () => {
                                 <th className="p-3 text-left font-semibold text-slate-700 border-b">Rank</th>
                                 <th className="p-3 text-left font-semibold text-slate-700 border-b">Course</th>
                                 <th className="p-3 text-left font-semibold text-slate-700 border-b">Code</th>
+                                <th className="p-3 text-left font-semibold text-slate-700 border-b">Section</th>
                                 <th className="p-3 text-left font-semibold text-slate-700 border-b">Chair</th>
                               </tr>
                             </thead>
                             <tbody>
-                              {preferences
+                              {preferences.length > 0 ? (
+                                preferences
                                 .sort((a, b) => a.rank - b.rank)
-                                .map((pref) => (
-                                  <tr key={pref.courseId._id} className="hover:bg-slate-50">
-                                    <td className="p-3 border-b border-slate-200">
-                                      <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-medium">
-                                        {pref.rank}
-                                      </span>
-                                    </td>
-                                    <td className="p-3 border-b border-slate-200">{pref.courseId.name}</td>
-                                    <td className="p-3 border-b border-slate-200">
-                                      <span className="text-slate-500 flex items-center">
-                                        <Code className="h-4 w-4 mr-1 text-slate-400" />
-                                        {pref.courseId.code}
-                                      </span>
-                                    </td>
-                                    <td className="p-3 border-b border-slate-200">
-                                      <span className="text-slate-500">{pref.courseId.chair}</span>
-                                    </td>
-                                  </tr>
-                                ))}
-                              {preferences.length === 0 && (
+                                .map((pref) => {
+                                  const course = courses.find(c => c._id === pref.courseId || c._id === pref.courseId._id);
+                                  return course ? (
+                                    <tr key={pref.courseId} className="hover:bg-slate-50">
+                                      <td className="p-3 border-b border-slate-200">
+                                        <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-medium">
+                                          {pref.rank}
+                                        </span>
+                                      </td>
+                                      <td className="p-3 border-b border-slate-200">
+                                        {pref.courseId.name || course.name}
+                                      </td>
+                                      <td className="p-3 border-b border-slate-200">
+                                        <span className="text-slate-500 flex items-center">
+                                          <Code className="h-4 w-4 mr-1 text-slate-400" />
+                                          {pref.courseId.code || course.code}
+                                        </span>
+                                      </td>
+                                      <td className="p-3 border-b border-slate-200">
+                                        {course.section}
+                                        {course.NoOfSections > 1 && 
+                                          <span className="ml-1 text-xs bg-slate-100 px-1 rounded">
+                                            ({course.NoOfSections} sections)
+                                          </span>
+                                        }
+                                      </td>
+                                      <td className="p-3 border-b border-slate-200">
+                                        <span className="text-slate-500">{pref.courseId.chair || course.chair}</span>
+                                      </td>
+                                    </tr>
+                                  ) : null;
+                                })
+                              ) : (
                                 <tr>
-                                  <td colSpan="4" className="p-4 text-center text-slate-500">No preferences found</td>
+                                  <td colSpan="5" className="p-4 text-center text-slate-500">No preferences found</td>
                                 </tr>
                               )}
                             </tbody>
@@ -379,27 +413,39 @@ const PreferencesInst = () => {
                         
                         {/* Mobile view - cards */}
                         <div className="md:hidden space-y-3">
-                          {preferences
+                          {preferences.length > 0 ? (
+                            preferences
                             .sort((a, b) => a.rank - b.rank)
-                            .map((pref) => (
-                              <div 
-                                key={pref.courseId._id} 
-                                className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50"
-                              >
-                                <div className="flex justify-between items-center mb-2">
-                                  <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-medium">
-                                    Rank {pref.rank}
-                                  </span>
-                                  <span className="text-sm text-slate-500">{pref.courseId.chair}</span>
+                            .map((pref) => {
+                              const course = courses.find(c => c._id === pref.courseId || c._id === pref.courseId._id);
+                              return course ? (
+                                <div 
+                                  key={pref.courseId} 
+                                  className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50"
+                                >
+                                  <div className="flex justify-between items-center mb-2">
+                                    <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-medium">
+                                      Rank {pref.rank}
+                                    </span>
+                                    <span className="text-sm text-slate-500">{pref.courseId.chair || course.chair}</span>
+                                  </div>
+                                  <h4 className="font-medium mb-1">{pref.courseId.name || course.name}</h4>
+                                  <div className="flex items-center text-slate-500 text-sm mb-1">
+                                    <Code className="h-4 w-4 mr-1 text-slate-400" />
+                                    {pref.courseId.code || course.code}
+                                  </div>
+                                  <div className="text-sm text-slate-500">
+                                    Section {course.section}
+                                    {course.NoOfSections > 1 && 
+                                      <span className="ml-1 text-xs bg-slate-100 px-1 rounded">
+                                        ({course.NoOfSections} sections)
+                                      </span>
+                                    }
+                                  </div>
                                 </div>
-                                <h4 className="font-medium mb-1">{pref.courseId.name}</h4>
-                                <div className="flex items-center text-slate-500 text-sm">
-                                  <Code className="h-4 w-4 mr-1 text-slate-400" />
-                                  {pref.courseId.code}
-                                </div>
-                              </div>
-                            ))}
-                          {preferences.length === 0 && (
+                              ) : null;
+                            })
+                          ) : (
                             <div className="p-4 text-center text-slate-500 border border-slate-200 rounded-lg">
                               No preferences found
                             </div>
@@ -436,15 +482,16 @@ const PreferencesInst = () => {
                               <tr className="bg-slate-100">
                                 <th className="p-3 text-left font-semibold text-slate-700 border-b">Course</th>
                                 <th className="p-3 text-left font-semibold text-slate-700 border-b">Code</th>
+                                <th className="p-3 text-left font-semibold text-slate-700 border-b">Section</th>
                                 <th className="p-3 text-left font-semibold text-slate-700 border-b">Chair</th>
-                                <th className="p-3 text-left font-semibold text-slate-700 border-b">Year/Sem</th>
+                                <th className="p-3 text-left font-semibold text-slate-700 border-b">Details</th>
                                 <th className="p-3 text-left font-semibold text-slate-700 border-b">Preference Rank</th>
                               </tr>
                             </thead>
                             <tbody>
                               {filteredCourses.length === 0 ? (
                                 <tr>
-                                  <td colSpan="5" className="p-4 text-center text-slate-500">No courses match your search criteria</td>
+                                  <td colSpan="6" className="p-4 text-center text-slate-500">No courses match your search criteria</td>
                                 </tr>
                               ) : (
                                 filteredCourses.map((course) => (
@@ -456,9 +503,20 @@ const PreferencesInst = () => {
                                         {course.code}
                                       </div>
                                     </td>
+                                    <td className="p-3 border-b border-slate-200">
+                                      {course.section}
+                                      {course.NoOfSections > 1 && 
+                                        <span className="ml-1 text-xs bg-slate-100 px-1 rounded">
+                                          ({course.NoOfSections} sections)
+                                        </span>
+                                      }
+                                    </td>
                                     <td className="p-3 border-b border-slate-200 text-slate-500">{course.chair}</td>
                                     <td className="p-3 border-b border-slate-200 text-slate-500">
-                                      Year {course.year}, Sem {course.semester}
+                                      <div className="flex items-center text-xs">
+                                        <Layers className="h-4 w-4 mr-1" />
+                                        {getLabDivisionText(course.labDivision)}
+                                      </div>
                                     </td>
                                     <td className="p-3 border-b border-slate-200">
                                       <select
@@ -503,6 +561,14 @@ const PreferencesInst = () => {
                                       <Code className="h-4 w-4 mr-1 text-slate-400" />
                                       {course.code}
                                     </div>
+                                    <div className="text-sm text-slate-500 mt-1">
+                                      Section {course.section}
+                                      {course.NoOfSections > 1 && 
+                                        <span className="ml-1 text-xs bg-slate-100 px-1 rounded">
+                                          ({course.NoOfSections} sections)
+                                        </span>
+                                      }
+                                    </div>
                                   </div>
                                   <div className="min-w-fit">
                                     <select
@@ -525,7 +591,10 @@ const PreferencesInst = () => {
                                   <div className="p-4 pt-0 bg-slate-50 text-sm">
                                     <div className="pt-3 border-t mt-3">
                                       <p><span className="font-medium">Chair:</span> {course.chair}</p>
-                                      <p><span className="font-medium">Year/Semester:</span> Year {course.year}, Sem {course.semester}</p>
+                                      <p className="mt-1 flex items-start">
+                                        <Layers className="h-4 w-4 mr-1 mt-0.5 text-slate-400" />
+                                        <span>{getLabDivisionText(course.labDivision)}</span>
+                                      </p>
                                     </div>
                                   </div>
                                 )}
@@ -574,6 +643,7 @@ const PreferencesInst = () => {
                 <div>
                   <h3 className="font-semibold">Not Eligible</h3>
                   <p>You are not eligible to submit preferences for this form.</p>
+                  <p className="mt-2 text-sm">This form is only available to selected instructors in the {preferenceForm.chair} department.</p>
                 </div>
               </div>
             )
@@ -582,6 +652,7 @@ const PreferencesInst = () => {
               <Info className="h-6 w-6 mb-2 md:mb-0 md:mt-0.5 flex-shrink-0" />
               <div>
                 <p>Please search for a preference form using the fields above.</p>
+                <p className="mt-2 text-sm">Your department's chair creates preference forms for each semester. If you can't find a form, please contact your department chair.</p>
               </div>
             </div>
           )}

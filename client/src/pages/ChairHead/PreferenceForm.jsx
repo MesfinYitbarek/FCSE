@@ -1,4 +1,3 @@
-// PreferenceForm.jsx
 import { useEffect, useState } from "react";
 import api from "../../utils/api";
 import { useSelector } from "react-redux";
@@ -17,7 +16,8 @@ import {
   Users,
   Loader,
   Info,
-  Check
+  Check,
+  Sliders
 } from 'lucide-react';
 
 const PreferenceForm = () => {
@@ -31,6 +31,7 @@ const PreferenceForm = () => {
     submissionEnd: "",
     courses: [],
     instructors: [],
+    allInstructors: false
   });
   const [courses, setCourses] = useState([]);
   const [instructors, setInstructors] = useState([]);
@@ -39,12 +40,22 @@ const PreferenceForm = () => {
   const [openModal, setOpenModal] = useState(false);
   const [selectedForm, setSelectedForm] = useState(null);
   
+  // Course filtering states
+  const [courseFilterDept, setCourseFilterDept] = useState("");
+  const [courseFilterYear, setCourseFilterYear] = useState("");
+  const [courseFilterSemester, setCourseFilterSemester] = useState("");
+  const [filteredCourses, setFilteredCourses] = useState([]);
+  
+  // Selected course details states
+  const [selectedCourseDetails, setSelectedCourseDetails] = useState({});
+  
   // Filter states
   const [filterYear, setFilterYear] = useState(new Date().getFullYear());
   const [filterSemester, setFilterSemester] = useState("");
   const [filterChair, setFilterChair] = useState(user.chair);
   const [isFiltered, setIsFiltered] = useState(false);
   const [chairs, setChairs] = useState([]);
+  const [departments, setDepartments] = useState([]);
 
   // Mobile responsiveness
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
@@ -66,21 +77,43 @@ const PreferenceForm = () => {
       try {
         const { data } = await api.get("/chairs");
         setChairs(data);
+        setDepartments([...new Set(data.map(chair => chair.department))]);
       } catch (error) {
         console.error("Error fetching chairs:", error);
       }
     };
     
-    if (user.role === "admin") {
-      fetchChairs();
-    }
-  }, [user.role]);
+    fetchChairs();
+  }, []);
 
   // Fetch courses and instructors on component mount
   useEffect(() => {
     fetchCourses();
     fetchInstructors();
   }, []);
+
+  // Filter courses based on selected filters
+  useEffect(() => {
+    if (courses.length > 0) {
+      let filtered = [...courses];
+      
+      if (courseFilterDept) {
+        filtered = filtered.filter(course => course.department === courseFilterDept);
+      }
+      
+      if (courseFilterYear) {
+        filtered = filtered.filter(course => course.year === parseInt(courseFilterYear));
+      }
+      
+      if (courseFilterSemester) {
+        filtered = filtered.filter(course => course.semester === courseFilterSemester);
+      }
+      
+      setFilteredCourses(filtered);
+    } else {
+      setFilteredCourses([]);
+    }
+  }, [courses, courseFilterDept, courseFilterYear, courseFilterSemester]);
 
   const fetchPreferenceForms = async () => {
     setFetchingData(true);
@@ -102,6 +135,7 @@ const PreferenceForm = () => {
     try {
       const { data } = await api.get(`/courses/${filterChair || user.chair}`);
       setCourses(data);
+      setFilteredCourses(data);
     } catch (error) {
       console.error("Error fetching courses:", error);
     }
@@ -121,20 +155,91 @@ const PreferenceForm = () => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // Handle course selection
+  // Handle course selection with details
   const handleCourseSelection = (courseId) => {
-    const updatedCourses = formData.courses.includes(courseId)
-      ? formData.courses.filter((id) => id !== courseId)
-      : [...formData.courses, courseId];
+    let updatedCourses = [...formData.courses];
+    
+    // Check if course is already selected
+    const courseIndex = updatedCourses.findIndex(c => 
+      typeof c === 'object' ? c.course === courseId : c === courseId
+    );
+    
+    if (courseIndex !== -1) {
+      // Remove course if already selected
+      updatedCourses = updatedCourses.filter((_, index) => index !== courseIndex);
+      
+      // Remove course details
+      const newSelectedCourseDetails = {...selectedCourseDetails};
+      delete newSelectedCourseDetails[courseId];
+      setSelectedCourseDetails(newSelectedCourseDetails);
+    } else {
+      // Add course with details
+      updatedCourses.push({
+        course: courseId,
+        section: "A",
+        NoOfSections: 1,
+        labDivision: "No"
+      });
+      
+      // Initialize course details
+      setSelectedCourseDetails({
+        ...selectedCourseDetails,
+        [courseId]: {
+          section: "A",
+          NoOfSections: 1,
+          labDivision: "No"
+        }
+      });
+    }
+    
+    setFormData({ ...formData, courses: updatedCourses });
+  };
+
+  // Handle course details change
+  const handleCourseDetailChange = (courseId, field, value) => {
+    // Update selected course details
+    const updatedDetails = {
+      ...selectedCourseDetails,
+      [courseId]: {
+        ...selectedCourseDetails[courseId],
+        [field]: value
+      }
+    };
+    setSelectedCourseDetails(updatedDetails);
+    
+    // Update form data courses array
+    const updatedCourses = formData.courses.map(course => {
+      if (typeof course === 'object' && course.course === courseId) {
+        return {
+          ...course,
+          [field]: value
+        };
+      }
+      return course;
+    });
+    
     setFormData({ ...formData, courses: updatedCourses });
   };
 
   // Handle instructor selection
   const handleInstructorSelection = (instructorId) => {
+    if (formData.allInstructors) {
+      return; // Do nothing if "All Instructors" is selected
+    }
+    
     const updatedInstructors = formData.instructors.includes(instructorId)
       ? formData.instructors.filter((id) => id !== instructorId)
       : [...formData.instructors, instructorId];
     setFormData({ ...formData, instructors: updatedInstructors });
+  };
+
+  // Handle "All Instructors" toggle
+  const handleAllInstructorsToggle = () => {
+    setFormData({
+      ...formData,
+      allInstructors: !formData.allInstructors,
+      instructors: [] // Clear selected instructors when toggling "All"
+    });
   };
 
   // Reset filters
@@ -145,16 +250,58 @@ const PreferenceForm = () => {
     setIsFiltered(false);
   };
 
+  // Reset course filters
+  const resetCourseFilters = () => {
+    setCourseFilterDept("");
+    setCourseFilterYear("");
+    setCourseFilterSemester("");
+  };
+
   // Handle creating or updating a preference form
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    
     try {
+      // Format courses with their details for submission
+      const formattedCourses = formData.courses.map(course => {
+        if (typeof course === 'object' && course.course) {
+          return {
+            course: course.course,
+            section: course.section,
+            NoOfSections: course.NoOfSections,
+            labDivision: course.labDivision
+          };
+        } else {
+          // For backward compatibility with existing data
+          const courseId = course;
+          const details = selectedCourseDetails[courseId] || {
+            section: "A",
+            NoOfSections: 1,
+            labDivision: "No"
+          };
+          
+          return {
+            course: courseId,
+            section: details.section,
+            NoOfSections: details.NoOfSections,
+            labDivision: details.labDivision
+          };
+        }
+      });
+      
+      const dataToSubmit = {
+        ...formData,
+        courses: formattedCourses,
+        chair: filterChair || user.chair
+      };
+      
       if (selectedForm) {
-        await api.put(`/preference-forms/${selectedForm._id}`, formData);
+        await api.put(`/preference-forms/${selectedForm._id}`, dataToSubmit);
       } else {
-        await api.post("/preference-forms", { ...formData, chair: filterChair || user.chair });
+        await api.post("/preference-forms", dataToSubmit);
       }
+      
       setOpenModal(false);
       setFormData({
         year: new Date().getFullYear(),
@@ -164,7 +311,9 @@ const PreferenceForm = () => {
         submissionEnd: "",
         courses: [],
         instructors: [],
+        allInstructors: false
       });
+      setSelectedCourseDetails({});
       setSelectedForm(null);
       
       // Refresh the list with current filters
@@ -174,21 +323,58 @@ const PreferenceForm = () => {
     } catch (error) {
       console.error("Error saving preference form:", error);
     }
+    
     setLoading(false);
   };
 
   // Open edit modal and pre-fill form
   const openEditFormModal = (form) => {
     setSelectedForm(form);
+    
+    // Format courses with their details
+    const coursesWithDetails = form.courses.map(course => {
+      if (typeof course === 'object') {
+        return {
+          course: course.course._id || course.course,
+          section: course.section || "A",
+          NoOfSections: course.NoOfSections || 1,
+          labDivision: course.labDivision || "No"
+        };
+      } else {
+        return {
+          course: course._id || course,
+          section: "A",
+          NoOfSections: 1,
+          labDivision: "No"
+        };
+      }
+    });
+    
+    // Prepare course details for state
+    const courseDetailsMap = {};
+    coursesWithDetails.forEach(course => {
+      if (typeof course === 'object' && course.course) {
+        courseDetailsMap[course.course] = {
+          section: course.section,
+          NoOfSections: course.NoOfSections,
+          labDivision: course.labDivision
+        };
+      }
+    });
+    
+    setSelectedCourseDetails(courseDetailsMap);
+    
     setFormData({
       year: form.year,
       semester: form.semester,
       maxPreferences: form.maxPreferences,
       submissionStart: form.submissionStart,
       submissionEnd: form.submissionEnd,
-      courses: form.courses.map(course => course._id || course),
+      courses: coursesWithDetails,
       instructors: form.instructors.map(instructor => instructor._id || instructor),
+      allInstructors: form.allInstructors || false
     });
+    
     setOpenModal(true);
   };
 
@@ -219,6 +405,15 @@ const PreferenceForm = () => {
     fetchPreferenceForms();
   };
 
+  // Check if course is selected
+  const isCourseSelected = (courseId) => {
+    return formData.courses.some(course => 
+      typeof course === 'object' 
+        ? course.course === courseId 
+        : course === courseId
+    );
+  };
+
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-6">
       <div className="mb-8">
@@ -245,7 +440,7 @@ const PreferenceForm = () => {
                   <option key={year} value={year}>{year}</option>
                 ))}
               </select>
-              
+              <ChevronDown size={16} className="absolute right-3 top-2.5 text-gray-500 pointer-events-none" />
             </div>
           </div>
           
@@ -263,7 +458,7 @@ const PreferenceForm = () => {
                 <option value="Summer">Summer</option>
                 <option value="Extension">Extension</option>
               </select>
-              
+              <ChevronDown size={16} className="absolute right-3 top-2.5 text-gray-500 pointer-events-none" />
             </div>
           </div>
           
@@ -323,7 +518,9 @@ const PreferenceForm = () => {
               submissionEnd: "",
               courses: [],
               instructors: [],
+              allInstructors: false
             });
+            setSelectedCourseDetails({});
             setOpenModal(true);
           }}
           className="w-full sm:w-auto flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md shadow-sm text-sm font-medium transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
@@ -491,7 +688,7 @@ const PreferenceForm = () => {
       {/* Form Creation/Edit Dialog */}
       {openModal && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 rounded-lg shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-white dark:bg-slate-900 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
             {/* Header */}
             <div className="sticky top-0 bg-white dark:bg-slate-900 px-4 py-4 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between">
               <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white">
@@ -584,32 +781,139 @@ const PreferenceForm = () => {
                 
                 <hr className="my-6 border-gray-200 dark:border-slate-700" />
                 
+                {/* Course Selection with Filtering */}
                 <div className="mb-6">
                   <h4 className="flex items-center gap-2 text-base font-medium text-gray-900 dark:text-white mb-3">
                     <Book size={16} className="text-blue-500" /> Available Courses
                   </h4>
+                  
+                  {/* Course Filters */}
+                  <div className="mb-4 p-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-md">
+                    <div className="flex items-center justify-between mb-2">
+                      <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                        <Sliders size={14} className="text-blue-500" /> Filter Courses
+                      </h5>
+                      <button
+                        type="button"
+                        onClick={resetCourseFilters}
+                        className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+                      >
+                        Reset Filters
+                      </button>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Department</label>
+                        <select
+                          value={courseFilterDept}
+                          onChange={(e) => setCourseFilterDept(e.target.value)}
+                          className="block w-full bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-md shadow-sm py-1.5 px-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                          <option value="">All Departments</option>
+                          {departments.map(dept => (
+                            <option key={dept} value={dept}>{dept}</option>
+                          ))}
+                        </select>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Year</label>
+                        <select
+                          value={courseFilterYear}
+                          onChange={(e) => setCourseFilterYear(e.target.value)}
+                          className="block w-full bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-md shadow-sm py-1.5 px-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                          <option value="">All Years</option>
+                          <option value="1">Year 1</option>
+                          <option value="2">Year 2</option>
+                          <option value="3">Year 3</option>
+                          <option value="4">Year 4</option>
+                          <option value="5">Year 5</option>
+                        </select>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Semester</label>
+                        <select
+                          value={courseFilterSemester}
+                          onChange={(e) => setCourseFilterSemester(e.target.value)}
+                          className="block w-full bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-md shadow-sm py-1.5 px-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                        >
+                          <option value="">All Semesters</option>
+                          <option value="1">Semester 1</option>
+                          <option value="2">Semester 2</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                  
                   <div className="max-h-48 overflow-y-auto p-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-md">
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                      {courses.length > 0 ? courses.map((course) => (
-                        <div key={course._id} className="flex items-center space-x-2">
-                          <div 
-                            onClick={() => handleCourseSelection(course._id)}
-                            className={`flex h-5 w-5 items-center justify-center border rounded cursor-pointer transition-colors ${
-                              formData.courses.includes(course._id) 
-                                ? 'bg-blue-500 border-blue-500' 
-                                : 'border-gray-300 dark:border-gray-600'
-                            }`}
-                          >
-                            {formData.courses.includes(course._id) && (
-                              <Check size={14} className="text-white" />
-                            )}
+                      {filteredCourses.length > 0 ? filteredCourses.map((course) => (
+                        <div key={course._id} className={`p-2 border rounded-md ${
+                          isCourseSelected(course._id) 
+                            ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800' 
+                            : 'bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700'
+                        }`}>
+                          <div className="flex items-center space-x-2 mb-1">
+                            <div 
+                              onClick={() => handleCourseSelection(course._id)}
+                              className={`flex h-5 w-5 items-center justify-center border rounded cursor-pointer transition-colors ${
+                                isCourseSelected(course._id) 
+                                  ? 'bg-blue-500 border-blue-500' 
+                                  : 'border-gray-300 dark:border-gray-600'
+                              }`}
+                            >
+                              {isCourseSelected(course._id) && (
+                                <Check size={14} className="text-white" />
+                              )}
+                            </div>
+                            <label
+                              onClick={() => handleCourseSelection(course._id)}
+                              className="text-sm text-gray-700 dark:text-gray-300 truncate cursor-pointer font-medium"
+                            >
+                              {course.name}
+                            </label>
                           </div>
-                          <label
-                            onClick={() => handleCourseSelection(course._id)}
-                            className="text-sm text-gray-700 dark:text-gray-300 truncate cursor-pointer"
-                          >
-                            {course.name}
-                          </label>
+                          
+                          {/* Show course details fields when selected */}
+                          {isCourseSelected(course._id) && (
+                            <div className="mt-2 pt-2 border-t border-gray-200 dark:border-slate-700 grid grid-cols-2 gap-2">
+                              <div>
+                                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Section</label>
+                                <input
+                                  type="text"
+                                  value={selectedCourseDetails[course._id]?.section || "A"}
+                                  onChange={(e) => handleCourseDetailChange(course._id, "section", e.target.value)}
+                                  className="block w-full bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-md shadow-sm py-1 px-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                />
+                              </div>
+                              
+                              <div>
+                                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">No. of Sections</label>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  value={selectedCourseDetails[course._id]?.NoOfSections || 1}
+                                  onChange={(e) => handleCourseDetailChange(course._id, "NoOfSections", parseInt(e.target.value, 10))}
+                                  className="block w-full bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-md shadow-sm py-1 px-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                />
+                              </div>
+                              
+                              <div className="col-span-2">
+                                <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Lab Division</label>
+                                <select
+                                  value={selectedCourseDetails[course._id]?.labDivision || "No"}
+                                  onChange={(e) => handleCourseDetailChange(course._id, "labDivision", e.target.value)}
+                                  className="block w-full bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-md shadow-sm py-1 px-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                >
+                                  <option value="Yes">Yes</option>
+                                  <option value="No">No</option>
+                                </select>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )) : (
                         <p className="text-gray-500 dark:text-gray-400 col-span-full text-center py-4">
@@ -624,25 +928,55 @@ const PreferenceForm = () => {
                   <h4 className="flex items-center gap-2 text-base font-medium text-gray-900 dark:text-white mb-3">
                     <Users size={16} className="text-blue-500" /> Available Instructors
                   </h4>
-                  <div className="max-h-48 overflow-y-auto p-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-md">
+                  
+                  {/* "All Instructors" toggle */}
+                  <div className="mb-3 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-md border border-blue-200 dark:border-blue-800 flex items-center">
+                    <div 
+                      onClick={handleAllInstructorsToggle}
+                      className={`flex h-5 w-5 items-center justify-center border rounded cursor-pointer transition-colors mr-2 ${
+                        formData.allInstructors 
+                          ? 'bg-blue-500 border-blue-500' 
+                          : 'border-gray-300 dark:border-gray-600'
+                      }`}
+                    >
+                      {formData.allInstructors && (
+                        <Check size={14} className="text-white" />
+                      )}
+                    </div>
+                    <label
+                      onClick={handleAllInstructorsToggle}
+                      className="text-sm text-gray-700 dark:text-gray-300 cursor-pointer font-medium"
+                    >
+                      Select All Department Instructors
+                    </label>
+                  </div>
+                  
+                  {/* Instructor selection (disabled if "All Instructors" is checked) */}
+                  <div className={`max-h-48 overflow-y-auto p-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-md ${formData.allInstructors ? 'opacity-50' : ''}`}>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                       {instructors.length > 0 ? instructors.map((instructor) => (
                         <div key={instructor._id} className="flex items-center space-x-2">
                           <div 
-                            onClick={() => handleInstructorSelection(instructor._id)}
+                            onClick={() => !formData.allInstructors && handleInstructorSelection(instructor._id)}
                             className={`flex h-5 w-5 items-center justify-center border rounded cursor-pointer transition-colors ${
-                              formData.instructors.includes(instructor._id) 
-                                ? 'bg-blue-500 border-blue-500' 
-                                : 'border-gray-300 dark:border-gray-600'
+                              formData.allInstructors 
+                                ? 'bg-gray-200 dark:bg-gray-700 border-gray-300 dark:border-gray-600' 
+                                : formData.instructors.includes(instructor._id) 
+                                  ? 'bg-blue-500 border-blue-500' 
+                                  : 'border-gray-300 dark:border-gray-600'
                             }`}
                           >
-                            {formData.instructors.includes(instructor._id) && (
-                              <Check size={14} className="text-white" />
+                            {(formData.allInstructors || formData.instructors.includes(instructor._id)) && (
+                              <Check size={14} className={formData.allInstructors ? 'text-gray-500 dark:text-gray-400' : 'text-white'} />
                             )}
                           </div>
                           <label
-                            onClick={() => handleInstructorSelection(instructor._id)}
-                            className="text-sm text-gray-700 dark:text-gray-300 truncate cursor-pointer"
+                            onClick={() => !formData.allInstructors && handleInstructorSelection(instructor._id)}
+                            className={`text-sm truncate cursor-pointer ${
+                              formData.allInstructors 
+                                ? 'text-gray-500 dark:text-gray-400' 
+                                : 'text-gray-700 dark:text-gray-300'
+                            }`}
                           >
                             {instructor.fullName}
                           </label>

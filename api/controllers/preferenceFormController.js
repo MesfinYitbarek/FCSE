@@ -3,28 +3,63 @@ import mongoose from "mongoose";
 // Chair Head creates a new preference form
 export const createPreferenceForm = async (req, res) => {
   try {
-    const { chair, year, semester, maxPreferences, submissionStart, submissionEnd, courses, instructors } = req.body;
+    const { 
+      chair, 
+      year, 
+      semester, 
+      maxPreferences, 
+      submissionStart, 
+      submissionEnd, 
+      courses, 
+      instructors,
+      allInstructors 
+    } = req.body;
 
     // Validate required fields
-    if (!chair || !year || !semester || !maxPreferences || !submissionStart || !submissionEnd || !courses || !instructors) {
+    if (!chair || !year || !semester || !maxPreferences || !submissionStart || !submissionEnd || !courses) {
       return res.status(400).json({ message: "All fields are required" });
     }
 
-    // Validate courses and instructors arrays
-    if (!Array.isArray(courses) || !Array.isArray(instructors)) {
-      return res.status(400).json({ message: "Courses and instructors must be arrays" });
+    // If allInstructors is true, no need to check instructors array
+    if (!allInstructors && (!instructors || !Array.isArray(instructors))) {
+      return res.status(400).json({ message: "Instructors must be an array when not selecting all instructors" });
     }
+
+    // Validate courses array
+    if (!Array.isArray(courses)) {
+      return res.status(400).json({ message: "Courses must be an array" });
+    }
+
+    // Format courses with additional fields
+    const formattedCourses = courses.map(course => {
+      if (typeof course === 'object' && course.course) {
+        return {
+          course: course.course,
+          section: course.section || "A",
+          NoOfSections: course.NoOfSections || 1,
+          labDivision: course.labDivision || "No"
+        };
+      } else {
+        return {
+          course: course,
+          section: "A",
+          NoOfSections: 1,
+          labDivision: "No"
+        };
+      }
+    });
 
     // Create new preference form
     const newForm = new PreferenceForm({
-      chair, // Now it's a string
+      chair,
       year,
       semester,
       maxPreferences,
       submissionStart: new Date(submissionStart),
       submissionEnd: new Date(submissionEnd),
-      courses,
-      instructors,
+      courses: formattedCourses,
+      instructors: allInstructors ? [] : instructors,
+      allInstructors
     });
 
     // Save to database
@@ -42,32 +77,85 @@ export const createPreferenceForm = async (req, res) => {
 export const updatePreferenceForm = async (req, res) => {
   try {
     const { formId } = req.params;
-    const updatedForm = await PreferenceForm.findByIdAndUpdate(formId, req.body, { new: true });
+    const { 
+      chair, 
+      year, 
+      semester, 
+      maxPreferences, 
+      submissionStart, 
+      submissionEnd, 
+      courses, 
+      instructors,
+      allInstructors 
+    } = req.body;
+
+    // Format courses if provided
+    let updateData = {...req.body};
+    
+    if (courses && Array.isArray(courses)) {
+      const formattedCourses = courses.map(course => {
+        if (typeof course === 'object' && course.course) {
+          return {
+            course: course.course,
+            section: course.section || "A",
+            NoOfSections: course.NoOfSections || 1,
+            labDivision: course.labDivision || "No"
+          };
+        } else {
+          return {
+            course: course,
+            section: "A",
+            NoOfSections: 1,
+            labDivision: "No"
+          };
+        }
+      });
+      updateData.courses = formattedCourses;
+    }
+
+    // If allInstructors is true, clear instructors array
+    if (allInstructors) {
+      updateData.instructors = [];
+    }
+
+    const updatedForm = await PreferenceForm.findByIdAndUpdate(formId, updateData, { new: true });
     if (!updatedForm) return res.status(404).json({ message: "Preference form not found." });
 
     res.json({ message: "Preference form updated successfully", form: updatedForm });
   } catch (error) {
-    res.status(500).json({ message: "Error updating preference form", error });
+    res.status(500).json({ message: "Error updating preference form", error: error.message });
   }
 };
 
 // Get the active preference form for instructors
 export const getActivePreferenceForm = async (req, res) => {
   const { year, semester, chair } = req.query;
+
   try {
-    // Updated query to include chair parameter if provided
+    // Constructing the query based on provided parameters
     const query = { year, semester };
+
+    // Including 'chair' in the query only if it's provided
     if (chair) {
       query.chair = chair;
     }
-    
-    const forms = await PreferenceForm.find(query).populate("courses instructors");
-    if (!forms.length) return res.status(404).json({ message: "No preference forms found." });
+
+    // Searching for preference forms with the provided query parameters
+    const forms = await PreferenceForm.find(query).populate("courses.course instructors");
+
+    // Check if any forms are found
+    if (!forms.length) {
+      return res.status(404).json({ message: "No preference forms found." });
+    }
+
+    // Return the first matching preference form
     res.json(forms[0]); // Return the first matching form
   } catch (error) {
+    // Handle any errors that occur during the query
     res.status(500).json({ message: "Error fetching preference forms", error });
   }
 };
+
 
 // Get the preference form created by a specific Chair Head
 export const getFilteredPreferenceForms = async (req, res) => {
