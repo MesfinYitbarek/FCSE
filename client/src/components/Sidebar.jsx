@@ -1,4 +1,3 @@
-// Layout.jsx
 import { useState, useEffect, useRef } from "react";
 import { NavLink, Outlet, useNavigate, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
@@ -30,9 +29,19 @@ import {
   Eye,
   EyeOff,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  PieChart,
+  Database,
+  Shield,
+  Mail,
+  HelpCircle,
+  ChevronLeft
 } from "lucide-react";
 import api from "../utils/api";
+import dayjs from "dayjs";
+import relativeTime from "dayjs/plugin/relativeTime";
+
+dayjs.extend(relativeTime);
 
 const Layout = () => {
   const dispatch = useDispatch();
@@ -47,14 +56,11 @@ const Layout = () => {
     courses: true,
     assignments: true,
     reports: true,
-    preferences: true
+    preferences: true,
+    management: true
   });
-  const [notifications, setNotifications] = useState([
-    { id: 1, type: "announcement", message: "New announcement posted", read: false, link: "/announcementsView", time: "2 hours ago" },
-    { id: 2, type: "report", message: "Monthly report available", read: false, link: "/reports", time: "Yesterday" },
-    { id: 3, type: "complaint", message: "New complaint received", read: false, link: "/complaints", time: "2 days ago" },
-    { id: 4, type: "assignment", message: "Course assignments updated", read: false, link: "/assignments", time: "Mar 15, 2025" }
-  ]);
+  const [announcements, setAnnouncements] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [passwordData, setPasswordData] = useState({
     currentPassword: "",
     newPassword: "",
@@ -67,16 +73,56 @@ const Layout = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+  const [activePath, setActivePath] = useState("");
 
   const profileRef = useRef(null);
   const notificationRef = useRef(null);
+  const sidebarRef = useRef(null);
+  const mainContentRef = useRef(null);
+
+  // Fetch announcements for the current user's role
+  useEffect(() => {
+    const fetchAnnouncements = async () => {
+      try {
+        const response = await api.get('/announcements');
+        const now = new Date();
+        
+        // Filter announcements that are still valid
+        const validAnnouncements = response.data.filter(ann => 
+          !ann.validUntil || new Date(ann.validUntil) > now
+        );
+
+        setAnnouncements(validAnnouncements);
+        
+        // Calculate unread count
+        const unread = validAnnouncements.filter(ann => !ann.read).length;
+        setUnreadCount(unread);
+      } catch (error) {
+        console.error("Error fetching announcements:", error);
+      }
+    };
+
+    fetchAnnouncements();
+    
+    // Set up polling to check for new announcements every 5 minutes
+    const interval = setInterval(fetchAnnouncements, 5 * 60 * 1000);
+    
+    return () => clearInterval(interval);
+  }, [user?.role]);
+
+  // Track active path for sidebar highlights
+  useEffect(() => {
+    setActivePath(location.pathname);
+  }, [location.pathname]);
 
   // Check window width for responsive sidebar
   useEffect(() => {
     const handleResize = () => {
       setWindowWidth(window.innerWidth);
-      if (window.innerWidth < 768) {
+      if (window.innerWidth < 1024) {
         setIsSidebarOpen(false);
+      } else {
+        setIsSidebarOpen(true);
       }
     };
 
@@ -96,11 +142,15 @@ const Layout = () => {
       if (isNotificationOpen && notificationRef.current && !notificationRef.current.contains(event.target)) {
         setIsNotificationOpen(false);
       }
+      
+      if (windowWidth < 1024 && isSidebarOpen && sidebarRef.current && !sidebarRef.current.contains(event.target)) {
+        setIsSidebarOpen(false);
+      }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [isProfileDropdownOpen, isNotificationOpen]);
+  }, [isProfileDropdownOpen, isNotificationOpen, isSidebarOpen, windowWidth]);
 
   useEffect(() => {
     if (location.pathname === "/") {
@@ -216,20 +266,45 @@ const Layout = () => {
     navigate("/");
   };
 
-  const handleNotificationClick = (notification) => {
-    setNotifications(
-      notifications.map((n) =>
-        n.id === notification.id ? { ...n, read: true } : n
-      )
-    );
-    navigate(notification.link);
-    setIsNotificationOpen(false);
+  const handleNotificationClick = async (announcement) => {
+    try {
+      // Mark announcement as read if not already read
+      if (!announcement.read) {
+        await api.patch(`/announcements/${announcement._id}/read`);
+        
+        // Update local state
+        setAnnouncements(prev =>
+          prev.map(ann =>
+            ann._id === announcement._id ? { ...ann, read: true } : ann
+          )
+        );
+        
+        setUnreadCount(prev => prev - 1);
+      }
+      
+      // Navigate to announcements page with the clicked announcement highlighted
+      navigate("/announcementsView", { state: { highlightId: announcement._id } });
+      setIsNotificationOpen(false);
+    } catch (error) {
+      console.error("Error handling announcement click:", error);
+    }
   };
 
-  const markAllNotificationsAsRead = () => {
-    setNotifications(
-      notifications.map(n => ({ ...n, read: true }))
-    );
+  const markAllAnnouncementsAsRead = async () => {
+    try {
+      await api.patch('/announcements/mark-all-read');
+      
+      // Update local state
+      setAnnouncements(prev =>
+        prev.map(ann => ({ ...ann, read: true }))
+      );
+      
+      setUnreadCount(0);
+      toast.success("All announcements marked as read");
+    } catch (error) {
+      console.error("Error marking all announcements as read:", error);
+      toast.error("Failed to mark all as read");
+    }
   };
 
   const getStrengthColor = () => {
@@ -238,18 +313,20 @@ const Layout = () => {
     return "bg-green-500";
   };
 
-  const navItemClass = `flex items-center gap-3 py-2.5 px-4 rounded-md transition-colors font-medium text-gray-200 hover:bg-indigo-600/20 hover:text-white`;
-  const navGroupClass = `flex items-center justify-between gap-2 py-2.5 px-4 rounded-md transition-colors font-medium text-gray-200 hover:bg-indigo-600/20 hover:text-white cursor-pointer`;
-  const subNavItemClass = `flex items-center gap-3 py-2 px-4 ml-4 rounded-md transition-colors font-medium text-gray-300 hover:bg-indigo-600/20 hover:text-white border-l border-gray-700/50`;
+  // Updated dark sidebar styles
+  const navItemClass = `flex items-center gap-3 py-2.5 px-4 rounded-lg transition-all font-medium text-gray-300 hover:bg-gray-700 hover:text-white group`;
+  const navGroupClass = `flex items-center justify-between gap-2 py-2.5 px-4 rounded-lg transition-all font-medium text-gray-300 hover:bg-gray-700 hover:text-white cursor-pointer group`;
+  const subNavItemClass = `flex items-center gap-3 py-2 px-4 ml-6 rounded-lg transition-all font-medium text-gray-400 hover:bg-gray-700 hover:text-white`;
+  const activeNavItemClass = `bg-gray-700 text-white border-l-4 border-indigo-500`;
 
   const sidebarVariants = {
     open: { 
-      width: windowWidth < 768 ? "250px" : "280px", 
-      transition: { duration: 0.3 } 
+      width: windowWidth < 1024 ? "280px" : "300px", 
+      transition: { duration: 0.3, ease: "easeInOut" } 
     },
     closed: { 
-      width: windowWidth < 768 ? "0" : "80px", 
-      transition: { duration: 0.3 } 
+      width: windowWidth < 1024 ? "0" : "80px", 
+      transition: { duration: 0.3, ease: "easeInOut" } 
     }
   };
 
@@ -257,11 +334,13 @@ const Layout = () => {
     <NavLink
       to={to}
       className={({ isActive }) =>
-        `${navItemClass} ${isActive ? "bg-indigo-600/30 text-white" : ""}`
+        `${navItemClass} ${isActive ? activeNavItemClass : ""}`
       }
-      onClick={() => windowWidth < 768 && setIsSidebarOpen(false)}
+      onClick={() => windowWidth < 1024 && setIsSidebarOpen(false)}
     >
-      <Icon size={20} className="flex-shrink-0" />
+      <div className={`p-1.5 rounded-lg group-hover:bg-gray-600 ${activePath === to ? "bg-gray-600 text-white" : "bg-gray-800 text-gray-400"}`}>
+        <Icon size={18} className="flex-shrink-0" />
+      </div>
       {isSidebarOpen && <span className="truncate">{children}</span>}
     </NavLink>
   );
@@ -270,11 +349,11 @@ const Layout = () => {
     <NavLink
       to={to}
       className={({ isActive }) =>
-        `${subNavItemClass} ${isActive ? "bg-indigo-600/30 text-white" : ""}`
+        `${subNavItemClass} ${isActive ? activeNavItemClass : ""}`
       }
-      onClick={() => windowWidth < 768 && setIsSidebarOpen(false)}
+      onClick={() => windowWidth < 1024 && setIsSidebarOpen(false)}
     >
-      <div className="w-1.5 h-1.5 rounded-full bg-gray-500"></div>
+      <div className="w-1.5 h-1.5 rounded-full bg-gray-500 group-hover:bg-indigo-400"></div>
       {isSidebarOpen && <span className="truncate">{children}</span>}
     </NavLink>
   );
@@ -286,11 +365,14 @@ const Layout = () => {
         onClick={onToggle}
       >
         <div className="flex items-center gap-3">
-          <Icon size={20} className="flex-shrink-0" />
+          <div className={`p-1.5 rounded-lg group-hover:bg-gray-600 ${expanded ? "bg-gray-600 text-white" : "bg-gray-800 text-gray-400"}`}>
+            <Icon size={18} className="flex-shrink-0" />
+          </div>
           {isSidebarOpen && <span className="truncate">{title}</span>}
         </div>
         {isSidebarOpen && (
-          expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />
+          expanded ? <ChevronDown size={16} className="text-gray-400 group-hover:text-white" /> 
+          : <ChevronRight size={16} className="text-gray-400 group-hover:text-white" />
         )}
       </button>
 
@@ -303,92 +385,141 @@ const Layout = () => {
   );
 
   const renderNotifications = () => (
-    <div className="divide-y divide-gray-100">
-      {notifications.length > 0 ? (
+    <div className="divide-y divide-gray-200">
+      {announcements.length > 0 ? (
         <>
-          <div className="p-2 flex justify-between items-center border-b">
-            <span className="text-xs text-gray-500">
-              {notifications.filter(n => !n.read).length} unread
-            </span>
+          <div className="p-3 flex justify-between items-center border-b">
+            <h3 className="text-sm font-semibold text-gray-900">
+              Announcements
+              {unreadCount > 0 && (
+                <span className="ml-2 bg-indigo-100 text-indigo-800 text-xs font-medium px-2 py-0.5 rounded-full">
+                  {unreadCount} new
+                </span>
+              )}
+            </h3>
             <button
-              onClick={markAllNotificationsAsRead}
+              onClick={markAllAnnouncementsAsRead}
               className="text-xs text-indigo-600 hover:text-indigo-800 font-medium"
+              disabled={unreadCount === 0}
             >
               Mark all as read
             </button>
           </div>
-          {notifications.map((notification) => (
-            <button
-              key={notification.id}
-              onClick={() => handleNotificationClick(notification)}
-              className={`w-full p-3 text-left hover:bg-gray-50 transition-colors flex items-start gap-3 ${notification.read ? "opacity-60" : ""
-                }`}
-            >
-              <div className={`mt-1 rounded-full p-1.5 ${notification.type === "announcement" ? "bg-blue-100 text-blue-600" :
-                  notification.type === "report" ? "bg-green-100 text-green-600" :
-                    notification.type === "complaint" ? "bg-orange-100 text-orange-600" :
-                      "bg-indigo-100 text-indigo-600"
-                }`}>
-                {notification.type === "announcement" ? <Megaphone size={16} /> :
-                  notification.type === "report" ? <FileText size={16} /> :
-                    notification.type === "complaint" ? <AlertTriangle size={16} /> :
-                      <AlertCircle size={16} />}
-              </div>
-              <div className="flex-1">
-                <p className="text-sm font-medium text-gray-900">{notification.message}</p>
-                <p className="text-xs text-gray-500 mt-1">{notification.time}</p>
-              </div>
-              {!notification.read && (
-                <span className="w-2 h-2 bg-blue-600 rounded-full mt-2"></span>
-              )}
-            </button>
-          ))}
+          <div className="max-h-96 overflow-y-auto">
+            {announcements.map((announcement) => {
+              const isExpired = announcement.validUntil && new Date(announcement.validUntil) < new Date();
+              
+              return (
+                <button
+                  key={announcement._id}
+                  onClick={() => handleNotificationClick(announcement)}
+                  className={`w-full p-3 text-left hover:bg-gray-50 transition-colors flex items-start gap-3 ${
+                    announcement.read ? "opacity-75" : "bg-indigo-50/50"
+                  } ${isExpired ? "bg-gray-100" : ""}`}
+                  disabled={isExpired}
+                >
+                  <div className={`mt-1 rounded-full p-2 ${
+                    isExpired ? "bg-gray-200 text-gray-500" : "bg-blue-100 text-blue-600"
+                  }`}>
+                    <Megaphone size={16} />
+                  </div>
+                  <div className="flex-1 text-left">
+                    <div className="flex justify-between items-start">
+                      <p className={`text-sm font-medium ${
+                        isExpired ? "text-gray-500" : "text-gray-900"
+                      }`}>
+                        {announcement.title}
+                      </p>
+                      {isExpired && (
+                        <span className="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">
+                          Expired
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1">
+                      {dayjs(announcement.publishedAt).fromNow()}
+                      {announcement.validUntil && (
+                        <span className="ml-2">
+                          · Valid until: {dayjs(announcement.validUntil).format('MMM D, YYYY')}
+                        </span>
+                      )}
+                    </p>
+                    <p className={`text-xs mt-1 line-clamp-2 ${
+                      isExpired ? "text-gray-500" : "text-gray-700"
+                    }`}>
+                      {announcement.message}
+                    </p>
+                  </div>
+                  {!announcement.read && !isExpired && (
+                    <span className="w-2 h-2 bg-indigo-600 rounded-full mt-2"></span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </>
       ) : (
-        <div className="p-4 text-center text-gray-500">
-          <p>No notifications yet</p>
+        <div className="p-6 text-center">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gray-100">
+            <Bell size={20} className="text-gray-500" />
+          </div>
+          <h3 className="mt-2 text-sm font-medium text-gray-900">No announcements</h3>
+          <p className="mt-1 text-sm text-gray-500">You'll see announcements here when they appear.</p>
         </div>
       )}
     </div>
   );
 
-  // Create navigation items based on user role
   const renderNavItems = () => {
     switch (user?.role) {
       case "HeadOfFaculty":
         return (
           <>
-            <NavItem to="/dashboard" icon={Home}>Dashboard</NavItem>
-            <NavItem to="/users" icon={Users}>User Management</NavItem>
-            <NavItem to="/chairs" icon={Circle}>Chair Management</NavItem>
-            <NavItem to="/positions" icon={UserCheck}>Position Management</NavItem>
-            <NavItem to="/rules" icon={Settings}>Rule Management</NavItem>
+            <NavItem to="/dashboard" icon={PieChart}>Dashboard</NavItem>
+            
             <NavGroup
-              title="Reports"
+              title="Management"
+              icon={Database}
+              expanded={expandedGroups.management}
+              onToggle={() => toggleGroup('management')}
+            >
+              <SubNavItem to="/users">User Management</SubNavItem>
+              <SubNavItem to="/chairs">Chair Management</SubNavItem>
+              <SubNavItem to="/positions">Position Management</SubNavItem>
+              <SubNavItem to="/rules">Rule Management</SubNavItem>
+            </NavGroup>
+
+            <NavGroup
+              title="Reports & Analytics"
               icon={TrendingUp}
               expanded={expandedGroups.reports}
               onToggle={() => toggleGroup('reports')}
             >
               <SubNavItem to="/reports">View Reports</SubNavItem>
               <SubNavItem to="/weights">Weight Management</SubNavItem>
+              <SubNavItem to="/analytics">Performance Analytics</SubNavItem>
             </NavGroup>
+
             <NavItem to="/announcementsView" icon={Megaphone}>Announcements</NavItem>
+            <NavItem to="/messages" icon={Mail}>Messages</NavItem>
+            <NavItem to="/help" icon={HelpCircle}>Help Center</NavItem>
           </>
         );
 
       case "ChairHead":
         return (
           <>
-            <NavItem to="/dashboard" icon={Home}>Dashboard</NavItem>
+            <NavItem to="/dashboard" icon={PieChart}>Dashboard</NavItem>
 
             <NavGroup
-              title="Courses and Instructors"
+              title="Academic Management"
               icon={Book}
               expanded={expandedGroups.courses}
               onToggle={() => toggleGroup('courses')}
             >
               <SubNavItem to="/courses">Course Management</SubNavItem>
               <SubNavItem to="/instructorManagement">Instructor Management</SubNavItem>
+              <SubNavItem to="/schedules">Schedule Planning</SubNavItem>
             </NavGroup>
 
             <NavGroup
@@ -405,13 +536,14 @@ const Layout = () => {
             <NavItem to="/complaintsCH" icon={AlertTriangle}>Complaints</NavItem>
             <NavItem to="/reportsCH" icon={TrendingUp}>Reports</NavItem>
             <NavItem to="/announcementsCH" icon={Megaphone}>Announcements</NavItem>
+            <NavItem to="/help" icon={HelpCircle}>Help Center</NavItem>
           </>
         );
 
       case "COC":
         return (
           <>
-            <NavItem to="/dashboard" icon={Home}>Dashboard</NavItem>
+            <NavItem to="/dashboard" icon={PieChart}>Dashboard</NavItem>
 
             <NavGroup
               title="Course Assignments"
@@ -422,132 +554,192 @@ const Layout = () => {
               <SubNavItem to="/assignments/auto/common">Common Courses</SubNavItem>
               <SubNavItem to="/assignments/auto/extension">Extension Courses</SubNavItem>
               <SubNavItem to="/assignments/auto/summer">Summer Courses</SubNavItem>
+              <SubNavItem to="/assignments/calendar">Assignment Calendar</SubNavItem>
             </NavGroup>
 
             <NavItem to="/complaintsCOC" icon={AlertTriangle}>Complaints</NavItem>
             <NavItem to="/reportsCOC" icon={TrendingUp}>Reports</NavItem>
             <NavItem to="/announcementsCOC" icon={Megaphone}>Announcements</NavItem>
+            <NavItem to="/help" icon={HelpCircle}>Help Center</NavItem>
           </>
         );
 
       case "Instructor":
         return (
           <>
-            <NavItem to="/dashboard" icon={Home}>Dashboard</NavItem>
+            <NavItem to="/dashboard" icon={PieChart}>Dashboard</NavItem>
             <NavItem to="/preferencesInst" icon={ClipboardList}>Submit Preferences</NavItem>
             <NavItem to="/reportsInst" icon={FileText}>My Assignments</NavItem>
+            <NavItem to="/scheduleInst" icon={Calendar}>My Schedule</NavItem>
             <NavItem to="/complaintsInst" icon={AlertTriangle}>File Complaint</NavItem>
             <NavItem to="/announcementsInst" icon={Megaphone}>Announcements</NavItem>
             <NavItem to="/reportInst" icon={TrendingUp}>Reports</NavItem>
+            <NavItem to="/help" icon={HelpCircle}>Help Center</NavItem>
           </>
         );
 
       default:
-        return <NavItem to="/dashboard" icon={Home}>Dashboard</NavItem>;
+        return (
+          <>
+            <NavItem to="/dashboard" icon={PieChart}>Dashboard</NavItem>
+            <NavItem to="/help" icon={HelpCircle}>Help Center</NavItem>
+          </>
+        );
     }
   };
 
   return (
-    <div className="flex h-screen overflow-hidden bg-gray-50 font-sans">
-      {/* Overlay for mobile sidebar */}
-      {windowWidth < 768 && isSidebarOpen && (
+    <div className="flex h-screen overflow-hidden bg-gray-50 font-sans antialiased">
+      {/* Mobile sidebar overlay */}
+      {windowWidth < 1024 && isSidebarOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-10"
+          className="fixed inset-0 bg-black/50 z-20 lg:hidden"
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
 
-      {/* Sidebar */}
+      {/* Sidebar - Updated with dark theme */}
       <motion.aside
-        initial={windowWidth < 768 ? "closed" : "open"}
+        ref={sidebarRef}
+        initial={windowWidth < 1024 ? "closed" : "open"}
         animate={isSidebarOpen ? "open" : "closed"}
         variants={sidebarVariants}
-        className={`fixed left-0 top-0 h-full bg-gray-900 shadow-lg shadow-gray-900/10 z-20 overflow-hidden ${
-          windowWidth < 768 && !isSidebarOpen ? "w-0" : ""
+        className={`fixed left-0 top-0 h-full bg-gray-900 shadow-lg z-30 overflow-hidden ${
+          windowWidth < 1024 && !isSidebarOpen ? "w-0" : ""
         }`}
       >
-        <div className="flex items-center justify-between p-4 border-b border-gray-800">
-          {isSidebarOpen && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="space-y-1"
-            >
-              <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                <span className="bg-gradient-to-r from-indigo-500 to-purple-500 p-1.5 rounded text-white">
-                  FC
-                </span>
-                <span>FCSE COSystem</span>
-              </h2>
-              <p className="text-xs text-gray-400 uppercase tracking-wider ml-1">
-                {user?.role === "HeadOfFaculty" ? "Head of Faculty" :
-                  user?.role === "ChairHead" ? "Chair Head" :
-                    user?.role === "COC" ? "COC" : "Instructor"}
-              </p>
-            </motion.div>
-          )}
-          <button
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="p-2 hover:bg-gray-800 rounded-lg transition-colors"
-            aria-label={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
-          >
-            {isSidebarOpen ? <X size={20} className="text-gray-400" /> : <Menu size={20} className="text-gray-400" />}
-          </button>
-        </div>
+        <div className="flex flex-col h-full">
+          {/* Sidebar header */}
+          <div className="flex items-center justify-between p-4 border-b border-gray-800">
+            {isSidebarOpen ? (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="flex items-center space-x-3"
+              >
+                <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-2 rounded-lg text-white">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+                  </svg>
+                </div>
+                <div>
+                  <h2 className="text-lg font-bold text-white">FCSE COSystem</h2>
+                  <p className="text-xs text-gray-400 uppercase tracking-wider">
+                    {user?.role === "HeadOfFaculty" ? "Head of Faculty" :
+                      user?.role === "ChairHead" ? "Chair Head" :
+                        user?.role === "COC" ? "COC" : "Instructor"}
+                  </p>
+                </div>
+              </motion.div>
+            ) : (
+              <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-2 rounded-lg text-white mx-auto">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+                </svg>
+              </div>
+            )}
+            {windowWidth >= 1024 && (
+              <button
+                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+                className="p-1.5 hover:bg-gray-800 rounded-lg transition-colors text-gray-400 hover:text-white"
+                aria-label={isSidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+              >
+                {isSidebarOpen ? (
+                  <ChevronLeft size={20} />
+                ) : (
+                  <ChevronRight size={20} />
+                )}
+              </button>
+            )}
+          </div>
 
-        <nav className="py-4 px-3 space-y-2 overflow-y-auto h-[calc(100vh-5rem)] custom-scrollbar">
-          {renderNavItems()}
-        </nav>
+          {/* Navigation */}
+          <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto custom-scrollbar">
+            {renderNavItems()}
+          </nav>
+
+          {/* Sidebar footer */}
+          {isSidebarOpen && (
+            <div className="p-4 border-t border-gray-800">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-center text-white font-medium">
+                  {user?.fullName ? user.fullName.charAt(0).toUpperCase() : "U"}
+                </div>
+                <div>
+                  <p className="text-sm font-medium text-white truncate">
+                    {user?.fullName || "User"}
+                  </p>
+                  <p className="text-xs text-gray-400 truncate">
+                    {user?.email || "user@example.com"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
       </motion.aside>
 
+      {/* Main content area */}
       <div
         className={`flex-1 transition-all duration-300 ${
-          windowWidth >= 768
-            ? (isSidebarOpen ? "ml-[280px]" : "ml-[80px]")
+          windowWidth >= 1024
+            ? (isSidebarOpen ? "ml-[290px]" : "ml-[80px]")
             : "ml-0"
         }`}
       >
-        <header className="bg-white shadow-md h-16 fixed top-0 right-0 z-10 w-full">
+        {/* Top navigation bar */}
+        <header className="bg-white shadow-sm h-16 fixed top-0 right-0 z-10 w-full border-b border-gray-200">
           <div className={`flex items-center justify-between h-full px-4 md:px-6 ${
-            windowWidth >= 768 
-              ? (isSidebarOpen ? "ml-[280px]" : "ml-[80px]") 
+            windowWidth >= 1024 
+              ? (isSidebarOpen ? "ml-[300px]" : "ml-[80px]") 
               : "ml-0"
-          }`}>
-            {/* Mobile menu button - only shown on mobile */}
-            {windowWidth < 768 && (
+          } transition-all duration-300`}>
+            {/* Mobile menu button */}
+            {windowWidth < 1024 && (
               <button
                 onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
                 aria-label={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
               >
                 <Menu size={22} />
               </button>
             )}
 
-            {/* Logo shown on mobile */}
-            {windowWidth < 768 && (
-              <div className="flex items-center space-x-2">
-                <span className="bg-gradient-to-r from-indigo-500 to-purple-500 p-1 rounded text-white font-bold">
-                  FC
-                </span>
-                <h2 className="text-lg font-semibold text-gray-800">FCSE COSystem</h2>
-              </div>
-            )}
+            {/* Breadcrumbs or page title */}
+            <div className="hidden md:flex items-center">
+              <h2 className="text-lg font-semibold text-gray-800">
+                {location.pathname.split('/').pop() || "Dashboard"}
+              </h2>
+            </div>
 
-            <div className="flex items-center ml-auto gap-2 md:gap-4">
+            {/* Right side controls */}
+            <div className="flex items-center gap-3">
+              {/* Search button */}
+              <button className="p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </button>
+
+              {/* Help button */}
+              <button className="p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors hidden md:block">
+                <HelpCircle size={20} />
+              </button>
+
+              {/* Notifications */}
               <div className="relative" ref={notificationRef}>
                 <button
                   onClick={() => {
                     setIsNotificationOpen(!isNotificationOpen);
                     if (isProfileDropdownOpen) setIsProfileDropdownOpen(false);
                   }}
-                  className="p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 relative"
+                  className="p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors relative"
                   aria-label="Notifications"
                 >
                   <Bell size={20} />
-                  {notifications.filter((n) => !n.read).length > 0 && (
+                  {unreadCount > 0 && (
                     <span className="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                      {notifications.filter((n) => !n.read).length}
+                      {unreadCount}
                     </span>
                   )}
                 </button>
@@ -560,40 +752,28 @@ const Layout = () => {
                       exit={{ opacity: 0, y: -10 }}
                       className="absolute right-0 mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-lg shadow-lg bg-white border z-30"
                     >
-                      <div className="p-3 border-b border-gray-100">
-                        <div className="flex items-center justify-between">
-                          <h3 className="font-semibold text-gray-900">Notifications</h3>
-                          <button
-                            onClick={() => setIsNotificationOpen(false)}
-                            className="p-1 hover:bg-gray-100 rounded-lg"
-                            aria-label="Close notifications"
-                          >
-                            <X size={16} />
-                          </button>
-                        </div>
-                      </div>
                       {renderNotifications()}
                     </motion.div>
                   )}
                 </AnimatePresence>
               </div>
 
+              {/* User profile dropdown */}
               <div className="relative" ref={profileRef}>
                 <button
                   onClick={() => {
                     setIsProfileDropdownOpen(!isProfileDropdownOpen);
                     if (isNotificationOpen) setIsNotificationOpen(false);
                   }}
-                  className="flex items-center px-2 py-1.5 rounded-full hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+                  className="flex items-center space-x-2 p-1 rounded-full hover:bg-gray-100 transition-colors"
                   aria-label="User profile"
                 >
                   <div className="w-8 h-8 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-center text-white font-medium">
                     {user?.fullName ? user.fullName.charAt(0).toUpperCase() : "U"}
                   </div>
-                  <span className="hidden md:block ml-2 mr-1 font-medium text-gray-700 truncate max-w-[100px] lg:max-w-[200px]">
-                    {user?.fullName || "User"}
-                  </span>
-                  <ChevronDown size={16} className="text-gray-500" />
+                  {windowWidth >= 1024 && (
+                    <ChevronDown size={16} className="text-gray-500" />
+                  )}
                 </button>
 
                 <AnimatePresence>
@@ -615,7 +795,17 @@ const Layout = () => {
                           </div>
                         </div>
                       </div>
-                      <div className="p-2">
+                      <div className="p-2 space-y-1">
+                        <button
+                          onClick={() => {
+                            navigate("/profile");
+                            setIsProfileDropdownOpen(false);
+                          }}
+                          className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
+                        >
+                          <User size={16} />
+                          <span>My Profile</span>
+                        </button>
                         <button
                           onClick={() => {
                             setIsChangePasswordOpen(true);
@@ -628,7 +818,7 @@ const Layout = () => {
                         </button>
                         <button
                           onClick={handleLogout}
-                          className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md transition-colors mt-1"
+                          className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md transition-colors"
                         >
                           <LogOut size={16} />
                           <span>Logout</span>
@@ -682,14 +872,14 @@ const Layout = () => {
                           name="currentPassword"
                           value={passwordData.currentPassword}
                           onChange={handlePasswordChange}
-                          className={`w-full px-4 py-2.5 border ${passwordErrors.currentPassword ? "border-red-500" : "border-gray-300"
-                            } rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent`}
+                          className={`w-full px-4 py-2.5 border ${passwordErrors.currentPassword ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-indigo-500"
+                            } rounded-lg focus:ring-2 focus:border-transparent`}
                           placeholder="Enter current password"
                         />
                         <button
                           type="button"
                           onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500"
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
                           aria-label={showCurrentPassword ? "Hide password" : "Show password"}
                         >
                           {showCurrentPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -710,14 +900,14 @@ const Layout = () => {
                           name="newPassword"
                           value={passwordData.newPassword}
                           onChange={handlePasswordChange}
-                          className={`w-full px-4 py-2.5 border ${passwordErrors.newPassword ? "border-red-500" : "border-gray-300"
-                            } rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent`}
+                          className={`w-full px-4 py-2.5 border ${passwordErrors.newPassword ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-indigo-500"
+                            } rounded-lg focus:ring-2 focus:border-transparent`}
                           placeholder="Enter new password"
                         />
                         <button
                           type="button"
                           onClick={() => setShowNewPassword(!showNewPassword)}
-                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500"
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
                           aria-label={showNewPassword ? "Hide password" : "Show password"}
                         >
                           {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -730,18 +920,18 @@ const Layout = () => {
                       {/* Password strength indicator */}
                       {passwordData.newPassword && (
                         <div className="mt-3">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-xs font-medium text-gray-600">Password strength</span>
+                            <span className="text-xs font-medium text-gray-600">
+                              {passwordStrength <= 1 ? "Weak" : passwordStrength <= 3 ? "Medium" : "Strong"}
+                            </span>
+                          </div>
                           <div className="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
                             <div
                               className={`h-full ${getStrengthColor()}`}
                               style={{ width: `${(passwordStrength / 5) * 100}%` }}
                             ></div>
                           </div>
-                          <p className="text-xs text-gray-600 mt-1.5 flex items-center">
-                            <span className={`inline-block w-2 h-2 rounded-full mr-1.5 ${getStrengthColor()}`}></span>
-                            {passwordStrength <= 1 && "Weak password"}
-                            {passwordStrength > 1 && passwordStrength <= 3 && "Moderate password"}
-                            {passwordStrength > 3 && "Strong password"}
-                          </p>
                           <ul className="text-xs text-gray-600 mt-2 grid grid-cols-2 gap-x-2 gap-y-1 pl-1">
                             <li className={`flex items-center ${passwordData.newPassword.length >= 8 ? "text-green-600" : "text-gray-500"}`}>
                               <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1.5 ${passwordData.newPassword.length >= 8 ? "bg-green-500" : "bg-gray-300"}`}></span>
@@ -778,14 +968,14 @@ const Layout = () => {
                           name="confirmPassword"
                           value={passwordData.confirmPassword}
                           onChange={handlePasswordChange}
-                          className={`w-full px-4 py-2.5 border ${passwordErrors.confirmPassword ? "border-red-500" : "border-gray-300"
-                            } rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent`}
+                          className={`w-full px-4 py-2.5 border ${passwordErrors.confirmPassword ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-indigo-500"
+                            } rounded-lg focus:ring-2 focus:border-transparent`}
                           placeholder="Confirm new password"
                         />
                         <button
                           type="button"
                           onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500"
+                          className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
                           aria-label={showConfirmPassword ? "Hide password" : "Show password"}
                         >
                           {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
@@ -810,7 +1000,15 @@ const Layout = () => {
                         className={`px-4 py-2.5 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 ${isLoading ? "opacity-70 cursor-not-allowed" : ""
                           }`}
                       >
-                        {isLoading ? "Changing..." : "Change Password"}
+                        {isLoading ? (
+                          <span className="flex items-center justify-center">
+                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Changing...
+                          </span>
+                        ) : "Change Password"}
                       </button>
                     </div>
                   </div>
@@ -820,8 +1018,37 @@ const Layout = () => {
           )}
         </AnimatePresence>
 
-        <main className="pt-16 min-h-screen bg-gray-50 overflow-y-auto h-[calc(100vh-4rem)]">
+        {/* Main content */}
+        <main 
+          ref={mainContentRef}
+          className="pt-16 h-[calc(100vh-4rem)] overflow-y-auto bg-gray-50"
+        >
           <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto">
+            {/* Optional breadcrumbs */}
+            <div className="mb-6 hidden md:block">
+              <nav className="flex" aria-label="Breadcrumb">
+                <ol className="inline-flex items-center space-x-1 md:space-x-2">
+                  <li className="inline-flex items-center">
+                    <NavLink to="/dashboard" className="inline-flex items-center text-sm font-medium text-gray-500 hover:text-indigo-600">
+                      <Home size={16} className="mr-2" />
+                      Dashboard
+                    </NavLink>
+                  </li>
+                  {location.pathname !== '/dashboard' && (
+                    <li>
+                      <div className="flex items-center">
+                        <ChevronRight size={16} className="text-gray-400" />
+                        <span className="ml-1 text-sm font-medium text-gray-700 md:ml-2 capitalize">
+                          {location.pathname.split('/').filter(Boolean).pop()}
+                        </span>
+                      </div>
+                    </li>
+                  )}
+                </ol>
+              </nav>
+            </div>
+
+            {/* Page content */}
             <Outlet />
           </div>
         </main>
@@ -831,20 +1058,21 @@ const Layout = () => {
       <style jsx="true">{`
         .custom-scrollbar::-webkit-scrollbar {
           width: 6px;
+          height: 6px;
         }
         
         .custom-scrollbar::-webkit-scrollbar-track {
-          background: rgba(255, 255, 255, 0.05);
-          border-radius: 10px;
-        }
-        
-        .custom-scrollbar::-webkit-scrollbar-thumb {
           background: rgba(255, 255, 255, 0.1);
           border-radius: 10px;
         }
         
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        .custom-scrollbar::-webkit-scrollbar-thumb {
           background: rgba(255, 255, 255, 0.2);
+          border-radius: 10px;
+        }
+        
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: rgba(255, 255, 255, 0.3);
         }
       `}</style>
     </div>

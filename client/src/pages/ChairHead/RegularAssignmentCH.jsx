@@ -24,6 +24,28 @@ const RegularAssignmentCH = () => {
   const [showOptions, setShowOptions] = useState(false);
   const [activeTab, setActiveTab] = useState("manual"); // "manual", "automatic", "assigned"
 
+  // Setup dark mode detection
+  useEffect(() => {
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      document.documentElement.classList.add('dark');
+    }
+    
+    const darkModeListener = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleDarkModeChange = (event) => {
+      if (event.matches) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    };
+    
+    darkModeListener.addEventListener('change', handleDarkModeChange);
+    
+    return () => {
+      darkModeListener.removeEventListener('change', handleDarkModeChange);
+    };
+  }, []);
+
   // Fetch assignments when the component mounts or when filters change
   useEffect(() => {
     if (showOptions) {
@@ -51,8 +73,7 @@ const RegularAssignmentCH = () => {
     } finally {
       setLoading(false);
     }
-};
-
+  };
 
   // Handle filter changes
   const handleFilterChange = (e) => {
@@ -94,20 +115,20 @@ const RegularAssignmentCH = () => {
   };
 
   return (
-    <div className="p-2 sm:p-4 md:p-6 w-full max-w-7xl mx-auto">
-      <div className="bg-white rounded-xl shadow-sm p-3 sm:p-4 md:p-6 mb-4 sm:mb-6">
+    <div className="px-2 sm:px-4 md:px-6 py-3 sm:py-4 md:py-6 w-full max-w-7xl mx-auto">
+      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-3 sm:p-4 md:p-6 mb-4 sm:mb-6">
         <div className="mb-4 sm:mb-6">
-          <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-800">Regular Course Assignment</h1>
-          <p className="text-xs sm:text-sm text-gray-500 mt-1">
+          <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-800 dark:text-white">Regular Course Assignment</h1>
+          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
             Assign regular courses to instructors based on preferences and workload
           </p>
         </div>
 
         {/* Search (Filtering Mechanism) */}
         <div className="space-y-4 sm:space-y-5">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
             <div className="space-y-1 sm:space-y-2">
-              <label className="block text-xs sm:text-sm font-medium text-gray-700">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
                 <div className="flex items-center gap-1 sm:gap-2">
                   <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
                   <span>Academic Year</span>
@@ -118,12 +139,12 @@ const RegularAssignmentCH = () => {
                 name="year"
                 value={filters.year}
                 onChange={handleFilterChange}
-                className="w-full px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 md:py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-sm"
+                className="w-full px-3 py-2.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-base sm:text-sm text-gray-900 dark:text-white"
               />
             </div>
             
             <div className="space-y-1 sm:space-y-2">
-              <label className="block text-xs sm:text-sm font-medium text-gray-700">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
                 <div className="flex items-center gap-1 sm:gap-2">
                   <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
                   <span>Semester</span>
@@ -133,7 +154,7 @@ const RegularAssignmentCH = () => {
                 name="semester"
                 value={filters.semester}
                 onChange={handleFilterChange}
-                className="w-full px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 md:py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none text-sm"
+                className="w-full px-3 py-2.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none text-base sm:text-sm text-gray-900 dark:text-white"
               >
                 <option value="Regular 1">Regular 1</option>
                 <option value="Regular 2">Regular 2</option>
@@ -143,13 +164,13 @@ const RegularAssignmentCH = () => {
             </div>
             
             <div className="space-y-1 sm:space-y-2">
-              <label className="block text-xs sm:text-sm font-medium text-gray-700">
+              <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
                 <div className="flex items-center gap-1 sm:gap-2">
                   <User className="w-3 h-3 sm:w-4 sm:h-4" />
                   <span>Department Chair</span>
                 </div>
               </label>
-              <div className="px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 md:py-2.5 bg-gray-100 border border-gray-200 rounded-lg text-gray-700 text-xs sm:text-sm truncate">
+              <div className="px-3 py-2.5 bg-gray-100 dark:bg-gray-600 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-300 text-base sm:text-sm truncate">
                 {user?.chair || 'Loading chair information...'}
               </div>
             </div>
@@ -159,12 +180,13 @@ const RegularAssignmentCH = () => {
             <button
               onClick={handleSearch}
               disabled={loading}
-              className="flex items-center justify-center px-3 sm:px-4 md:px-6 py-1.5 sm:py-2 md:py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-300 transition-colors shadow-sm w-full sm:w-auto text-sm"
+              className="flex items-center justify-center px-4 sm:px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed transition-colors shadow-sm w-full sm:w-auto text-base"
+              style={{ minHeight: "44px" }} // Ensure minimum touch target size
             >
               {loading ? (
-                <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2 animate-spin" />
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
               ) : (
-                <Search className="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2" />
+                <Search className="w-5 h-5 mr-2" />
               )}
               {loading ? "Searching..." : "Search Preferences"}
             </button>
@@ -173,20 +195,20 @@ const RegularAssignmentCH = () => {
 
         {/* Error message */}
         {error && (
-          <div className="mt-4 sm:mt-6 bg-red-50 text-red-700 p-2 sm:p-3 md:p-4 rounded-lg border border-red-200 flex items-start flex-wrap">
-            <AlertCircle className="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2 flex-shrink-0 mt-0.5" />
-            <span className="text-xs sm:text-sm">{error}</span>
+          <div className="mt-4 sm:mt-6 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 p-3 sm:p-4 rounded-lg border border-red-200 dark:border-red-800/30 flex items-start">
+            <AlertCircle className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" />
+            <span className="text-sm">{error}</span>
           </div>
         )}
         
         {/* Preferences summary */}
         {preferences && preferences.preferences && preferences.preferences.length > 0 && (
-          <div className="mt-4 sm:mt-6 p-2 sm:p-3 md:p-4 bg-blue-50 border border-blue-100 rounded-lg">
-            <div className="flex items-center text-blue-700 flex-wrap">
-              <BookOpen className="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2 flex-shrink-0" />
-              <span className="font-medium text-xs sm:text-sm md:text-base">Found {preferences.preferences.length} instructor preference submissions for {filters.semester} {filters.year}</span>
+          <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/30 rounded-lg">
+            <div className="flex items-center text-blue-700 dark:text-blue-400 flex-wrap">
+              <BookOpen className="w-5 h-5 mr-2 flex-shrink-0" />
+              <span className="font-medium text-sm md:text-base">Found {preferences.preferences.length} instructor preference submissions for {filters.semester} {filters.year}</span>
             </div>
-            <p className="mt-1 text-xs sm:text-sm text-blue-600">
+            <p className="mt-1 text-sm text-blue-600 dark:text-blue-300">
               You can now proceed to assign courses manually or automatically
             </p>
           </div>
@@ -194,71 +216,78 @@ const RegularAssignmentCH = () => {
       </div>
 
       {showOptions && (
-        <div className="bg-white rounded-xl shadow-sm p-3 sm:p-4 md:p-6">
-          {/* Tabs */}
-          <div className="border-b border-gray-200 mb-4 sm:mb-6 overflow-x-auto">
-            <nav className="flex -mb-px space-x-2 sm:space-x-4 md:space-x-8 min-w-max">
-              <button
-                onClick={() => setActiveTab("manual")}
-                className={`py-2 sm:py-3 md:py-4 px-1 border-b-2 font-medium text-xs sm:text-sm ${
-                  activeTab === "manual"
-                    ? "border-blue-500 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                }`}
-              >
-                <div className="flex items-center">
-                  <User className="w-3 h-3 sm:w-4 sm:h-4 mr-0.5 sm:mr-1 md:mr-2" />
-                  <span>Manual Assignment</span>
-                </div>
-              </button>
-              
-              <button
-                onClick={() => setActiveTab("automatic")}
-                className={`py-2 sm:py-3 md:py-4 px-1 border-b-2 font-medium text-xs sm:text-sm ${
-                  activeTab === "automatic"
-                    ? "border-blue-500 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                }`}
-              >
-                <div className="flex items-center">
-                  <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 mr-0.5 sm:mr-1 md:mr-2" />
-                  <span>Automatic Assignment</span>
-                </div>
-              </button>
-              
-              <button
-                onClick={() => setActiveTab("assigned")}
-                className={`py-2 sm:py-3 md:py-4 px-1 border-b-2 font-medium text-xs sm:text-sm ${
-                  activeTab === "assigned"
-                    ? "border-blue-500 text-blue-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                }`}
-              >
-                <div className="flex items-center">
-                  <Filter className="w-3 h-3 sm:w-4 sm:h-4 mr-0.5 sm:mr-1 md:mr-2" />
-                  <span>Assigned Courses</span>
-                </div>
-              </button>
-            </nav>
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-3 sm:p-4 md:p-6">
+          {/* Tabs - Scrollable on mobile */}
+          <div className="border-b border-gray-200 dark:border-gray-700 mb-4 sm:mb-6 overflow-x-auto">
+            <div className="min-w-max">
+              <nav className="flex -mb-px space-x-4 md:space-x-8">
+                <button
+                  onClick={() => setActiveTab("manual")}
+                  className={`py-3 sm:py-4 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === "manual"
+                      ? "border-blue-500 text-blue-600 dark:text-blue-400"
+                      : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
+                  }`}
+                  style={{ minHeight: "44px" }} // Ensure minimum touch target size
+                >
+                  <div className="flex items-center">
+                    <User className="w-4 h-4 mr-2" />
+                    <span>Manual Assignment</span>
+                  </div>
+                </button>
+                
+                <button
+                  onClick={() => setActiveTab("automatic")}
+                  className={`py-3 sm:py-4 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === "automatic"
+                      ? "border-blue-500 text-blue-600 dark:text-blue-400"
+                      : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
+                  }`}
+                  style={{ minHeight: "44px" }}
+                >
+                  <div className="flex items-center">
+                    <ArrowRight className="w-4 h-4 mr-2" />
+                    <span>Automatic Assignment</span>
+                  </div>
+                </button>
+                
+                <button
+                  onClick={() => setActiveTab("assigned")}
+                  className={`py-3 sm:py-4 px-1 border-b-2 font-medium text-sm ${
+                    activeTab === "assigned"
+                      ? "border-blue-500 text-blue-600 dark:text-blue-400"
+                      : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
+                  }`}
+                  style={{ minHeight: "44px" }}
+                >
+                  <div className="flex items-center">
+                    <Filter className="w-4 h-4 mr-2" />
+                    <span>Assigned Courses</span>
+                  </div>
+                </button>
+              </nav>
+            </div>
           </div>
 
           {/* Tab Content */}
-          {activeTab === "manual" && (
-            <ManualAssignment fetchAssignments={fetchAssignments} filters={filters} />
-          )}
+          <div className="mt-4">
+            {activeTab === "manual" && (
+              <ManualAssignment fetchAssignments={fetchAssignments} filters={filters} />
+            )}
 
-          {activeTab === "automatic" && (
-            <AutomaticAssignment fetchAssignments={fetchAssignments} filters={filters} />
-          )}
+            {activeTab === "automatic" && (
+              <AutomaticAssignment fetchAssignments={fetchAssignments} filters={filters} />
+            )}
 
-          {activeTab === "assigned" && (
-            <AssignedCourses
-              fetchAssignments={fetchAssignments}
-              assignments={assignments}
-              handleDelete={handleDelete}
-              currentFilters={filters}
-            />
-          )}
+            {activeTab === "assigned" && (
+              <AssignedCourses
+                fetchAssignments={fetchAssignments}
+                assignments={assignments}
+                handleDelete={handleDelete}
+                currentFilters={filters}
+              />
+            )}
+          </div>
         </div>
       )}
     </div>

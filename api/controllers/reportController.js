@@ -137,42 +137,58 @@ export const getReportById = async (req, res) => {
   }
 };
 
-// Get reports by instructor (for individual instructors)
+// Get reports by instructor (for individual instructors) with filtering
 export const getReportsByInstructor = async (req, res) => {
   try {
     const instructorId = req.params.instructorId;
-
-    // Find reports that include assignments for this instructor
+    const { year, semester, program } = req.query; // Get filter parameters from query
+    
+    // Base query to find assignments for this instructor
+    let assignmentsQuery = {
+      "assignments.instructorId": new mongoose.Types.ObjectId(instructorId)
+    };
+    
+    // Add filters if they are provided
+    if (year) assignmentsQuery.year = parseInt(year);
+    if (semester) assignmentsQuery.semester = semester;
+    if (program) assignmentsQuery.program = program;
+    
+    // Get the IDs of assignments matching our criteria
+    const assignmentIds = await Assignment.find(assignmentsQuery).distinct('_id');
+    
+    // Find reports that include these filtered assignments
     const reports = await Report.find({
-      assignments: { 
-        $in: await Assignment.find({
-          "assignments.instructorId": new mongoose.Types.ObjectId(instructorId)
-        }).distinct('_id')
-      }
+      assignments: { $in: assignmentIds }
     })
     .populate("generatedBy", "name email")
     .populate({
       path: "assignments",
-      populate: {
-        path: "assignments.instructorId",
-        select: "fullName email chair",
-        model: "User", 
-      },
-      populate: {
-        path: "assignments.courseId",
-        select: "name code chair",
-        model: "Course", 
-      },
+      populate: [
+        {
+          path: "assignments.instructorId",
+          select: "fullName email chair",
+          model: "User",
+        },
+        {
+          path: "assignments.courseId",
+          select: "name code chair",
+          model: "Course", 
+        }
+      ]
     });
     
-
     if (reports.length === 0) {
-      return res.status(404).json({ message: "No reports found for this instructor" });
+      return res.status(404).json({ 
+        message: "No reports found for this instructor with the provided filters" 
+      });
     }
 
     res.status(200).json(reports);
   } catch (error) {
-    res.status(500).json({ message: "Error fetching instructor reports", error: error.message });
+    res.status(500).json({ 
+      message: "Error fetching instructor reports", 
+      error: error.message 
+    });
   }
 };
 
