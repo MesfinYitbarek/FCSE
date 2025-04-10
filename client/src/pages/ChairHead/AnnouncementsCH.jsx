@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { Dialog } from "@headlessui/react";
 import { motion } from "framer-motion";
-import { Plus, Search, Edit2, Trash2, ChevronRight} from "lucide-react";
+import { Plus, Search, Edit2, Trash2, ChevronRight, X, AlertCircle } from "lucide-react";
 import api from "../../utils/api";
 
 const AnnouncementsCH = () => {
@@ -27,6 +27,7 @@ const AnnouncementsCH = () => {
   const [selectedAnnouncement, setSelectedAnnouncement] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [readStats, setReadStats] = useState(null);
+  const [error, setError] = useState("");
 
   const roleOptions = ["ChairHead", "HeadOfFaculty", "Instructor", "COC"];
 
@@ -54,14 +55,14 @@ const AnnouncementsCH = () => {
       const filtered = data.filter((announcement) => announcement.publishedBy === user?.role);
       setAnnouncements(filtered);
     } catch (error) {
+      setError("Failed to fetch announcements");
       console.error("Error fetching announcements:", error);
     }
     setLoading(false);
   };
 
-
-
   const handleChange = (e) => {
+    setError("");
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
@@ -102,9 +103,10 @@ const AnnouncementsCH = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setError("");
     
     if (form.targetAudience.roles.length === 0 && form.targetAudience.chairs.length === 0) {
-      alert("Please select at least one role or chair for the target audience");
+      setError("Please select at least one role or chair for the target audience");
       setLoading(false);
       return;
     }
@@ -122,6 +124,7 @@ const AnnouncementsCH = () => {
       setOpenAddModal(false);
       setOpenEditModal(false);
     } catch (error) {
+      setError(error.response?.data?.message || "Error saving announcement");
       console.error("Error saving announcement:", error);
     }
     setLoading(false);
@@ -161,6 +164,7 @@ const AnnouncementsCH = () => {
       fetchAnnouncements();
       setOpenDeleteModal(false);
     } catch (error) {
+      setError("Failed to delete announcement");
       console.error("Error deleting announcement:", error);
     }
     setLoading(false);
@@ -192,14 +196,14 @@ const AnnouncementsCH = () => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="bg-white rounded-lg shadow-sm p-4 mb-4"
+      className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 mb-4"
     >
       <div className="flex justify-between items-start mb-2">
-        <h3 className="font-medium text-gray-900">{announcement.title}</h3>
+        <h3 className="font-medium text-gray-900 dark:text-white">{announcement.title}</h3>
         <div className="flex space-x-2">          
           <button
             onClick={() => handleEdit(announcement)}
-            className="p-1.5 rounded-md bg-blue-100 text-blue-600 hover:bg-blue-200"
+            className="p-1.5 rounded-md bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-200 dark:hover:bg-indigo-900/50"
             title="Edit announcement"
           >
             <Edit2 className="h-4 w-4" />
@@ -209,15 +213,15 @@ const AnnouncementsCH = () => {
               setSelectedAnnouncement(announcement);
               setOpenDeleteModal(true);
             }}
-            className="p-1.5 rounded-md bg-red-100 text-red-600 hover:bg-red-200"
+            className="p-1.5 rounded-md bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50"
             title="Delete announcement"
           >
             <Trash2 className="h-4 w-4" />
           </button>
         </div>
       </div>
-      <p className="text-sm text-gray-600 mb-2 line-clamp-2">{announcement.message}</p>
-      <div className="text-xs text-gray-500 space-y-1">
+      <p className="text-sm text-gray-600 dark:text-gray-300 mb-2 line-clamp-2">{announcement.message}</p>
+      <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
         <div className="flex justify-between">
           <span>Published By:</span>
           <span className="font-medium">{announcement.publishedBy}</span>
@@ -245,100 +249,138 @@ const AnnouncementsCH = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 sm:p-6">
       <div className="mx-auto max-w-7xl">
         {/* Header Section */}
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Announcements</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Announcements</h1>
           <button
             onClick={() => {
               resetForm();
               setOpenAddModal(true);
             }}
-            className="flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 w-full sm:w-auto"
+            className="flex items-center justify-center rounded-lg bg-indigo-600 hover:bg-indigo-700 px-4 py-2 text-white w-full sm:w-auto transition-colors"
           >
             <Plus className="mr-2 h-5 w-5" />
             New Announcement
           </button>
         </div>
 
+        {/* Error message if any */}
+        {error && (
+          <div className="mb-4 flex items-center p-4 bg-red-50 dark:bg-red-900/30 border-l-4 border-red-500 rounded-lg">
+            <AlertCircle className="text-red-500 dark:text-red-400 mr-3" size={20} />
+            <p className="text-red-700 dark:text-red-300">{error}</p>
+            <button
+              onClick={() => setError("")}
+              className="ml-auto text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
+            >
+              <X size={18} />
+            </button>
+          </div>
+        )}
+
         {/* Search Bar */}
         <div className="mb-6 relative">
-          <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
           <input
             type="text"
             placeholder="Search announcements..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full rounded-md border border-gray-300 pl-10 pr-4 py-2 focus:border-blue-500 focus:outline-none"
+            className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 pl-10 pr-4 py-2 focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-800 focus:outline-none text-gray-900 dark:text-gray-100"
           />
         </div>
 
-        {/* Desktop Table View */}
-        <div className="hidden md:block overflow-hidden rounded-lg bg-white shadow">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  {["Title", "Message", "Target Audience", "Valid Until", "Read Count", "Actions"].map((header) => (
-                    <th key={header} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      {header}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 bg-white">
-                {filteredAnnouncements.map((announcement) => (
-                  <motion.tr
-                    key={announcement._id}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                  >
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{announcement.title}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">{announcement.message}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
-                      {formatTargetAudience(announcement)}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
-                      {new Date(announcement.validUntil).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
-                      {announcement.readBy?.length || 0} users
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <div className="flex space-x-2">                  
-                        <button
-                          onClick={() => handleEdit(announcement)}
-                          className="p-2 rounded-md bg-blue-100 text-blue-600 hover:bg-blue-200"
-                          title="Edit announcement"
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </button>
-                        <button
-                          onClick={() => {
-                            setSelectedAnnouncement(announcement);
-                            setOpenDeleteModal(true);
-                          }}
-                          className="p-2 rounded-md bg-red-100 text-red-600 hover:bg-red-200"
-                          title="Delete announcement"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </motion.tr>
-                ))}
-              </tbody>
-            </table>
+        {/* Loading state */}
+        {loading && (
+          <div className="flex justify-center my-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-600 dark:border-indigo-400"></div>
           </div>
-        </div>
+        )}
+
+        {/* Desktop Table View */}
+        {!loading && (
+          <div className="hidden md:block overflow-hidden rounded-lg bg-white dark:bg-gray-800 shadow">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-700">
+                  <tr>
+                    {["Title", "Message", "Target Audience", "Valid Until", "Read Count", "Actions"].map((header) => (
+                      <th key={header} className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        {header}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
+                  {filteredAnnouncements.length === 0 ? (
+                    <tr>
+                      <td colSpan="6" className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                        No announcements found
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredAnnouncements.map((announcement) => (
+                      <motion.tr
+                        key={announcement._id}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{announcement.title}</td>
+                        <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate">{announcement.message}</td>
+                        <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate">
+                          {formatTargetAudience(announcement)}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                          {new Date(announcement.validUntil).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                          {announcement.readBy?.length || 0} users
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                          <div className="flex space-x-2">                  
+                            <button
+                              onClick={() => handleEdit(announcement)}
+                              className="p-2 rounded-md bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-200 dark:hover:bg-indigo-900/50"
+                              title="Edit announcement"
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSelectedAnnouncement(announcement);
+                                setOpenDeleteModal(true);
+                              }}
+                              className="p-2 rounded-md bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50"
+                              title="Delete announcement"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </motion.tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
         {/* Mobile Card View */}
         <div className="md:hidden">
-          {filteredAnnouncements.map((announcement) => (
-            <MobileAnnouncementCard key={announcement._id} announcement={announcement} />
-          ))}
+          {filteredAnnouncements.length === 0 ? (
+            <div className="text-center py-8 bg-white dark:bg-gray-800 rounded-lg shadow">
+              <p className="text-gray-500 dark:text-gray-400">No announcements found</p>
+            </div>
+          ) : (
+            filteredAnnouncements.map((announcement) => (
+              <MobileAnnouncementCard key={announcement._id} announcement={announcement} />
+            ))
+          )}
         </div>
 
         {/* Add/Edit Announcement Modal */}
@@ -349,59 +391,66 @@ const AnnouncementsCH = () => {
           <Dialog key={modal.title} open={modal.isOpen} onClose={() => modal.setIsOpen(false)} className="relative z-50">
             <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
             <div className="fixed inset-0 flex items-center justify-center p-4">
-              <Dialog.Panel className="w-full max-w-xl rounded-lg bg-white p-6 max-h-[90vh] overflow-y-auto">
+              <Dialog.Panel className="w-full max-w-xl rounded-lg bg-white dark:bg-gray-800 p-6 max-h-[90vh] overflow-y-auto">
                 <div className="flex justify-between items-center mb-4">
-                  <Dialog.Title className="text-lg font-medium leading-6 text-gray-900">{modal.title}</Dialog.Title>
+                  <Dialog.Title className="text-lg font-medium leading-6 text-gray-900 dark:text-white">{modal.title}</Dialog.Title>
                   <button
                     onClick={() => modal.setIsOpen(false)}
-                    className="text-gray-400 hover:text-gray-500"
+                    className="text-gray-400 dark:text-gray-500 hover:text-gray-500 dark:hover:text-gray-400"
                   >
                     <span className="sr-only">Close</span>
-                    <ChevronRight className="h-6 w-6" />
+                    <X className="h-6 w-6" />
                   </button>
                 </div>
+                
+                {error && (
+                  <div className="mb-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 px-4 py-3 rounded-md">
+                    {error}
+                  </div>
+                )}
+                
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Title</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Title</label>
                     <input
                       type="text"
                       name="title"
                       value={form.title}
                       onChange={handleChange}
-                      className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
+                      className="mt-1 block w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-800 focus:outline-none text-gray-900 dark:text-white"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Message</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Message</label>
                     <textarea
                       name="message"
                       value={form.message}
                       onChange={handleChange}
                       rows={4}
-                      className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
+                      className="mt-1 block w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-800 focus:outline-none text-gray-900 dark:text-white"
                       required
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700">Valid Until</label>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Valid Until</label>
                     <input
                       type="date"
                       name="validUntil"
                       value={form.validUntil}
                       onChange={handleChange}
-                      className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
+                      className="mt-1 block w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-800 focus:outline-none text-gray-900 dark:text-white"
                       required
                     />
                   </div>
                   
                   {/* Target Audience Section */}
-                  <div className="border border-gray-200 rounded-md p-4">
-                    <h3 className="font-medium text-gray-800 mb-3">Target Audience</h3>
+                  <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                    <h3 className="font-medium text-gray-800 dark:text-white mb-3">Target Audience</h3>
                     
                     {/* Roles Selection */}
                     <div className="mb-4">
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Roles</label>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Roles</label>
                       <div className="space-y-2">
                         {roleOptions.map(role => (
                           <div key={role} className="flex items-center">
@@ -411,9 +460,9 @@ const AnnouncementsCH = () => {
                               value={role}
                               checked={form.targetAudience.roles.includes(role)}
                               onChange={handleRoleChange}
-                              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                              className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-400 border-gray-300 dark:border-gray-700 rounded"
                             />
-                            <label htmlFor={`role-${role}-${modal.isEdit ? 'edit' : 'add'}`} className="ml-2 text-sm text-gray-700">
+                            <label htmlFor={`role-${role}-${modal.isEdit ? 'edit' : 'add'}`} className="ml-2 text-sm text-gray-700 dark:text-gray-300">
                               {role}
                             </label>
                           </div>
@@ -423,20 +472,20 @@ const AnnouncementsCH = () => {
                     
                     {/* Chairs Selection */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Chairs</label>
-                      <div className="space-y-2 max-h-40 overflow-y-auto p-2 border border-gray-200 rounded-md">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Chairs</label>
+                      <div className="space-y-2 max-h-40 overflow-y-auto p-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-700">
                         {chairs.map(chair => (
-                          <div key={chair._id} className="flex items-center">
+                          <div key={chair._id || chair} className="flex items-center">
                             <input
                               type="checkbox"
-                              id={`chair-${chair._id}-${modal.isEdit ? 'edit' : 'add'}`}
-                              value={chair.name}
-                              checked={form.targetAudience.chairs.includes(chair.name)}
+                              id={`chair-${chair._id || chair}-${modal.isEdit ? 'edit' : 'add'}`}
+                              value={chair.name || chair}
+                              checked={form.targetAudience.chairs.includes(chair.name || chair)}
                               onChange={handleChairChange}
-                              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                              className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-400 border-gray-300 dark:border-gray-700 rounded"
                             />
-                            <label htmlFor={`chair-${chair._id}-${modal.isEdit ? 'edit' : 'add'}`} className="ml-2 text-sm text-gray-700">
-                              {chair.name}
+                            <label htmlFor={`chair-${chair._id || chair}-${modal.isEdit ? 'edit' : 'add'}`} className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                              {chair.name || chair}
                             </label>
                           </div>
                         ))}
@@ -448,14 +497,14 @@ const AnnouncementsCH = () => {
                     <button
                       type="button"
                       onClick={() => modal.setIsOpen(false)}
-                      className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                      className="rounded-lg border border-gray-300 dark:border-gray-700 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
                       disabled={loading}
-                      className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                      className="rounded-lg bg-indigo-600 hover:bg-indigo-700 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 transition-colors"
                     >
                       {loading ? "Processing..." : modal.isEdit ? "Update" : "Create"}
                     </button>
@@ -470,22 +519,25 @@ const AnnouncementsCH = () => {
         <Dialog open={openDeleteModal} onClose={() => setOpenDeleteModal(false)} className="relative z-50">
           <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
           <div className="fixed inset-0 flex items-center justify-center p-4">
-            <Dialog.Panel className="w-full max-w-sm rounded-lg bg-white p-6">
-              <Dialog.Title className="text-lg font-medium leading-6 text-gray-900">Delete Announcement</Dialog.Title>
-              <p className="mt-2 text-sm text-gray-500">
+            <Dialog.Panel className="w-full max-w-sm rounded-lg bg-white dark:bg-gray-800 p-6 shadow-xl">
+              <div className="flex items-center justify-center mb-4">
+                <AlertCircle className="h-12 w-12 text-red-500" />
+              </div>
+              <Dialog.Title className="text-lg font-medium leading-6 text-gray-900 dark:text-white text-center">Delete Announcement</Dialog.Title>
+              <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 text-center">
                 Are you sure you want to delete "{selectedAnnouncement?.title}"? This action cannot be undone.
               </p>
-              <div className="mt-4 flex justify-end space-x-3">
+              <div className="mt-6 flex justify-center space-x-3">
                 <button
                   onClick={() => setOpenDeleteModal(false)}
-                  className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  className="rounded-lg border border-gray-300 dark:border-gray-700 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleDeleteAnnouncement}
                   disabled={loading}
-                  className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                  className="rounded-lg bg-red-600 hover:bg-red-700 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 transition-colors"
                 >
                   {loading ? "Deleting..." : "Delete"}
                 </button>

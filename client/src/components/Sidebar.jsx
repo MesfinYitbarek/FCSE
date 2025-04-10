@@ -532,7 +532,6 @@ const Layout = () => {
               <SubNavItem to="/assignments/auto/common">Common Courses</SubNavItem>
               <SubNavItem to="/assignments/auto/extension">Extension Courses</SubNavItem>
               <SubNavItem to="/assignments/auto/summer">Summer Courses</SubNavItem>
-              <SubNavItem to="/assignments/calendar">Assignment Calendar</SubNavItem>
             </NavGroup>
 
             <NavItem to="/complaintsCOC" icon={AlertTriangle}>Complaints</NavItem>

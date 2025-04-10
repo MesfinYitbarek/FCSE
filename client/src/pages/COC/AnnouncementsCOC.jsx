@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { Dialog } from "@headlessui/react";
 import { motion } from "framer-motion";
-import { Plus, Search, Trash2, AlertCircle, Eye, BarChart } from "lucide-react";
+import { Plus, Search, Edit2, Trash2, AlertCircle, Eye, BarChart, X, ChevronRight } from "lucide-react";
 import api from "../../utils/api";
 
 const AnnouncementsCOC = () => {
@@ -23,10 +23,10 @@ const AnnouncementsCOC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [openAddModal, setOpenAddModal] = useState(false);
+  const [openEditModal, setOpenEditModal] = useState(false);
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [selectedAnnouncement, setSelectedAnnouncement] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-
 
   // Role options
   const roleOptions = ["COC", "ChairHead", "HeadOfFaculty", "Instructor"];
@@ -38,12 +38,11 @@ const AnnouncementsCOC = () => {
 
   const fetchChairs = async () => {
     try {
-      // Replace with your actual API endpoint to fetch chairs
       const { data } = await api.get("/chairs");
       setChairs(data);
     } catch (error) {
       console.error("Error fetching chairs:", error);
-      // Fallback  if API fails
+      // Fallback if API fails
       setChairs(["Networking", "Software", "Database"]);
     }
   };
@@ -60,8 +59,6 @@ const AnnouncementsCOC = () => {
     }
     setLoading(false);
   };
-
-
 
   const handleChange = (e) => {
     setError("");
@@ -123,24 +120,49 @@ const AnnouncementsCOC = () => {
         publishedBy: user?.role || "Unknown",
       };
 
-      await api.post("/announcements", payload);
+      if (selectedAnnouncement) {
+        await api.put(`/announcements/${selectedAnnouncement._id}`, payload);
+      } else {
+        await api.post("/announcements", payload);
+      }
+      
       fetchAnnouncements();
-      setForm({
-        title: "",
-        message: "",
-        validUntil: "",
-        targetAudience: {
-          roles: [],
-          chairs: []
-        },
-        publishedBy: user?.role || "Unknown"
-      });
+      resetForm();
+      setSelectedAnnouncement(null);
       setOpenAddModal(false);
+      setOpenEditModal(false);
     } catch (error) {
       setError(error.response?.data?.message || "Error creating announcement");
-      console.error("Error creating announcement:", error);
+      console.error("Error saving announcement:", error);
     }
     setLoading(false);
+  };
+
+  const resetForm = () => {
+    setForm({
+      title: "",
+      message: "",
+      validUntil: "",
+      targetAudience: {
+        roles: [],
+        chairs: []
+      },
+      publishedBy: user?.role || "Unknown"
+    });
+  };
+
+  const handleEdit = (announcement) => {
+    const formattedDate = announcement.validUntil ? new Date(announcement.validUntil).toISOString().split('T')[0] : '';
+    
+    setForm({
+      title: announcement.title,
+      message: announcement.message,
+      validUntil: formattedDate,
+      targetAudience: announcement.targetAudience || { roles: [], chairs: [] }
+    });
+    
+    setSelectedAnnouncement(announcement);
+    setOpenEditModal(true);
   };
 
   const handleDelete = async () => {
@@ -150,6 +172,7 @@ const AnnouncementsCOC = () => {
       fetchAnnouncements();
       setOpenDeleteModal(false);
     } catch (error) {
+      setError("Failed to delete announcement");
       console.error("Error deleting announcement:", error);
     }
     setLoading(false);
@@ -180,25 +203,32 @@ const AnnouncementsCOC = () => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="bg-white rounded-lg shadow-sm p-4 mb-4"
+      className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-4 mb-4"
     >
       <div className="flex justify-between items-start mb-2">
-        <h3 className="font-medium text-gray-900">{announcement.title}</h3>
+        <h3 className="font-medium text-gray-900 dark:text-white">{announcement.title}</h3>
         <div className="flex space-x-2">
-
+          <button
+            onClick={() => handleEdit(announcement)}
+            className="p-1.5 rounded-md bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-200 dark:hover:bg-indigo-900/50"
+            title="Edit announcement"
+          >
+            <Edit2 className="h-4 w-4" />
+          </button>
           <button
             onClick={() => {
               setSelectedAnnouncement(announcement);
               setOpenDeleteModal(true);
             }}
-            className="p-1.5 rounded-md bg-red-100 text-red-600 hover:bg-red-200"
+            className="p-1.5 rounded-md bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50"
+            title="Delete announcement"
           >
             <Trash2 className="h-4 w-4" />
           </button>
         </div>
       </div>
-      <p className="text-sm text-gray-600 mb-2 line-clamp-2">{announcement.message}</p>
-      <div className="text-xs text-gray-500 space-y-1">
+      <p className="text-sm text-gray-600 dark:text-gray-300 mb-2 line-clamp-2">{announcement.message}</p>
+      <div className="text-xs text-gray-500 dark:text-gray-400 space-y-1">
         <div className="flex justify-between">
           <span>Published By:</span>
           <span className="font-medium">{announcement.publishedBy}</span>
@@ -226,245 +256,305 @@ const AnnouncementsCOC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 sm:p-6">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4 sm:p-6">
       <div className="mx-auto max-w-7xl">
         {/* Header Section */}
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">COC Announcements</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">COC Announcements</h1>
           <button
-            onClick={() => setOpenAddModal(true)}
-            className="flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700 w-full sm:w-auto"
+            onClick={() => {
+              resetForm();
+              setOpenAddModal(true);
+            }}
+            className="flex items-center justify-center rounded-lg bg-indigo-600 hover:bg-indigo-700 px-4 py-2 text-white w-full sm:w-auto transition-colors"
           >
             <Plus className="mr-2 h-5 w-5" />
             New Announcement
           </button>
         </div>
 
+        {/* Error message if any */}
+        {error && (
+          <div className="mb-4 flex items-center p-4 bg-red-50 dark:bg-red-900/30 border-l-4 border-red-500 rounded-lg">
+            <AlertCircle className="text-red-500 dark:text-red-400 mr-3" size={20} />
+            <p className="text-red-700 dark:text-red-300">{error}</p>
+            <button
+              onClick={() => setError("")}
+              className="ml-auto text-red-500 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
+            >
+              <X size={18} />
+            </button>
+          </div>
+        )}
+
         {/* Search Bar */}
         <div className="mb-6 relative">
-          <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400 dark:text-gray-500" />
           <input
             type="text"
             placeholder="Search announcements..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full rounded-md border border-gray-300 pl-10 pr-4 py-2 focus:border-blue-500 focus:outline-none"
+            className="w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 pl-10 pr-4 py-2 focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-800 focus:outline-none text-gray-900 dark:text-gray-100"
           />
         </div>
 
-        {/* Desktop Table View */}
-        <div className="hidden md:block overflow-hidden rounded-lg bg-white shadow">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  {["Title", "Message", "Published By", "Target Audience", "Valid Until", "Read Count", "Actions"].map((header) => (
-                    <th key={header} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      {header}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200 bg-white">
-                {filteredAnnouncements.map((announcement) => (
-                  <motion.tr
-                    key={announcement._id}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                  >
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{announcement.title}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">{announcement.message}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500">{announcement.publishedBy}</td>
-                    <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
-                      {formatTargetAudience(announcement)}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
-                      {new Date(announcement.validUntil).toLocaleDateString()}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-500">
-                      {announcement.readBy?.length || 0} users
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <div className="flex space-x-2">
-                        <button
-                          onClick={() => {
-                            setSelectedAnnouncement(announcement);
-                            setOpenDeleteModal(true);
-                          }}
-                          className="p-2 rounded-md bg-red-100 text-red-600 hover:bg-red-200"
-                          title="Delete announcement"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </motion.tr>
-                ))}
-              </tbody>
-            </table>
+        {/* Loading state */}
+        {loading && (
+          <div className="flex justify-center my-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-600 dark:border-indigo-400"></div>
           </div>
-        </div>
+        )}
+
+        {/* Desktop Table View */}
+        {!loading && (
+          <div className="hidden md:block overflow-hidden rounded-lg bg-white dark:bg-gray-800 shadow">
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-gray-700">
+                  <tr>
+                    {["Title", "Message", "Published By", "Target Audience", "Valid Until", "Read Count", "Actions"].map((header) => (
+                      <th key={header} className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        {header}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200 dark:divide-gray-700 bg-white dark:bg-gray-800">
+                  {filteredAnnouncements.length === 0 ? (
+                    <tr>
+                      <td colSpan="7" className="px-6 py-8 text-center text-gray-500 dark:text-gray-400">
+                        No announcements found
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredAnnouncements.map((announcement) => (
+                      <motion.tr
+                        key={announcement._id}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">{announcement.title}</td>
+                        <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate">{announcement.message}</td>
+                        <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">{announcement.publishedBy}</td>
+                        <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400 max-w-xs truncate">
+                          {formatTargetAudience(announcement)}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                          {new Date(announcement.validUntil).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
+                          {announcement.readBy?.length || 0} users
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                          <div className="flex space-x-2">
+                            <button
+                              onClick={() => handleEdit(announcement)}
+                              className="p-2 rounded-md bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-200 dark:hover:bg-indigo-900/50"
+                              title="Edit announcement"
+                            >
+                              <Edit2 className="h-4 w-4" />
+                            </button>
+                            <button
+                              onClick={() => {
+                                setSelectedAnnouncement(announcement);
+                                setOpenDeleteModal(true);
+                              }}
+                              className="p-2 rounded-md bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 hover:bg-red-200 dark:hover:bg-red-900/50"
+                              title="Delete announcement"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </motion.tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
         {/* Mobile Card View */}
         <div className="md:hidden">
-          {filteredAnnouncements.map((announcement) => (
-            <MobileAnnouncementCard key={announcement._id} announcement={announcement} />
-          ))}
+          {filteredAnnouncements.length === 0 ? (
+            <div className="text-center py-8 bg-white dark:bg-gray-800 rounded-lg shadow">
+              <p className="text-gray-500 dark:text-gray-400">No announcements found</p>
+            </div>
+          ) : (
+            filteredAnnouncements.map((announcement) => (
+              <MobileAnnouncementCard key={announcement._id} announcement={announcement} />
+            ))
+          )}
         </div>
 
-        {/* Add Announcement Modal */}
-        <Dialog open={openAddModal} onClose={() => setOpenAddModal(false)} className="relative z-50">
-          <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
-          <div className="fixed inset-0 flex items-center justify-center p-4">
-            <Dialog.Panel className="w-full max-w-xl rounded-lg bg-white p-6 max-h-[90vh] overflow-y-auto">
-              <Dialog.Title className="text-lg font-medium leading-6 text-gray-900 mb-4">
-                Create New Announcement
-              </Dialog.Title>
-              {error && (
-                <div className="mb-4 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md">
-                  {error}
+        {/* Add/Edit Announcement Modal */}
+        {[
+          { isOpen: openAddModal, setIsOpen: setOpenAddModal, title: "Create New Announcement", isEdit: false },
+          { isOpen: openEditModal, setIsOpen: setOpenEditModal, title: "Edit Announcement", isEdit: true },
+        ].map((modal) => (
+          <Dialog key={modal.title} open={modal.isOpen} onClose={() => modal.setIsOpen(false)} className="relative z-50">
+            <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+            <div className="fixed inset-0 flex items-center justify-center p-4">
+              <Dialog.Panel className="w-full max-w-xl rounded-lg bg-white dark:bg-gray-800 p-6 max-h-[90vh] overflow-y-auto">
+                <div className="flex justify-between items-center mb-4">
+                  <Dialog.Title className="text-lg font-medium leading-6 text-gray-900 dark:text-white">{modal.title}</Dialog.Title>
+                  <button
+                    onClick={() => modal.setIsOpen(false)}
+                    className="text-gray-400 dark:text-gray-500 hover:text-gray-500 dark:hover:text-gray-400"
+                  >
+                    <span className="sr-only">Close</span>
+                    <X className="h-6 w-6" />
+                  </button>
                 </div>
-              )}
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Title</label>
-                  <input
-                    type="text"
-                    name="title"
-                    value={form.title}
-                    onChange={handleChange}
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Message</label>
-                  <textarea
-                    name="message"
-                    value={form.message}
-                    onChange={handleChange}
-                    rows={4}
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Valid Until</label>
-                  <input
-                    type="date"
-                    name="validUntil"
-                    value={form.validUntil}
-                    onChange={handleChange}
-                    className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 focus:border-blue-500 focus:outline-none"
-                    required
-                  />
-                </div>
-
-                {/* Target Audience Section */}
-                <div className="border border-gray-200 rounded-md p-4">
-                  <h3 className="font-medium text-gray-800 mb-3">Target Audience</h3>
-
-                  {/* Roles Selection */}
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Roles</label>
-                    <div className="space-y-2">
-                      {roleOptions.map(role => (
-                        <div key={role} className="flex items-center">
-                          <input
-                            type="checkbox"
-                            id={`role-${role}`}
-                            value={role}
-                            checked={form.targetAudience.roles.includes(role)}
-                            onChange={handleRoleChange}
-                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                          />
-                          <label htmlFor={`role-${role}`} className="ml-2 text-sm text-gray-700">
-                            {role}
-                          </label>
-                        </div>
-                      ))}
-                    </div>
+                
+                {error && (
+                  <div className="mb-4 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-600 dark:text-red-400 px-4 py-3 rounded-md">
+                    {error}
                   </div>
-
-                  {/* Chairs Selection */}
+                )}
+                
+                <form onSubmit={handleSubmit} className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Chairs</label>
-                    <div className="space-y-2 max-h-60 overflow-y-auto p-3 border border-gray-200 rounded-md bg-gray-50">
-                      {chairs.map(chair => (
-                        <div
-                          key={chair._id}
-                          className="flex items-center p-2 hover:bg-gray-100 rounded transition-colors"
-                        >
-                          <input
-                            type="checkbox"
-                            id={`chair-${chair._id}`}
-                            value={chair.name}
-                            checked={form.targetAudience.chairs.includes(chair.name)}
-                            onChange={handleChairChange}
-                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                          />
-                          <label
-                            htmlFor={`chair-${chair._id}`}
-                            className="ml-3 text-sm text-gray-700 flex-1"
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Title</label>
+                    <input
+                      type="text"
+                      name="title"
+                      value={form.title}
+                      onChange={handleChange}
+                      className="mt-1 block w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-800 focus:outline-none text-gray-900 dark:text-white"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Message</label>
+                    <textarea
+                      name="message"
+                      value={form.message}
+                      onChange={handleChange}
+                      rows={4}
+                      className="mt-1 block w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-800 focus:outline-none text-gray-900 dark:text-white"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Valid Until</label>
+                    <input
+                      type="date"
+                      name="validUntil"
+                      value={form.validUntil}
+                      onChange={handleChange}
+                      className="mt-1 block w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-800 focus:outline-none text-gray-900 dark:text-white"
+                      required
+                    />
+                  </div>
+
+                  {/* Target Audience Section */}
+                  <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+                    <h3 className="font-medium text-gray-800 dark:text-white mb-3">Target Audience</h3>
+
+                    {/* Roles Selection */}
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Roles</label>
+                      <div className="space-y-2">
+                        {roleOptions.map(role => (
+                          <div key={role} className="flex items-center">
+                            <input
+                              type="checkbox"
+                              id={`role-${role}-${modal.isEdit ? 'edit' : 'add'}`}
+                              value={role}
+                              checked={form.targetAudience.roles.includes(role)}
+                              onChange={handleRoleChange}
+                              className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-400 border-gray-300 dark:border-gray-700 rounded"
+                            />
+                            <label htmlFor={`role-${role}-${modal.isEdit ? 'edit' : 'add'}`} className="ml-2 text-sm text-gray-700 dark:text-gray-300">
+                              {role}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Chairs Selection */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Chairs</label>
+                      <div className="space-y-2 max-h-60 overflow-y-auto p-3 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-700">
+                        {chairs.map(chair => (
+                          <div
+                            key={chair._id || chair}
+                            className="flex items-center p-2 hover:bg-gray-100 dark:hover:bg-gray-600 rounded transition-colors"
                           >
-                            <span className="block font-medium">{chair.name}</span>
-                            {chair.description && (
-                              <span className="block text-xs text-gray-500 mt-1">{chair.description}</span>
-                            )}
-                          </label>
-                        </div>
-                      ))}
+                            <input
+                              type="checkbox"
+                              id={`chair-${chair._id || chair}-${modal.isEdit ? 'edit' : 'add'}`}
+                              value={chair.name || chair}
+                              checked={form.targetAudience.chairs.includes(chair.name || chair)}
+                              onChange={handleChairChange}
+                              className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-400 border-gray-300 dark:border-gray-700 rounded"
+                            />
+                            <label
+                              htmlFor={`chair-${chair._id || chair}-${modal.isEdit ? 'edit' : 'add'}`}
+                              className="ml-3 text-sm text-gray-700 dark:text-gray-300 flex-1"
+                            >
+                              <span className="block font-medium">{chair.name || chair}</span>
+                              {chair.description && (
+                                <span className="block text-xs text-gray-500 dark:text-gray-400 mt-1">{chair.description}</span>
+                              )}
+                            </label>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                <div className="flex justify-end space-x-3 pt-4">
-                  <button
-                    type="button"
-                    onClick={() => setOpenAddModal(false)}
-                    className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-                  >
-                    {loading ? "Creating..." : "Create Announcement"}
-                  </button>
-                </div>
-              </form>
-            </Dialog.Panel>
-          </div>
-        </Dialog>
+                  <div className="flex justify-end space-x-3 pt-4">
+                    <button
+                      type="button"
+                      onClick={() => modal.setIsOpen(false)}
+                      className="rounded-lg border border-gray-300 dark:border-gray-700 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="rounded-lg bg-indigo-600 hover:bg-indigo-700 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 transition-colors"
+                    >
+                      {loading ? "Processing..." : modal.isEdit ? "Update" : "Create"}
+                    </button>
+                  </div>
+                </form>
+              </Dialog.Panel>
+            </div>
+          </Dialog>
+        ))}
 
         {/* Delete Confirmation Modal */}
         <Dialog open={openDeleteModal} onClose={() => setOpenDeleteModal(false)} className="relative z-50">
           <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
           <div className="fixed inset-0 flex items-center justify-center p-4">
-            <Dialog.Panel className="w-full max-w-sm rounded-lg bg-white p-6">
+            <Dialog.Panel className="w-full max-w-sm rounded-lg bg-white dark:bg-gray-800 p-6 shadow-xl">
               <div className="flex items-center justify-center mb-4">
                 <AlertCircle className="h-12 w-12 text-red-500" />
               </div>
-              <Dialog.Title className="text-lg font-medium leading-6 text-gray-900 text-center">
-                Delete Announcement
-              </Dialog.Title>
-              <p className="mt-2 text-sm text-gray-500 text-center">
+              <Dialog.Title className="text-lg font-medium leading-6 text-gray-900 dark:text-white text-center">Delete Announcement</Dialog.Title>
+              <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 text-center">
                 Are you sure you want to delete this announcement? This action cannot be undone.
               </p>
               <div className="mt-6 flex justify-center space-x-3">
                 <button
                   onClick={() => setOpenDeleteModal(false)}
-                  className="rounded-md border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  className="rounded-lg border border-gray-300 dark:border-gray-700 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleDelete}
                   disabled={loading}
-                  className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
+                  className="rounded-lg bg-red-600 hover:bg-red-700 px-4 py-2 text-sm font-medium text-white disabled:opacity-50 transition-colors"
                 >
                   {loading ? "Deleting..." : "Delete"}
                 </button>

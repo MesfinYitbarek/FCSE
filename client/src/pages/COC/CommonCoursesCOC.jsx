@@ -373,14 +373,14 @@ const CommonCoursesCOC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+      <div className="max-w-7xl mx-auto">
         {/* Header Section */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Common Course Assignments</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">Common Course Assignments</h1>
           <p className="mt-2 text-gray-600 dark:text-gray-400">Manage and assign common courses to instructors</p>
         </motion.div>
 
@@ -389,7 +389,7 @@ const CommonCoursesCOC = () => {
           {error && (
             <motion.div
               {...fadeIn}
-              className="flex items-center p-4 bg-red-50 dark:bg-red-900/30 border-l-4 border-red-500 rounded-md mb-6"
+              className="flex items-center p-4 bg-red-50 dark:bg-red-900/30 border-l-4 border-red-500 rounded-lg mb-6"
             >
               <AlertCircle className="text-red-500 dark:text-red-400 mr-3" size={20} />
               <p className="text-red-700 dark:text-red-300">{error}</p>
@@ -404,7 +404,7 @@ const CommonCoursesCOC = () => {
           {success && (
             <motion.div
               {...fadeIn}
-              className="flex items-center p-4 bg-green-50 dark:bg-green-900/30 border-l-4 border-green-500 rounded-md mb-6"
+              className="flex items-center p-4 bg-green-50 dark:bg-green-900/30 border-l-4 border-green-500 rounded-lg mb-6"
             >
               <CheckCircle className="text-green-500 dark:text-green-400 mr-3" size={20} />
               <p className="text-green-700 dark:text-green-300">{success}</p>
@@ -421,7 +421,7 @@ const CommonCoursesCOC = () => {
         {/* Delete Confirmation Dialog */}
         {deleteConfirm && (
           <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 w-full max-w-md mx-4">
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-6 w-full max-w-md mx-4 shadow-lg">
               <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Confirm Deletion</h3>
               <p className="text-gray-600 dark:text-gray-300 mb-6">
                 Are you sure you want to delete this assignment? This action cannot be undone.
@@ -429,13 +429,13 @@ const CommonCoursesCOC = () => {
               <div className="flex justify-end space-x-3">
                 <button
                   onClick={() => setDeleteConfirm(null)}
-                  className="px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-md"
+                  className="px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleDeleteAssignment}
-                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md"
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
                 >
                   {loading ? "Deleting..." : "Delete"}
                 </button>
@@ -451,7 +451,7 @@ const CommonCoursesCOC = () => {
             className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 mb-6 p-6"
           >
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6 flex items-center">
-              <Calendar className="mr-2" size={20} />
+              <Calendar className="mr-2 text-indigo-600 dark:text-indigo-400" size={20} />
               Select Academic Period
             </h2>
                  
@@ -461,7 +461,7 @@ const CommonCoursesCOC = () => {
                 <select
                   value={selectedYear}
                   onChange={(e) => setSelectedYear(e.target.value)}
-                  className="w-full px-4 py-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-800 dark:text-gray-200 text-base"
+                  className="w-full px-4 py-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent text-gray-800 dark:text-gray-200 text-base"
                 >
                   <option value="">Select Year</option>
                   {years.map((year) => (
@@ -477,7 +477,7 @@ const CommonCoursesCOC = () => {
                 <select
                   value={selectedSemester}
                   onChange={(e) => setSelectedSemester(e.target.value)}
-                  className="w-full px-4 py-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent text-gray-800 dark:text-gray-200 text-base"
+                  className="w-full px-4 py-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent text-gray-800 dark:text-gray-200 text-base"
                 >
                   <option value="">Select Semester</option>
                   {semesters.map((semester) => (
@@ -492,7 +492,7 @@ const CommonCoursesCOC = () => {
             <div className="mt-8 flex justify-end">
               <button
                 onClick={handleSelectionSubmit}
-                className="inline-flex items-center px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-md transition-colors shadow-md"
+                className="inline-flex items-center px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors shadow-md"
               >
                 <Filter className="mr-2" size={18} />
                 Load Assignments
@@ -502,14 +502,14 @@ const CommonCoursesCOC = () => {
         ) : (
           <motion.div
             {...fadeIn}
-            className="mb-6 flex flex-wrap items-center justify-between bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-lg border border-indigo-100 dark:border-indigo-800"
+            className="mb-6 flex flex-wrap items-center justify-between bg-indigo-50 dark:bg-indigo-900/20 p-4 rounded-xl border border-indigo-100 dark:border-indigo-800"
           >
             <div className="flex flex-wrap items-center gap-4 mb-2 sm:mb-0">
-              <div className="px-4 py-2 bg-indigo-100 dark:bg-indigo-800 rounded-md flex items-center">
+              <div className="px-4 py-2 bg-indigo-100 dark:bg-indigo-800 rounded-lg flex items-center">
                 <Calendar className="text-indigo-600 dark:text-indigo-400 mr-2" size={18} />
                 <span className="font-medium text-indigo-800 dark:text-indigo-200">{selectedYear}</span>
               </div>
-              <div className="px-4 py-2 bg-indigo-100 dark:bg-indigo-800 rounded-md flex items-center">
+              <div className="px-4 py-2 bg-indigo-100 dark:bg-indigo-800 rounded-lg flex items-center">
                 <School className="text-indigo-600 dark:text-indigo-400 mr-2" size={18} />
                 <span className="font-medium text-indigo-800 dark:text-indigo-200">{selectedSemester}</span>
               </div>
@@ -592,7 +592,7 @@ const CommonCoursesCOC = () => {
                           <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Edit Assignment</h2>
                           <button
                             onClick={cancelEditing}
-                            className="inline-flex items-center px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-md transition-colors"
+                            className="inline-flex items-center px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg transition-colors"
                           >
                             <X className="mr-2" size={18} />
                             Cancel
@@ -606,7 +606,7 @@ const CommonCoursesCOC = () => {
                               <select
                                 value={editingAssignment.instructorId}
                                 onChange={(e) => handleUpdateInputChange("instructorId", e.target.value)}
-                                className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent text-base"
+                                className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent text-base text-gray-900 dark:text-white"
                               >
                                 <option value="">Select Instructor</option>
                                 {instructors.map((inst) => (
@@ -622,7 +622,7 @@ const CommonCoursesCOC = () => {
                               <select
                                 value={editingAssignment.courseId}
                                 onChange={(e) => handleUpdateInputChange("courseId", e.target.value)}
-                                className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent text-base"
+                                className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent text-base text-gray-900 dark:text-white"
                               >
                                 <option value="">Select Course</option>
                                 {courses.map((course) => (
@@ -640,7 +640,7 @@ const CommonCoursesCOC = () => {
                                 placeholder="Enter section"
                                 value={editingAssignment.section}
                                 onChange={(e) => handleUpdateInputChange("section", e.target.value)}
-                                className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent text-base"
+                                className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent text-base text-gray-900 dark:text-white"
                               />
                             </div>
 
@@ -649,7 +649,7 @@ const CommonCoursesCOC = () => {
                               <select
                                 value={editingAssignment.labDivision}
                                 onChange={(e) => handleUpdateInputChange("labDivision", e.target.value)}
-                                className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent text-base"
+                                className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent text-base text-gray-900 dark:text-white"
                               >
                                 <option value="No">No</option>
                                 <option value="Yes">Yes</option>
@@ -661,7 +661,7 @@ const CommonCoursesCOC = () => {
                             <button
                               type="submit"
                               disabled={loading}
-                              className="inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors disabled:opacity-50"
+                              className="inline-flex items-center px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors disabled:opacity-50"
                             >
                               {loading ? (
                                 <Loader className="animate-spin mr-2" size={18} />
@@ -685,14 +685,14 @@ const CommonCoursesCOC = () => {
                           <div className="flex flex-wrap gap-3">
                             <button
                               onClick={addAssignment}
-                              className="inline-flex items-center px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-md transition-colors"
+                              className="inline-flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors"
                             >
                               <PlusCircle className="mr-2" size={18} />
                               Add Assignment
                             </button>
                             <button
                               onClick={() => setShowAssignmentForm(false)}
-                              className="inline-flex items-center px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-md transition-colors"
+                              className="inline-flex items-center px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg transition-colors"
                             >
                               <X className="mr-2" size={18} />
                               Cancel
@@ -714,7 +714,7 @@ const CommonCoursesCOC = () => {
                                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Instructor</label>
                                   <select
                                     onChange={(e) => handleInputChange(index, "instructorId", e.target.value)}
-                                    className="w-full px-3 py-2 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent text-base"
+                                    className="w-full px-3 py-2 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent text-base text-gray-900 dark:text-white"
                                   >
                                     <option value="">Select Instructor</option>
                                     {instructors.map((inst) => (
@@ -729,7 +729,7 @@ const CommonCoursesCOC = () => {
                                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Course</label>
                                   <select
                                     onChange={(e) => handleInputChange(index, "courseId", e.target.value)}
-                                    className="w-full px-3 py-2 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent text-base"
+                                    className="w-full px-3 py-2 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent text-base text-gray-900 dark:text-white"
                                   >
                                     <option value="">Select Course</option>
                                     {courses.map((course) => (
@@ -746,7 +746,7 @@ const CommonCoursesCOC = () => {
                                     type="text"
                                     placeholder="Enter section"
                                     onChange={(e) => handleInputChange(index, "section", e.target.value)}
-                                    className="w-full px-3 py-2 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent text-base"
+                                    className="w-full px-3 py-2 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent text-base text-gray-900 dark:text-white"
                                   />
                                 </div>
 
@@ -754,7 +754,7 @@ const CommonCoursesCOC = () => {
                                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Lab Division</label>
                                   <select
                                     onChange={(e) => handleInputChange(index, "labDivision", e.target.value)}
-                                    className="w-full px-3 py-2 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent text-base"
+                                    className="w-full px-3 py-2 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent text-base text-gray-900 dark:text-white"
                                   >
                                     <option value="No">No</option>
                                     <option value="Yes">Yes</option>
@@ -765,7 +765,7 @@ const CommonCoursesCOC = () => {
                                   <button
                                     type="button"
                                     onClick={() => removeAssignment(index)}
-                                    className="px-3 py-2 bg-red-100 dark:bg-red-900/40 hover:bg-red-200 dark:hover:bg-red-900/60 text-red-600 dark:text-red-400 rounded-md flex items-center justify-center w-full"
+                                    className="px-3 py-2 bg-red-100 dark:bg-red-900/40 hover:bg-red-200 dark:hover:bg-red-900/60 text-red-600 dark:text-red-400 rounded-lg flex items-center justify-center w-full"
                                   >
                                     <Trash2 size={18} />
                                   </button>
@@ -779,7 +779,7 @@ const CommonCoursesCOC = () => {
                               <button
                                 type="submit"
                                 disabled={loading}
-                                className="inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors disabled:opacity-50"
+                                className="inline-flex items-center px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors disabled:opacity-50"
                               >
                                 {loading ? (
                                   <Loader className="animate-spin mr-2" size={18} />
@@ -803,7 +803,7 @@ const CommonCoursesCOC = () => {
                           <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Automatic Assignment</h2>
                           <button
                             onClick={() => setShowAssignmentForm(false)}
-                            className="inline-flex items-center px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-md transition-colors"
+                            className="inline-flex items-center px-4 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg transition-colors"
                           >
                             <X className="mr-2" size={18} />
                             Cancel
@@ -813,13 +813,13 @@ const CommonCoursesCOC = () => {
                         {/* Instructor Selection */}
                         <div className="space-y-2">
                           <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
-                            <Users className="mr-2" size={18} />
+                            <Users className="mr-2 text-indigo-600 dark:text-indigo-400" size={18} />
                             Select Instructors
                           </label>
                           <select
                             multiple
                             onChange={handleInstructorSelection}
-                            className="w-full h-48 px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent text-base"
+                            className="w-full h-48 px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent text-base text-gray-900 dark:text-white"
                           >
                             {instructors.map((inst) => (
                               <option key={inst._id} value={inst._id}>
@@ -833,7 +833,7 @@ const CommonCoursesCOC = () => {
                         {/* Course Selection with Section and Lab Division Inputs */}
                         <div className="mt-6 space-y-4">
                           <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
-                            <BookOpen className="mr-2" size={18} />
+                            <BookOpen className="mr-2 text-indigo-600 dark:text-indigo-400" size={18} />
                             Select Courses and Set Section & Lab Division
                           </label>
 
@@ -845,9 +845,9 @@ const CommonCoursesCOC = () => {
                                   value={course._id}
                                   onChange={(e) => handleCourseSelection(e, course)}
                                   checked={selectedCourses.some((c) => c.courseId === course._id)}
-                                  className="w-5 h-5 text-purple-600 border-gray-300 dark:border-gray-600 rounded"
+                                  className="w-5 h-5 text-indigo-600 dark:text-indigo-400 border-gray-300 dark:border-gray-600 rounded focus:ring-indigo-500 dark:focus:ring-indigo-400"
                                 />
-                                <span className="text-sm">{course.name} ({course.code})</span>
+                                <span className="text-sm text-gray-900 dark:text-white">{course.name} ({course.code})</span>
                               </div>
 
                               {selectedCourses.some((c) => c.courseId === course._id) && (
@@ -858,14 +858,14 @@ const CommonCoursesCOC = () => {
                                     placeholder="Enter section"
                                     value={selectedCourses.find((c) => c.courseId === course._id)?.section || ""}
                                     onChange={(e) => handleCourseDetailChange(course._id, "section", e.target.value)}
-                                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-base"
+                                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent text-base text-gray-900 dark:text-white"
                                   />
 
                                   {/* Lab Division Selection */}
                                   <select
                                     value={selectedCourses.find((c) => c.courseId === course._id)?.labDivision || "No"}
                                     onChange={(e) => handleCourseDetailChange(course._id, "labDivision", e.target.value)}
-                                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-base"
+                                    className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent text-base text-gray-900 dark:text-white"
                                   >
                                     <option value="No">No Lab</option>
                                     <option value="Yes">Yes (With Lab)</option>
@@ -881,7 +881,7 @@ const CommonCoursesCOC = () => {
                           <button
                             onClick={handleAutoAssign}
                             disabled={loading}
-                            className="inline-flex items-center px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors disabled:opacity-50"
+                            className="inline-flex items-center px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors disabled:opacity-50"
                           >
                             {loading ? (
                               <Loader className="animate-spin mr-2" size={18} />
@@ -905,7 +905,7 @@ const CommonCoursesCOC = () => {
             >
               <div className="p-6">
                 <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6 flex items-center">
-                  <BookOpen className="mr-2" size={20} />
+                  <BookOpen className="mr-2 text-indigo-600 dark:text-indigo-400" size={20} />
                   Current Assignments
                   <span className="ml-3 px-3 py-1 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-800 dark:text-indigo-200 text-sm rounded-full">
                     {selectedYear} - {selectedSemester}
@@ -927,7 +927,7 @@ const CommonCoursesCOC = () => {
                     <div className="mt-6">
                       <button
                         onClick={() => setShowAssignmentForm(true)}
-                        className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                        className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                       >
                         <PlusCircle className="-ml-1 mr-2 h-5 w-5" />
                         Create New Assignment
@@ -935,7 +935,7 @@ const CommonCoursesCOC = () => {
                     </div>
                   </div>
                 ) : (
-                  <div className="overflow-x-auto -mx-6 px-6">
+                  <div className="overflow-x-auto">
                     <table className="w-full min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                       <thead className="bg-gray-50 dark:bg-gray-700">
                         <tr>
@@ -970,7 +970,7 @@ const CommonCoursesCOC = () => {
                               initial={{ opacity: 0 }}
                               animate={{ opacity: 1 }}
                               whileHover={{ backgroundColor: "rgba(249, 250, 251, 0.5)" }}
-                              className="transition-colors"
+                              className="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700"
                             >
                               <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                                 {subAssignment.instructorId?.fullName || "Unassigned"}
@@ -993,7 +993,7 @@ const CommonCoursesCOC = () => {
                               <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 flex space-x-2">
                                 <button
                                   onClick={() => handleEditAssignment(subAssignment, assignment._id)}
-                                  className="p-1 rounded-md text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30"
+                                  className="p-1 rounded-md text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30"
                                   title="Edit"
                                 >
                                   <Edit size={16} />
