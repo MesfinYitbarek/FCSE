@@ -1,6 +1,16 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
-import { motion } from 'framer-motion'; // Assuming you have framer-motion installed
+import { motion } from 'framer-motion';
+import {
+  Eye,
+  ArrowUp,
+  ArrowDown,
+  Calendar,
+  Users,
+  User,
+  Briefcase,
+  FileText
+} from 'lucide-react';
 
 const ReportsList = ({ reports, onViewReport }) => {
   const [sortConfig, setSortConfig] = useState({
@@ -14,13 +24,13 @@ const ReportsList = ({ reports, onViewReport }) => {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
-        className="text-center py-12 bg-gray-50 rounded-lg"
+        className="text-center py-12 bg-gray-50 dark:bg-gray-700 rounded-lg"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 mx-auto text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-        </svg>
-        <h3 className="mt-4 text-lg font-medium text-gray-900">No reports found</h3>
-        <p className="mt-2 text-sm text-gray-500 max-w-md mx-auto">Try adjusting your filters or check back later as new reports are added to the system.</p>
+        <FileText size={48} className="mx-auto text-gray-400 dark:text-gray-500 mb-4" />
+        <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-white">No reports found</h3>
+        <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 max-w-md mx-auto">
+          Try adjusting your filters or check back later as new reports are added to the system.
+        </p>
       </motion.div>
     );
   }
@@ -51,132 +61,181 @@ const ReportsList = ({ reports, onViewReport }) => {
 
   const getSortIcon = (name) => {
     if (sortConfig.key !== name) {
-      return (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4" />
-        </svg>
-      );
+      return null;
     }
     
     return sortConfig.direction === 'ascending' ? (
-      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-      </svg>
+      <ArrowUp size={14} className="text-indigo-600 dark:text-indigo-400" />
     ) : (
-      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-      </svg>
+      <ArrowDown size={14} className="text-indigo-600 dark:text-indigo-400" />
     );
   };
 
+  // Mobile card variant - we'll show this on small screens
+  const renderMobileCard = (report, idx) => (
+    <motion.div
+      key={report._id}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3, delay: idx * 0.05 }}
+      className="p-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm mb-4 last:mb-0"
+    >
+      <div className="flex justify-between items-start mb-3">
+        <div>
+          <h3 className="font-medium text-gray-900 dark:text-white">{report.year} - {report.semester || 'N/A'}</h3>
+          {report.program && (
+            <span className={`mt-1 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+              report.program === 'Regular' ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300' : 
+              report.program === 'Common' ? 'bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300' :
+              report.program === 'Extension' ? 'bg-purple-100 dark:bg-purple-900/40 text-purple-800 dark:text-purple-300' :
+              'bg-orange-100 dark:bg-orange-900/40 text-orange-800 dark:text-orange-300'
+            }`}>
+              {report.program}
+            </span>
+          )}
+        </div>
+        <div className="text-xs text-gray-500 dark:text-gray-400 flex items-center">
+          <Calendar size={12} className="mr-1" />
+          {format(new Date(report.createdAt), 'MMM d, yyyy')}
+        </div>
+      </div>
+      
+      <div className="flex items-center mb-3 text-sm text-gray-500 dark:text-gray-400">
+        <User size={14} className="mr-2" />
+        <span>{report.generatedBy || 'N/A'}</span>
+      </div>
+      
+      <div className="flex justify-between items-center">
+        <div className="flex items-center">
+          <Briefcase size={14} className="mr-1 text-gray-400 dark:text-gray-500" />
+          <span className="text-xs text-gray-500 dark:text-gray-400">
+            {report.assignments?.length || 0} assignments
+          </span>
+        </div>
+        
+        <button
+          onClick={() => onViewReport(report._id)}
+          className="inline-flex items-center px-3 py-1.5 border border-indigo-600 dark:border-indigo-400 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-600 dark:hover:bg-indigo-700 hover:text-white dark:hover:text-white rounded-md text-sm transition-colors"
+        >
+          <Eye size={14} className="mr-1" />
+          View
+        </button>
+      </div>
+    </motion.div>
+  );
+
   return (
-    <div className="overflow-x-auto">
-      <div className="inline-block min-w-full align-middle">
-        <div className="overflow-hidden shadow-sm ring-1 ring-black ring-opacity-5 rounded-lg">
-          <table className="min-w-full divide-y divide-gray-300">
-            <thead className="bg-gray-50">
-              <tr>
-                <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6">
-                  <button
-                    onClick={() => requestSort('year')}
-                    className="group inline-flex items-center font-semibold text-gray-900 hover:text-indigo-600"
-                  >
-                    Year
-                    <span className="ml-2 flex-none rounded">{getSortIcon('year')}</span>
-                  </button>
-                </th>
-                <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                  <button
-                    onClick={() => requestSort('semester')}
-                    className="group inline-flex items-center font-semibold text-gray-900 hover:text-indigo-600"
-                  >
-                    Semester
-                    <span className="ml-2 flex-none rounded">{getSortIcon('semester')}</span>
-                  </button>
-                </th>
-                <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                  <button
-                    onClick={() => requestSort('program')}
-                    className="group inline-flex items-center font-semibold text-gray-900 hover:text-indigo-600"
-                  >
-                    Program
-                    <span className="ml-2 flex-none rounded">{getSortIcon('program')}</span>
-                  </button>
-                </th>
-                <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Created By</th>
-                <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">
-                  <button
-                    onClick={() => requestSort('createdAt')}
-                    className="group inline-flex items-center font-semibold text-gray-900 hover:text-indigo-600"
-                  >
-                    Date Created
-                    <span className="ml-2 flex-none rounded">{getSortIcon('createdAt')}</span>
-                  </button>
-                </th>
-                <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Assignments</th>
-                <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
-                  <span className="sr-only">Actions</span>
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {sortedReports.map((report, idx) => (
-                <motion.tr 
-                  key={report._id}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.3, delay: idx * 0.05 }}
-                  className={`${idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'} hover:bg-indigo-50 transition-colors duration-150`}
-                >
-                  <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">{report.year}</td>
-                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{report.semester || 'N/A'}</td>
-                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                    {report.program ? (
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        report.program === 'Regular' ? 'bg-blue-100 text-blue-800' : 
-                        report.program === 'Common' ? 'bg-green-100 text-green-800' :
-                        report.program === 'Extension' ? 'bg-purple-100 text-purple-800' :
-                        'bg-orange-100 text-orange-800'
-                      }`}>
-                        {report.program}
-                      </span>
-                    ) : 'N/A'}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                    <div className="flex items-center">
-                      <div className="h-8 w-8 flex-shrink-0 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-medium text-sm">
-                        {report.generatedBy?.charAt(0) || '?'}
-                      </div>
-                      <div className="ml-3">
-                        <p className="text-gray-900 whitespace-nowrap">{report.generatedBy || 'N/A'}</p>
-                        <p className="text-gray-500 text-xs">{report.generatedBy || ''}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                    {format(new Date(report.createdAt), 'MMM d, yyyy')}
-                  </td>
-                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      {report.assignments?.length || 0}
-                    </span>
-                  </td>
-                  <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
+    <div>
+      {/* Mobile view */}
+      <div className="sm:hidden space-y-4">
+        {sortedReports.map((report, idx) => renderMobileCard(report, idx))}
+      </div>
+      
+      {/* Desktop view */}
+      <div className="hidden sm:block overflow-x-auto">
+        <div className="inline-block min-w-full align-middle">
+          <div className="overflow-hidden rounded-lg border border-gray-200 dark:border-gray-700">
+            <table className="min-w-full divide-y divide-gray-300 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-700">
+                <tr>
+                  <th scope="col" className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-200 sm:pl-6">
                     <button
-                      onClick={() => onViewReport(report._id)}
-                      className="inline-flex items-center px-3 py-1.5 border border-indigo-600 text-indigo-600 hover:bg-indigo-600 hover:text-white rounded-md text-sm transition-colors duration-150"
+                      onClick={() => requestSort('year')}
+                      className="group inline-flex items-center font-semibold hover:text-indigo-600 dark:hover:text-indigo-400"
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                      </svg>
-                      View
+                      Year
+                      <span className="ml-2 flex-none rounded">{getSortIcon('year')}</span>
                     </button>
-                  </td>
-                </motion.tr>
-              ))}
-            </tbody>
-          </table>
+                  </th>
+                  <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-200">
+                    <button
+                      onClick={() => requestSort('semester')}
+                      className="group inline-flex items-center font-semibold hover:text-indigo-600 dark:hover:text-indigo-400"
+                    >
+                      Semester
+                      <span className="ml-2 flex-none rounded">{getSortIcon('semester')}</span>
+                    </button>
+                  </th>
+                  <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-200">
+                    <button
+                      onClick={() => requestSort('program')}
+                      className="group inline-flex items-center font-semibold hover:text-indigo-600 dark:hover:text-indigo-400"
+                    >
+                      Program
+                      <span className="ml-2 flex-none rounded">{getSortIcon('program')}</span>
+                    </button>
+                  </th>
+                  <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-200">Created By</th>
+                  <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-200">
+                    <button
+                      onClick={() => requestSort('createdAt')}
+                      className="group inline-flex items-center font-semibold hover:text-indigo-600 dark:hover:text-indigo-400"
+                    >
+                      Date Created
+                      <span className="ml-2 flex-none rounded">{getSortIcon('createdAt')}</span>
+                    </button>
+                  </th>
+                  <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 dark:text-gray-200">Assignments</th>
+                  <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6">
+                    <span className="sr-only">Actions</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
+                {sortedReports.map((report, idx) => (
+                  <motion.tr 
+                    key={report._id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3, delay: idx * 0.05 }}
+                    className={`${idx % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-750'} hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors duration-150`}
+                  >
+                    <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 dark:text-white sm:pl-6">{report.year}</td>
+                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">{report.semester || 'N/A'}</td>
+                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
+                      {report.program ? (
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          report.program === 'Regular' ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300' : 
+                          report.program === 'Common' ? 'bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300' :
+                          report.program === 'Extension' ? 'bg-purple-100 dark:bg-purple-900/40 text-purple-800 dark:text-purple-300' :
+                          'bg-orange-100 dark:bg-orange-900/40 text-orange-800 dark:text-orange-300'
+                        }`}>
+                          {report.program}
+                        </span>
+                      ) : 'N/A'}
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
+                      <div className="flex items-center">
+                        <div className="h-8 w-8 flex-shrink-0 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-700 dark:text-indigo-300 font-medium text-sm">
+                          {report.generatedBy?.charAt(0) || '?'}
+                        </div>
+                        <div className="ml-3">
+                          <p className="text-gray-900 dark:text-gray-200 whitespace-nowrap">{report.generatedBy || 'N/A'}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
+                      {format(new Date(report.createdAt), 'MMM d, yyyy')}
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 dark:text-gray-400">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300">
+                        {report.assignments?.length || 0}
+                      </span>
+                    </td>
+                    <td className="relative whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
+                      <button
+                        onClick={() => onViewReport(report._id)}
+                        className="inline-flex items-center px-3 py-1.5 border border-indigo-600 dark:border-indigo-400 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-600 dark:hover:bg-indigo-700 hover:text-white dark:hover:text-white rounded-md text-sm transition-colors"
+                      >
+                        <Eye size={14} className="mr-1" />
+                        View
+                      </button>
+                    </td>
+                  </motion.tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>

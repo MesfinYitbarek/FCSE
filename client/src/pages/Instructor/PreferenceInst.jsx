@@ -1,11 +1,28 @@
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
+import { motion, AnimatePresence } from "framer-motion";
 import api from "../../utils/api";
-import Spinner from "../../components/Spinner";
 import { 
-  Search, FileText, Calendar, CheckCircle, AlertCircle, 
-  Edit, Send, Info, Lock, Award, Filter, BookOpen, Code, 
-  Layers, ClipboardList
+  Search, 
+  FileText, 
+  Calendar, 
+  CheckCircle, 
+  AlertCircle, 
+  Edit, 
+  Send, 
+  Info, 
+  Lock, 
+  Award, 
+  Filter, 
+  BookOpen, 
+  Code, 
+  Layers, 
+  ClipboardList,
+  RefreshCw,
+  Loader2,
+  ChevronDown,
+  ChevronRight,
+  Building
 } from "lucide-react";
 
 const PreferencesInst = () => {
@@ -13,7 +30,10 @@ const PreferencesInst = () => {
   const [preferenceForm, setPreferenceForm] = useState(null);
   const [courses, setCourses] = useState([]);
   const [preferences, setPreferences] = useState([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState({
+    form: false,
+    submission: false
+  });
   const [submissionAllowed, setSubmissionAllowed] = useState(false);
   const [year, setYear] = useState(new Date().getFullYear());
   const [semester, setSemester] = useState("Regular 1");
@@ -34,7 +54,7 @@ const PreferencesInst = () => {
   }, [user, year, semester]);
 
   const fetchPreferenceForm = async () => {
-    setLoading(true);
+    setLoading(prev => ({ ...prev, form: true }));
     setErrorMessage("");
     try {
       // Get active preference form for the instructor's chair
@@ -80,7 +100,7 @@ const PreferencesInst = () => {
       setSubmissionAllowed(false);
       setErrorMessage("Failed to fetch preference form. Please try again.");
     }
-    setLoading(false);
+    setLoading(prev => ({ ...prev, form: false }));
   };
 
   const fetchPreferences = async () => {
@@ -142,7 +162,7 @@ const PreferencesInst = () => {
       setErrorMessage("Please select at least one course preference.");
       return;
     }
-    setLoading(true);
+    setLoading(prev => ({ ...prev, submission: true }));
     setErrorMessage("");
     try {
       // Use isUpdating or hasSubmitted to determine the method
@@ -173,7 +193,7 @@ const PreferencesInst = () => {
         : "Failed to submit preferences. Please try again."
       );
     }
-    setLoading(false);
+    setLoading(prev => ({ ...prev, submission: false }));
   };
 
   // Filter courses based on search query and chair
@@ -198,15 +218,24 @@ const PreferencesInst = () => {
     return labDivision === "Yes" ? "Has Lab Sections" : "No Lab Sections";
   };
 
+  // Animation variants
+  const fadeVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.3 } },
+    exit: { opacity: 0, y: -20, transition: { duration: 0.2 } }
+  };
+
   if (user?.role !== "Instructor") {
     return (
-      <div className="p-4 md:p-8 bg-gradient-to-br from-slate-100 to-slate-200 min-h-screen">
-        <div className="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-lg">
-          <div className="flex flex-col md:flex-row md:items-center md:space-x-4 text-red-500">
-            <AlertCircle size={36} className="mb-2 md:mb-0" />
-            <div>
-              <h1 className="text-xl md:text-2xl font-bold">Access Denied</h1>
-              <p className="text-gray-600">Only instructors can access this page.</p>
+      <div className="h-full overflow-y-auto">
+        <div className="max-w-4xl mx-auto p-6">
+          <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+            <div className="flex flex-col md:flex-row md:items-center md:space-x-4 text-red-600 dark:text-red-400">
+              <AlertCircle size={36} className="mb-2 md:mb-0" />
+              <div>
+                <h1 className="text-xl md:text-2xl font-bold dark:text-white">Access Denied</h1>
+                <p className="text-gray-600 dark:text-gray-400">Only instructors can access this page.</p>
+              </div>
             </div>
           </div>
         </div>
@@ -215,367 +244,371 @@ const PreferencesInst = () => {
   }
 
   return (
-    <div className="p-4 md:p-8 bg-gradient-to-br from-slate-100 to-slate-200 min-h-screen">
-      <div className="max-w-6xl mx-auto">
-        <div className="bg-white p-4 md:p-8 rounded-lg shadow-lg">
-          <h1 className="text-2xl md:text-3xl font-bold text-slate-800 mb-6 border-b pb-4 flex items-center">
-            <FileText className="h-7 w-7 mr-3 text-blue-600" />
-            Course Preferences
-          </h1>
+    <div className="h-full overflow-y-auto">
+      <div className="max-w-6xl mx-auto pb-6">
+        {/* Page Header */}
+        <div className="mb-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+              <ClipboardList className="text-indigo-600 dark:text-indigo-400" size={24} />
+              Course Preferences
+            </h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Submit and manage your course teaching preferences
+            </p>
+          </div>
+        </div>
 
+        {/* Notifications */}
+        <AnimatePresence>
           {submitSuccess && (
-            <div className="mb-6 p-4 rounded-lg bg-green-100 text-green-800 flex items-center">
+            <motion.div 
+              variants={fadeVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              className="mb-6 p-4 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-green-700 dark:text-green-300 flex items-center"
+            >
               <CheckCircle className="h-5 w-5 mr-2 flex-shrink-0" />
               <span>Preferences submitted successfully!</span>
-            </div>
+              <button 
+                onClick={() => setSubmitSuccess(false)}
+                className="ml-auto text-green-700 dark:text-green-300 hover:text-green-900 dark:hover:text-green-100"
+              >
+                &times;
+              </button>
+            </motion.div>
           )}
 
           {errorMessage && (
-            <div className="mb-6 p-4 rounded-lg bg-red-100 text-red-800 flex items-center">
+            <motion.div 
+              variants={fadeVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              className="mb-6 p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 flex items-center"
+            >
               <AlertCircle className="h-5 w-5 mr-2 flex-shrink-0" />
               <span>{errorMessage}</span>
-            </div>
+              <button 
+                onClick={() => setErrorMessage("")}
+                className="ml-auto text-red-700 dark:text-red-300 hover:text-red-900 dark:hover:text-red-100"
+              >
+                &times;
+              </button>
+            </motion.div>
           )}
+        </AnimatePresence>
 
-          <div className="bg-slate-50 p-4 md:p-6 rounded-lg mb-8">
-            <h2 className="text-lg md:text-xl font-semibold text-slate-700 mb-4 flex items-center">
-              <Search className="h-5 w-5 mr-2 text-blue-600" />
-              Search Preference Form
-            </h2>
+        {/* Search Form */}
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 mb-6">
+          <h2 className="text-lg font-semibold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
+            <Search className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+            Search Preference Form
+          </h2>
 
-            <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Academic Year</label>
-                <input
-                  type="number"
-                  value={year}
-                  onChange={(e) => setYear(parseInt(e.target.value))}
-                  className="w-full p-3 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Semester</label>
-                <select
-                  value={semester}
-                  onChange={(e) => setSemester(e.target.value)}
-                  className="w-full p-3 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                >
-                  <option value="Regular 1">Regular 1</option>
-                  <option value="Regular 2">Regular 2</option>
-                  <option value="Summer">Summer</option>
-                  <option value="Extension">Extension</option>
-                </select>
-              </div>
-
-              <div className="flex items-end">
-                <button
-                  type="submit"
-                  className="w-full bg-blue-600 text-white py-3 px-4 md:px-6 rounded-md hover:bg-blue-700 transition shadow-md flex items-center justify-center space-x-2 disabled:bg-slate-400"
-                  disabled={loading}
-                >
-                  {loading ? <Spinner /> : (
-                    <>
-                      <Search className="h-5 w-5" />
-                      <span>Search</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </form>
-          </div>
-
-          {loading ? (
-            <div className="flex justify-center items-center h-64">
-              <Spinner size="lg" />
+          <form onSubmit={handleSearch} className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-2">
+                <Calendar size={16} className="text-gray-500 dark:text-gray-400" />
+                Academic Year
+              </label>
+              <input
+                type="number"
+                value={year}
+                onChange={(e) => setYear(parseInt(e.target.value))}
+                className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600 focus:border-indigo-500 dark:focus:border-indigo-600 outline-none transition dark:bg-gray-700 dark:text-white text-base"
+              />
             </div>
-          ) : preferenceForm ? (
-            isEligible ? (
-              submissionAllowed ? (
-                <div className="bg-white rounded-lg transition-all">
-                  <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4 rounded-t-lg flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                    <div>
-                      <h2 className="text-lg font-semibold flex items-center">
-                        <Calendar className="h-5 w-5 mr-2 flex-shrink-0" />
-                        <span>{preferenceForm.semester} - {preferenceForm.year} Preference Form</span>
-                      </h2>
-                      <p className="text-sm mt-1 text-blue-100">Chair: {preferenceForm.chair}</p>
-                    </div>
-                    <div className="text-sm bg-blue-800 px-3 py-1.5 rounded-full shadow-sm">
-                      Max Preferences: {preferenceForm.maxPreferences}
-                    </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-2">
+                <FileText size={16} className="text-gray-500 dark:text-gray-400" />
+                Semester
+              </label>
+              <select
+                value={semester}
+                onChange={(e) => setSemester(e.target.value)}
+                className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600 focus:border-indigo-500 dark:focus:border-indigo-600 outline-none transition dark:bg-gray-700 dark:text-white text-base"
+              >
+                <option value="Regular 1">Regular 1</option>
+                <option value="Regular 2">Regular 2</option>
+                <option value="Summer">Summer</option>
+                <option value="Extension">Extension</option>
+              </select>
+            </div>
+
+            <div className="flex items-end">
+              <button
+                type="submit"
+                className="w-full bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-700 dark:hover:bg-indigo-600 text-white py-2.5 px-6 rounded-lg transition shadow-sm flex items-center justify-center gap-2 disabled:bg-gray-400 dark:disabled:bg-gray-600"
+                disabled={loading.form}
+              >
+                {loading.form ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <span>Searching...</span>
+                  </>
+                ) : (
+                  <>
+                    <Search className="h-5 w-5" />
+                    <span>Search</span>
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
+
+        {/* Main Content */}
+        {loading.form ? (
+          <div className="flex justify-center items-center h-64">
+            <Loader2 size={32} className="animate-spin text-indigo-600 dark:text-indigo-400 mr-3" />
+            <span className="text-gray-600 dark:text-gray-300">Loading...</span>
+          </div>
+        ) : preferenceForm ? (
+          isEligible ? (
+            submissionAllowed ? (
+              <motion.div 
+                variants={fadeVariants}
+                initial="hidden"
+                animate="visible"
+                className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm transition-all overflow-hidden"
+              >
+                <div className="bg-indigo-600 dark:bg-indigo-700 text-white p-4 rounded-t-lg flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                  <div>
+                    <h2 className="text-lg font-semibold flex items-center">
+                      <Calendar className="h-5 w-5 mr-2 flex-shrink-0" />
+                      <span>{preferenceForm.semester} - {preferenceForm.year} Preference Form</span>
+                    </h2>
+                    <p className="text-sm mt-1 text-indigo-100 dark:text-indigo-200">Chair: {preferenceForm.chair}</p>
+                  </div>
+                  <div className="text-sm bg-indigo-700 dark:bg-indigo-800 px-3 py-1.5 rounded-full shadow-sm">
+                    Max Preferences: {preferenceForm.maxPreferences}
+                  </div>
+                </div>
+
+                <div className="p-6">
+                  <div className="flex items-center text-sm text-gray-600 dark:text-gray-400 mb-6 bg-indigo-50 dark:bg-indigo-900/20 p-3 rounded-md border border-indigo-100 dark:border-indigo-800">
+                    <Calendar className="h-5 w-5 mr-2 text-indigo-600 dark:text-indigo-400 flex-shrink-0" />
+                    <span>
+                      Submission Period: {formatDate(preferenceForm.submissionStart)} - {formatDate(preferenceForm.submissionEnd)}
+                    </span>
                   </div>
 
-                  <div className="p-4 md:p-6 border-b">
-                    <div className="flex items-center text-sm text-slate-600 mb-6 bg-blue-50 p-3 rounded-md">
-                      <Calendar className="h-5 w-5 mr-2 text-blue-600 flex-shrink-0" />
-                      <span>
-                        Submission Period: {formatDate(preferenceForm.submissionStart)} - {formatDate(preferenceForm.submissionEnd)}
-                      </span>
-                    </div>
-
-                    {/* Search and Filter Bar */}
-                    {(!hasSubmitted || isUpdating) && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                        <div className="relative">
-                          <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                            <Search className="w-4 h-4 text-gray-500" />
-                          </div>
-                          <input
-                            type="text"
-                            placeholder="Search courses..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="block w-full p-3 pl-10 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                          />
+                  {/* Search and Filter Bar */}
+                  {(!hasSubmitted || isUpdating) && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                          <Search className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                         </div>
-                        <div className="relative">
-                          <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                            <Filter className="w-4 h-4 text-gray-500" />
-                          </div>
-                          <select
-                            value={filterChair}
-                            onChange={(e) => setFilterChair(e.target.value)}
-                            className="block w-full p-3 pl-10 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                          >
-                            <option value="">All Chairs</option>
-                            {chairs.map(chair => (
-                              <option key={chair} value={chair}>{chair}</option>
-                            ))}
-                          </select>
-                        </div>
+                        <input
+                          type="text"
+                          placeholder="Search courses..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="block w-full pl-10 px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600 focus:border-indigo-500 dark:focus:border-indigo-600 outline-none transition dark:bg-gray-700 dark:text-white text-base"
+                        />
                       </div>
-                    )}
-
-                    {(hasSubmitted && !isUpdating) ? (
-                      <div>
-                        <h3 className="text-lg font-semibold text-slate-800 mb-4 flex items-center">
-                          <CheckCircle className="h-5 w-5 mr-2 text-green-600" />
-                          Your Submitted Preferences
-                        </h3>
-                        
-                        {/* Desktop view */}
-                        <div className="hidden md:block overflow-x-auto rounded-lg border border-slate-200">
-                          <table className="w-full border-collapse">
-                            <thead>
-                              <tr className="bg-slate-100">
-                                <th className="p-3 text-left font-semibold text-slate-700 border-b">Rank</th>
-                                <th className="p-3 text-left font-semibold text-slate-700 border-b">Course</th>
-                                <th className="p-3 text-left font-semibold text-slate-700 border-b">Code</th>
-                                <th className="p-3 text-left font-semibold text-slate-700 border-b">Section</th>
-                                <th className="p-3 text-left font-semibold text-slate-700 border-b">Chair</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {preferences.length > 0 ? (
-                                preferences
-                                .sort((a, b) => a.rank - b.rank)
-                                .map((pref) => {
-                                  const course = courses.find(c => c._id === pref.courseId || c._id === pref.courseId._id);
-                                  return course ? (
-                                    <tr key={pref.courseId} className="hover:bg-slate-50">
-                                      <td className="p-3 border-b border-slate-200">
-                                        <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-medium">
-                                          {pref.rank}
-                                        </span>
-                                      </td>
-                                      <td className="p-3 border-b border-slate-200">
-                                        {pref.courseId.name || course.name}
-                                      </td>
-                                      <td className="p-3 border-b border-slate-200">
-                                        <span className="text-slate-500 flex items-center">
-                                          <Code className="h-4 w-4 mr-1 text-slate-400" />
-                                          {pref.courseId.code || course.code}
-                                        </span>
-                                      </td>
-                                      <td className="p-3 border-b border-slate-200">
-                                        {course.section}
-                                        {course.NoOfSections > 1 && 
-                                          <span className="ml-1 text-xs bg-slate-100 px-1 rounded">
-                                            ({course.NoOfSections} sections)
-                                          </span>
-                                        }
-                                      </td>
-                                      <td className="p-3 border-b border-slate-200">
-                                        <span className="text-slate-500">{pref.courseId.chair || course.chair}</span>
-                                      </td>
-                                    </tr>
-                                  ) : null;
-                                })
-                              ) : (
-                                <tr>
-                                  <td colSpan="5" className="p-4 text-center text-slate-500">No preferences found</td>
-                                </tr>
-                              )}
-                            </tbody>
-                          </table>
+                      <div className="relative">
+                        <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                          <Filter className="w-4 h-4 text-gray-500 dark:text-gray-400" />
                         </div>
-                        
-                        {/* Mobile view - cards */}
-                        <div className="md:hidden space-y-3">
-                          {preferences.length > 0 ? (
-                            preferences
-                            .sort((a, b) => a.rank - b.rank)
-                            .map((pref) => {
-                              const course = courses.find(c => c._id === pref.courseId || c._id === pref.courseId._id);
-                              return course ? (
-                                <div 
-                                  key={pref.courseId} 
-                                  className="border border-slate-200 rounded-lg p-4 hover:bg-slate-50"
-                                >
-                                  <div className="flex justify-between items-center mb-2">
-                                    <span className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-medium">
-                                      Rank {pref.rank}
+                        <select
+                          value={filterChair}
+                          onChange={(e) => setFilterChair(e.target.value)}
+                          className="block w-full pl-10 px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600 focus:border-indigo-500 dark:focus:border-indigo-600 outline-none transition dark:bg-gray-700 dark:text-white text-base"
+                        >
+                          <option value="">All Chairs</option>
+                          {chairs.map(chair => (
+                            <option key={chair} value={chair}>{chair}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  )}
+
+                  {(hasSubmitted && !isUpdating) ? (
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4 flex items-center gap-2">
+                        <CheckCircle className="h-5 w-5 text-green-600 dark:text-green-400" />
+                        Your Submitted Preferences
+                      </h3>
+                      
+                      {/* Desktop view */}
+                      <div className="hidden md:block overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+                        <table className="w-full border-collapse">
+                          <thead>
+                            <tr className="bg-gray-50 dark:bg-gray-700">
+                              <th className="p-3 text-left font-semibold text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700">Rank</th>
+                              <th className="p-3 text-left font-semibold text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700">Course</th>
+                              <th className="p-3 text-left font-semibold text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700">Code</th>
+                              <th className="p-3 text-left font-semibold text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700">Section</th>
+                              <th className="p-3 text-left font-semibold text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700">Chair</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {preferences.length > 0 ? (
+                              preferences
+                              .sort((a, b) => a.rank - b.rank)
+                              .map((pref) => {
+                                const course = courses.find(c => c._id === pref.courseId || c._id === pref.courseId._id);
+                                return course ? (
+                                  <tr key={pref.courseId} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                    <td className="p-3 border-b border-gray-200 dark:border-gray-700">
+                                      <span className="bg-indigo-100 dark:bg-indigo-900/40 text-indigo-800 dark:text-indigo-300 px-3 py-1 rounded-full font-medium">
+                                        {pref.rank}
+                                      </span>
+                                    </td>
+                                    <td className="p-3 border-b border-gray-200 dark:border-gray-700 text-gray-800 dark:text-white">
+                                      {pref.courseId.name || course.name}
+                                    </td>
+                                    <td className="p-3 border-b border-gray-200 dark:border-gray-700">
+                                      <span className="text-gray-500 dark:text-gray-400 flex items-center">
+                                        <Code className="h-4 w-4 mr-1 text-gray-400 dark:text-gray-500" />
+                                        {pref.courseId.code || course.code}
+                                      </span>
+                                    </td>
+                                    <td className="p-3 border-b border-gray-200 dark:border-gray-700 text-gray-800 dark:text-white">
+                                      {course.section}
+                                      {course.NoOfSections > 1 && 
+                                        <span className="ml-1 text-xs bg-gray-100 dark:bg-gray-700 px-1 rounded">
+                                          ({course.NoOfSections} sections)
+                                        </span>
+                                      }
+                                    </td>
+                                    <td className="p-3 border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400">
+                                      {pref.courseId.chair || course.chair}
+                                    </td>
+                                  </tr>
+                                ) : null;
+                              })
+                            ) : (
+                              <tr>
+                                <td colSpan="5" className="p-4 text-center text-gray-500 dark:text-gray-400">No preferences found</td>
+                              </tr>
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                      
+                      {/* Mobile view - cards */}
+                      <div className="md:hidden space-y-3">
+                        {preferences.length > 0 ? (
+                          preferences
+                          .sort((a, b) => a.rank - b.rank)
+                          .map((pref) => {
+                            const course = courses.find(c => c._id === pref.courseId || c._id === pref.courseId._id);
+                            return course ? (
+                              <div 
+                                key={pref.courseId} 
+                                className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:bg-gray-50 dark:hover:bg-gray-700"
+                              >
+                                <div className="flex justify-between items-center mb-2">
+                                  <span className="bg-indigo-100 dark:bg-indigo-900/40 text-indigo-800 dark:text-indigo-300 px-3 py-1 rounded-full font-medium">
+                                    Rank {pref.rank}
+                                  </span>
+                                  <span className="text-sm text-gray-500 dark:text-gray-400">{pref.courseId.chair || course.chair}</span>
+                                </div>
+                                <h4 className="font-medium text-gray-800 dark:text-white mb-1">{pref.courseId.name || course.name}</h4>
+                                <div className="flex items-center text-gray-500 dark:text-gray-400 text-sm mb-1">
+                                  <Code className="h-4 w-4 mr-1 text-gray-400 dark:text-gray-500" />
+                                  {pref.courseId.code || course.code}
+                                </div>
+                                <div className="text-sm text-gray-500 dark:text-gray-400">
+                                  Section {course.section}
+                                  {course.NoOfSections > 1 && 
+                                    <span className="ml-1 text-xs bg-gray-100 dark:bg-gray-700 px-1 rounded">
+                                      ({course.NoOfSections} sections)
                                     </span>
-                                    <span className="text-sm text-slate-500">{pref.courseId.chair || course.chair}</span>
-                                  </div>
-                                  <h4 className="font-medium mb-1">{pref.courseId.name || course.name}</h4>
-                                  <div className="flex items-center text-slate-500 text-sm mb-1">
-                                    <Code className="h-4 w-4 mr-1 text-slate-400" />
-                                    {pref.courseId.code || course.code}
-                                  </div>
-                                  <div className="text-sm text-slate-500">
-                                    Section {course.section}
+                                  }
+                                </div>
+                              </div>
+                            ) : null;
+                          })
+                        ) : (
+                          <div className="p-4 text-center text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 rounded-lg">
+                            No preferences found
+                          </div>
+                        )}
+                      </div>
+                      
+                      {submissionAllowed && (
+                        <button
+                          onClick={handleUpdate}
+                          className="mt-6 inline-flex items-center bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-700 dark:hover:bg-indigo-600 text-white px-4 py-2.5 rounded-lg transition shadow-sm"
+                        >
+                          <Edit className="h-5 w-5 mr-2" />
+                          Update Preferences
+                        </button>
+                      )}
+                      {!submissionAllowed && (
+                        <div className="mt-6 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-md text-yellow-700 dark:text-yellow-300 flex items-start gap-3">
+                          <Lock className="h-5 w-5 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p className="font-medium">Submission period is closed</p>
+                            <p className="text-sm mt-1">You cannot update your preferences at this time.</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <form onSubmit={handleSubmit}>
+                      {/* Course selection table/cards */}
+                      
+                      {/* Desktop view */}
+                      <div className="hidden md:block overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+                        <table className="w-full border-collapse">
+                          <thead>
+                            <tr className="bg-gray-50 dark:bg-gray-700">
+                              <th className="p-3 text-left font-semibold text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700">Course</th>
+                              <th className="p-3 text-left font-semibold text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700">Code</th>
+                              <th className="p-3 text-left font-semibold text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700">Section</th>
+                              <th className="p-3 text-left font-semibold text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700">Chair</th>
+                              <th className="p-3 text-left font-semibold text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700">Details</th>
+                              <th className="p-3 text-left font-semibold text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700">Preference Rank</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {filteredCourses.length === 0 ? (
+                              <tr>
+                                <td colSpan="6" className="p-4 text-center text-gray-500 dark:text-gray-400">No courses match your search criteria</td>
+                              </tr>
+                            ) : (
+                              filteredCourses.map((course) => (
+                                <tr key={course._id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                  <td className="p-3 border-b border-gray-200 dark:border-gray-700 text-gray-800 dark:text-white">
+                                    {course.name}
+                                  </td>
+                                  <td className="p-3 border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400">
+                                    <div className="flex items-center">
+                                      <Code className="h-4 w-4 mr-1 text-gray-400 dark:text-gray-500" />
+                                      {course.code}
+                                    </div>
+                                  </td>
+                                  <td className="p-3 border-b border-gray-200 dark:border-gray-700 text-gray-800 dark:text-white">
+                                    {course.section}
                                     {course.NoOfSections > 1 && 
-                                      <span className="ml-1 text-xs bg-slate-100 px-1 rounded">
+                                      <span className="ml-1 text-xs bg-gray-100 dark:bg-gray-700 px-1 rounded">
                                         ({course.NoOfSections} sections)
                                       </span>
                                     }
-                                  </div>
-                                </div>
-                              ) : null;
-                            })
-                          ) : (
-                            <div className="p-4 text-center text-slate-500 border border-slate-200 rounded-lg">
-                              No preferences found
-                            </div>
-                          )}
-                        </div>
-                        
-                        {submissionAllowed && (
-                          <button
-                            onClick={handleUpdate}
-                            className="mt-6 inline-flex items-center bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition shadow-md"
-                          >
-                            <Edit className="h-5 w-5 mr-2" />
-                            Update Preferences
-                          </button>
-                        )}
-                        {!submissionAllowed && (
-                          <div className="mt-6 p-3 bg-yellow-50 border border-yellow-200 rounded-md text-yellow-700 flex items-start space-x-3">
-                            <Lock className="h-5 w-5 mt-0.5 flex-shrink-0" />
-                            <div>
-                              <p className="font-medium">Submission period is closed</p>
-                              <p className="text-sm mt-1">You cannot update your preferences at this time.</p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ) : (
-                      <form onSubmit={handleSubmit}>
-                        {/* Course selection table/cards */}
-                        
-                        {/* Desktop view */}
-                        <div className="hidden md:block overflow-x-auto rounded-lg border border-slate-200">
-                          <table className="w-full border-collapse">
-                            <thead>
-                              <tr className="bg-slate-100">
-                                <th className="p-3 text-left font-semibold text-slate-700 border-b">Course</th>
-                                <th className="p-3 text-left font-semibold text-slate-700 border-b">Code</th>
-                                <th className="p-3 text-left font-semibold text-slate-700 border-b">Section</th>
-                                <th className="p-3 text-left font-semibold text-slate-700 border-b">Chair</th>
-                                <th className="p-3 text-left font-semibold text-slate-700 border-b">Details</th>
-                                <th className="p-3 text-left font-semibold text-slate-700 border-b">Preference Rank</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {filteredCourses.length === 0 ? (
-                                <tr>
-                                  <td colSpan="6" className="p-4 text-center text-slate-500">No courses match your search criteria</td>
-                                </tr>
-                              ) : (
-                                filteredCourses.map((course) => (
-                                  <tr key={course._id} className="hover:bg-slate-50">
-                                    <td className="p-3 border-b border-slate-200">{course.name}</td>
-                                    <td className="p-3 border-b border-slate-200 text-slate-500">
-                                      <div className="flex items-center">
-                                        <Code className="h-4 w-4 mr-1 text-slate-400" />
-                                        {course.code}
-                                      </div>
-                                    </td>
-                                    <td className="p-3 border-b border-slate-200">
-                                      {course.section}
-                                      {course.NoOfSections > 1 && 
-                                        <span className="ml-1 text-xs bg-slate-100 px-1 rounded">
-                                          ({course.NoOfSections} sections)
-                                        </span>
-                                      }
-                                    </td>
-                                    <td className="p-3 border-b border-slate-200 text-slate-500">{course.chair}</td>
-                                    <td className="p-3 border-b border-slate-200 text-slate-500">
-                                      <div className="flex items-center text-xs">
-                                        <Layers className="h-4 w-4 mr-1" />
-                                        {getLabDivisionText(course.labDivision)}
-                                      </div>
-                                    </td>
-                                    <td className="p-3 border-b border-slate-200">
-                                      <select
-                                        value={preferences.find((p) => p.courseId === course._id)?.rank || 0}
-                                        onChange={(e) => handlePreferenceChange(course._id, parseInt(e.target.value))}
-                                        className="p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                                      >
-                                        <option value="0">Not Selected</option>
-                                        {[...Array(preferenceForm.maxPreferences).keys()].map((i) => (
-                                          <option key={i + 1} value={i + 1}>
-                                            {i + 1}
-                                          </option>
-                                        ))}
-                                      </select>
-                                    </td>
-                                  </tr>
-                                ))
-                              )}
-                            </tbody>
-                          </table>
-                        </div>
-                        
-                        {/* Mobile view - cards */}
-                        <div className="md:hidden space-y-3">
-                          {filteredCourses.length === 0 ? (
-                            <div className="p-4 text-center text-slate-500 border border-slate-200 rounded-lg">
-                              No courses match your search criteria
-                            </div>
-                          ) : (
-                            filteredCourses.map((course) => (
-                              <div 
-                                key={course._id} 
-                                className="border border-slate-200 rounded-lg overflow-hidden"
-                              >
-                                <div 
-                                  className="p-4 flex justify-between cursor-pointer hover:bg-slate-50"
-                                  onClick={() => setExpandedCourse(expandedCourse === course._id ? null : course._id)}
-                                >
-                                  <div>
-                                    <h4 className="font-medium">{course.name}</h4>
-                                    <div className="flex items-center text-slate-500 text-sm mt-1">
-                                      <Code className="h-4 w-4 mr-1 text-slate-400" />
-                                      {course.code}
+                                  </td>
+                                  <td className="p-3 border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400">
+                                    {course.chair}
+                                  </td>
+                                  <td className="p-3 border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400">
+                                    <div className="flex items-center text-xs">
+                                      <Layers className="h-4 w-4 mr-1" />
+                                      {getLabDivisionText(course.labDivision)}
                                     </div>
-                                    <div className="text-sm text-slate-500 mt-1">
-                                      Section {course.section}
-                                      {course.NoOfSections > 1 && 
-                                        <span className="ml-1 text-xs bg-slate-100 px-1 rounded">
-                                          ({course.NoOfSections} sections)
-                                        </span>
-                                      }
-                                    </div>
-                                  </div>
-                                  <div className="min-w-fit">
+                                  </td>
+                                  <td className="p-3 border-b border-gray-200 dark:border-gray-700">
                                     <select
                                       value={preferences.find((p) => p.courseId === course._id)?.rank || 0}
                                       onChange={(e) => handlePreferenceChange(course._id, parseInt(e.target.value))}
-                                      className="p-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                                      onClick={(e) => e.stopPropagation()}
+                                      className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600 focus:border-indigo-500 dark:focus:border-indigo-600 transition dark:bg-gray-700 dark:text-white text-base"
                                     >
                                       <option value="0">Not Selected</option>
                                       {[...Array(preferenceForm.maxPreferences).keys()].map((i) => (
@@ -584,79 +617,154 @@ const PreferencesInst = () => {
                                         </option>
                                       ))}
                                     </select>
+                                  </td>
+                                </tr>
+                              ))
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                      
+                      {/* Mobile view - cards */}
+                      <div className="md:hidden space-y-3">
+                        {filteredCourses.length === 0 ? (
+                          <div className="p-4 text-center text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 rounded-lg">
+                            No courses match your search criteria
+                          </div>
+                        ) : (
+                          filteredCourses.map((course) => (
+                            <div 
+                              key={course._id} 
+                              className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden"
+                            >
+                              <div 
+                                className="p-4 flex justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
+                                onClick={() => setExpandedCourse(expandedCourse === course._id ? null : course._id)}
+                              >
+                                <div>
+                                  <h4 className="font-medium text-gray-800 dark:text-white">{course.name}</h4>
+                                  <div className="flex items-center text-gray-500 dark:text-gray-400 text-sm mt-1">
+                                    <Code className="h-4 w-4 mr-1 text-gray-400 dark:text-gray-500" />
+                                    {course.code}
+                                  </div>
+                                  <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                    Section {course.section}
+                                    {course.NoOfSections > 1 && 
+                                      <span className="ml-1 text-xs bg-gray-100 dark:bg-gray-700 px-1 rounded">
+                                        ({course.NoOfSections} sections)
+                                      </span>
+                                    }
                                   </div>
                                 </div>
-                                
-                                {expandedCourse === course._id && (
-                                  <div className="p-4 pt-0 bg-slate-50 text-sm">
-                                    <div className="pt-3 border-t mt-3">
-                                      <p><span className="font-medium">Chair:</span> {course.chair}</p>
-                                      <p className="mt-1 flex items-start">
-                                        <Layers className="h-4 w-4 mr-1 mt-0.5 text-slate-400" />
-                                        <span>{getLabDivisionText(course.labDivision)}</span>
-                                      </p>
-                                    </div>
-                                  </div>
-                                )}
+                                <div className="flex items-center gap-2">
+                                  <select
+                                    value={preferences.find((p) => p.courseId === course._id)?.rank || 0}
+                                    onChange={(e) => handlePreferenceChange(course._id, parseInt(e.target.value))}
+                                    className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600 focus:border-indigo-500 dark:focus:border-indigo-600 transition dark:bg-gray-700 dark:text-white text-base"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <option value="0">Not Selected</option>
+                                    {[...Array(preferenceForm.maxPreferences).keys()].map((i) => (
+                                      <option key={i + 1} value={i + 1}>
+                                        {i + 1}
+                                      </option>
+                                    ))}
+                                  </select>
+                                  {expandedCourse === course._id ? 
+                                    <ChevronDown className="h-5 w-5 text-gray-500 dark:text-gray-400" /> : 
+                                    <ChevronRight className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+                                  }
+                                </div>
                               </div>
-                            ))
+                              
+                              <AnimatePresence>
+                                {expandedCourse === course._id && (
+                                  <motion.div 
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: "auto", opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    transition={{ duration: 0.2 }}
+                                    className="overflow-hidden"
+                                  >
+                                    <div className="p-4 pt-0 bg-gray-50 dark:bg-gray-700 text-sm">
+                                      <div className="pt-3 border-t border-gray-200 dark:border-gray-600 mt-3">
+                                        <p className="flex items-center">
+                                          <Building className="h-4 w-4 mr-1 text-gray-400 dark:text-gray-500" />
+                                          <span className="text-gray-800 dark:text-white font-medium">Chair:</span>
+                                          <span className="ml-1 text-gray-500 dark:text-gray-400">{course.chair}</span>
+                                        </p>
+                                        <p className="mt-2 flex items-start">
+                                          <Layers className="h-4 w-4 mr-1 mt-0.5 text-gray-400 dark:text-gray-500" />
+                                          <span className="text-gray-500 dark:text-gray-400">{getLabDivisionText(course.labDivision)}</span>
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                      
+                      <div className="mt-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+                        <div className="text-sm flex items-center bg-indigo-50 dark:bg-indigo-900/20 px-3 py-2 rounded-md text-gray-700 dark:text-gray-300 border border-indigo-100 dark:border-indigo-800">
+                          <Award className="h-4 w-4 mr-2 text-indigo-600 dark:text-indigo-400" />
+                          <span>Selected preferences: <span className="font-semibold">{preferences.length}/{preferenceForm.maxPreferences}</span></span>
+                        </div>
+                        <button
+                          type="submit"
+                          disabled={loading.submission}
+                          className="w-full sm:w-auto inline-flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-700 dark:hover:bg-indigo-600 text-white px-6 py-2.5 rounded-lg transition shadow-sm disabled:bg-gray-400 dark:disabled:bg-gray-600"
+                        >
+                          {loading.submission ? (
+                            <>
+                              <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                              {isUpdating ? "Updating..." : "Submitting..."}
+                            </>
+                          ) : (
+                            <>
+                              <Send className="h-5 w-5 mr-2" />
+                              {isUpdating ? "Update Preferences" : "Submit Preferences"}
+                            </>
                           )}
-                        </div>
-                        
-                        <div className="mt-6 flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
-                          <div className="text-sm flex items-center bg-blue-50 px-3 py-2 rounded-md text-slate-700">
-                            <Award className="h-4 w-4 mr-2 text-blue-600" />
-                            <span>Selected preferences: <span className="font-semibold">{preferences.length}/{preferenceForm.maxPreferences}</span></span>
-                          </div>
-                          <button
-                            type="submit"
-                            disabled={loading}
-                            className="w-full sm:w-auto inline-flex items-center justify-center bg-blue-600 text-white px-6 py-3 rounded-md hover:bg-blue-700 transition shadow-md disabled:bg-slate-400"
-                          >
-                            {loading ? <Spinner /> : (
-                              <>
-                                <Send className="h-5 w-5 mr-2" />
-                                {isUpdating ? "Update Preferences" : "Submit Preferences"}
-                              </>
-                            )}
-                          </button>
-                        </div>
-                      </form>
-                    )}
-                  </div>
+                        </button>
+                      </div>
+                    </form>
+                  )}
                 </div>
-              ) : (
-                <div className="bg-orange-100 text-orange-800 p-4 md:p-6 rounded-lg flex flex-col md:flex-row md:items-start md:space-x-4">
-                  <AlertCircle className="h-6 w-6 mb-2 md:mb-0 md:mt-0.5 flex-shrink-0" />
-                  <div>
-                    <h3 className="font-semibold">Submission Period Closed</h3>
-                    <p>The submission period for this preference form is not currently active.</p>
-                    <p className="text-sm mt-2">
-                      Submission period: {formatDate(preferenceForm.submissionStart)} - {formatDate(preferenceForm.submissionEnd)}
-                    </p>
-                  </div>
-                </div>
-              )
+              </motion.div>
             ) : (
-              <div className="bg-red-100 text-red-800 p-4 md:p-6 rounded-lg flex flex-col md:flex-row md:items-start md:space-x-4">
+              <div className="bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-300 p-6 rounded-lg border border-yellow-200 dark:border-yellow-800 flex flex-col md:flex-row md:items-start gap-4">
                 <AlertCircle className="h-6 w-6 mb-2 md:mb-0 md:mt-0.5 flex-shrink-0" />
                 <div>
-                  <h3 className="font-semibold">Not Eligible</h3>
-                  <p>You are not eligible to submit preferences for this form.</p>
-                  <p className="mt-2 text-sm">This form is only available to selected instructors in the {preferenceForm.chair} department.</p>
+                  <h3 className="font-semibold">Submission Period Closed</h3>
+                  <p>The submission period for this preference form is not currently active.</p>
+                  <p className="text-sm mt-2">
+                    Submission period: {formatDate(preferenceForm.submissionStart)} - {formatDate(preferenceForm.submissionEnd)}
+                  </p>
                 </div>
               </div>
             )
           ) : (
-            <div className="bg-slate-100 text-slate-700 p-4 md:p-6 rounded-lg flex flex-col md:flex-row md:items-start md:space-x-4">
-              <Info className="h-6 w-6 mb-2 md:mb-0 md:mt-0.5 flex-shrink-0" />
+            <div className="bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-300 p-6 rounded-lg border border-red-200 dark:border-red-800 flex flex-col md:flex-row md:items-start gap-4">
+              <AlertCircle className="h-6 w-6 mb-2 md:mb-0 md:mt-0.5 flex-shrink-0" />
               <div>
-                <p>Please search for a preference form using the fields above.</p>
-                <p className="mt-2 text-sm">Your department's chair creates preference forms for each semester. If you can't find a form, please contact your department chair.</p>
+                <h3 className="font-semibold">Not Eligible</h3>
+                <p>You are not eligible to submit preferences for this form.</p>
+                <p className="mt-2 text-sm">This form is only available to selected instructors in the {preferenceForm.chair} department.</p>
               </div>
             </div>
-          )}
-        </div>
+          )
+        ) : (
+          <div className="bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 p-6 rounded-lg border border-gray-200 dark:border-gray-700 flex flex-col md:flex-row md:items-start gap-4">
+            <Info className="h-6 w-6 mb-2 md:mb-0 md:mt-0.5 flex-shrink-0 text-gray-500 dark:text-gray-400" />
+            <div>
+              <p>Please search for a preference form using the fields above.</p>
+              <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Your department's chair creates preference forms for each semester. If you can't find a form, please contact your department chair.</p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
