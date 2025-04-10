@@ -273,7 +273,7 @@ const Layout = () => {
       }
 
       // Navigate to announcements page with the clicked announcement highlighted
-      navigate(user.role == "Instructor" ? `/announcementsInst`: "/announcementsView", { state: { highlightId: announcement._id } });
+      navigate(user.role == "Instructor" ? `/announcementsInst` : "/announcementsView", { state: { highlightId: announcement._id } });
       setIsNotificationOpen(false);
     } catch (error) {
       console.error("Error handling announcement click:", error);
@@ -676,11 +676,28 @@ const Layout = () => {
               </button>
             )}
 
-            {/* Breadcrumbs or page title */}
-            <div className="hidden md:flex items-center">
-              <h2 className="text-lg font-semibold text-gray-800 capitalize">
-                {location.pathname.split('/').pop() || "Dashboard"}
-              </h2>
+            {/* Optional breadcrumbs */}
+            <div className="mb-6 mt-10 hidden md:block">
+              <nav className="flex" aria-label="Breadcrumb">
+                <ol className="inline-flex items-center space-x-1 md:space-x-2">
+                  <li className="inline-flex items-center">
+                    <NavLink to="/dashboard" className="inline-flex items-center text-sm font-medium text-gray-500 hover:text-indigo-600">
+                      <Home size={16} className="mr-2" />
+                      Dashboard
+                    </NavLink>
+                  </li>
+                  {location.pathname !== '/dashboard' && (
+                    <li>
+                      <div className="flex items-center">
+                        <ChevronRight size={16} className="text-gray-400" />
+                        <span className="ml-1 text-sm font-medium text-gray-700 md:ml-2 capitalize">
+                          {location.pathname.split('/').filter(Boolean).pop()}
+                        </span>
+                      </div>
+                    </li>
+                  )}
+                </ol>
+              </nav>
             </div>
 
             {/* Right side controls */}
@@ -974,30 +991,6 @@ const Layout = () => {
           className="pt-16 h-[calc(100vh-4rem)] overflow-y-auto bg-gray-50"
         >
           <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto">
-            {/* Optional breadcrumbs */}
-            <div className="mb-6 hidden md:block">
-              <nav className="flex" aria-label="Breadcrumb">
-                <ol className="inline-flex items-center space-x-1 md:space-x-2">
-                  <li className="inline-flex items-center">
-                    <NavLink to="/dashboard" className="inline-flex items-center text-sm font-medium text-gray-500 hover:text-indigo-600">
-                      <Home size={16} className="mr-2" />
-                      Dashboard
-                    </NavLink>
-                  </li>
-                  {location.pathname !== '/dashboard' && (
-                    <li>
-                      <div className="flex items-center">
-                        <ChevronRight size={16} className="text-gray-400" />
-                        <span className="ml-1 text-sm font-medium text-gray-700 md:ml-2 capitalize">
-                          {location.pathname.split('/').filter(Boolean).pop()}
-                        </span>
-                      </div>
-                    </li>
-                  )}
-                </ol>
-              </nav>
-            </div>
-
             {/* Page content */}
             <Outlet />
           </div>
