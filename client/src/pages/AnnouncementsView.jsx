@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { motion, AnimatePresence } from "framer-motion";
-import { Megaphone, Calendar, User, Loader2 } from "lucide-react";
+import { Megaphone, Calendar, User, Loader2, Check, Eye } from "lucide-react";
 import api from "../utils/api";
 
 const AnnouncementsView = () => {
   const { user } = useSelector((state) => state.auth);
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [markingRead, setMarkingRead] = useState(false);
 
   useEffect(() => {
     fetchAnnouncements();
@@ -16,18 +17,50 @@ const AnnouncementsView = () => {
   const fetchAnnouncements = async () => {
     setLoading(true);
     try {
+      // The server will now filter for valid announcements and include read status
       const { data } = await api.get("/announcements");
-      const currentDate = new Date();
-      const filtered = data.filter(
-        (announcement) => 
-          new Date(announcement.validUntil) >= currentDate && 
-          announcement.viewedBy === user.role
-      );
-      setAnnouncements(filtered);
+      setAnnouncements(data);
     } catch (error) {
       console.error("Error fetching announcements:", error);
     }
     setLoading(false);
+  };
+
+  // Mark an announcement as read
+  const markAsRead = async (announcementId) => {
+    if (markingRead) return;
+
+    setMarkingRead(true);
+    try {
+      await api.post(`/announcements/${announcementId}/read`);
+      // Update the local state to show it's been read
+      setAnnouncements(prev =>
+        prev.map(announcement =>
+          announcement._id === announcementId
+            ? { ...announcement, isRead: true }
+            : announcement
+        )
+      );
+    } catch (error) {
+      console.error("Error marking announcement as read:", error);
+    }
+    setMarkingRead(false);
+  };
+
+  // Format the target audience display
+  const formatTargetAudience = (announcement) => {
+    const roles = announcement.targetAudience?.roles || [];
+    const chairs = announcement.targetAudience?.chairs || [];
+
+    let audience = [];
+    if (roles && roles.length > 0) {
+      audience.push(`Roles: ${roles.join(', ')}`);
+    }
+    if (chairs && chairs.length > 0) {
+      audience.push(`Chairs: ${chairs.join(', ')}`);
+    }
+
+    return audience.join(' | ') || 'None specified';
   };
 
   const container = {
@@ -74,36 +107,37 @@ const AnnouncementsView = () => {
                 key={announcement._id}
                 variants={item}
                 layout
-                className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow duration-200"
+                className={`bg-white rounded-xl shadow-sm border ${announcement.isRead ? 'border-gray-100' : 'border-indigo-200'} overflow-hidden hover:shadow-md transition-shadow duration-200`}
               >
                 <div className="p-6">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <h2 className="text-xl font-semibold text-gray-900 mb-2">
+                      <h2 className="text-xl font-semibold text-gray-900 mb-2 flex items-center">
                         {announcement.title}
+                        {announcement.isRead && (
+                          <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                            <Check className="w-3 h-3 mr-1" />
+                            Read
+                          </span>
+                        )}
                       </h2>
                       <p className="text-gray-600 leading-relaxed">
                         {announcement.message}
                       </p>
                     </div>
+                    {!announcement.isRead && (
+                      <button
+                        onClick={() => markAsRead(announcement._id)}
+                        disabled={markingRead}
+                        className="ml-4 inline-flex items-center px-3 py-1.5 border border-indigo-300 rounded-md text-sm font-medium text-indigo-700 bg-indigo-50 hover:bg-indigo-100"
+                      >
+                        <Eye className="w-4 h-4 mr-1" />
+                        Mark as read
+                      </button>
+                    )}
                   </div>
-
                   <div className="mt-4 pt-4 border-t border-gray-100">
                     <div className="flex items-center justify-between flex-wrap gap-2">
-                      <div className="flex items-center gap-2 text-sm text-gray-500">
-                        <User size={16} />
-                        <span>Published by: {announcement.publishedBy}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm text-gray-500">
-                        <Calendar size={16} />
-                        <span>
-                          Valid Until: {new Date(announcement.validUntil).toLocaleDateString(undefined, {
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
-                          })}
-                        </span>
-                      </div>
                     </div>
                   </div>
                 </div>

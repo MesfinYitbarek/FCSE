@@ -45,7 +45,7 @@ app.use("/api/preferences", authenticate, preferenceRoutes);
 app.use("/api/preference-forms", authenticate, authorize(["ChairHead", "Instructor"]), preferenceFormRoutes);
 app.use("/api/assignments", authenticate, assignmentRoutes);
 app.use("/api/complaints", authenticate, complaintRoutes);
-app.use("/api/chairs", authenticate, authorize(["HeadOfFaculty"]), chairRoutes);
+app.use("/api/chairs", authenticate, authorize(["HeadOfFaculty","COC", "ChairHead"]), chairRoutes);
 app.use("/api/positions", authenticate, authorize(["HeadOfFaculty"]), positionRoutes);
 app.use("/api/rules", authenticate, authorize(["HeadOfFaculty"]), ruleRoutes);
 app.use("/api/announcements", authenticate, announcementRoutes);

@@ -2,16 +2,24 @@ import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { Dialog } from "@headlessui/react";
 import { motion } from "framer-motion";
-import { Plus, Search, Trash2, AlertCircle } from "lucide-react";
+import { Plus, Search, Trash2, AlertCircle, Eye, BarChart } from "lucide-react";
 import api from "../../utils/api";
 
 const AnnouncementsCOC = () => {
   const { user } = useSelector((state) => state.auth);
   const [announcements, setAnnouncements] = useState([]);
-  const [form, setForm] = useState({ title: "", message: "", validUntil: "",
-    viewedBy: "COC", // Default value
+  const [chairs, setChairs] = useState([]);
+  const [form, setForm] = useState({
+    title: "",
+    message: "",
+    validUntil: "",
+    targetAudience: {
+      roles: [],
+      chairs: []
+    },
     publishedBy: user?.role || "Unknown"
-   });
+  });
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [openAddModal, setOpenAddModal] = useState(false);
@@ -19,12 +27,26 @@ const AnnouncementsCOC = () => {
   const [selectedAnnouncement, setSelectedAnnouncement] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
 
-  // Role options for viewedBy field
+
+  // Role options
   const roleOptions = ["COC", "ChairHead", "HeadOfFaculty", "Instructor"];
 
   useEffect(() => {
     fetchAnnouncements();
+    fetchChairs();
   }, []);
+
+  const fetchChairs = async () => {
+    try {
+      // Replace with your actual API endpoint to fetch chairs
+      const { data } = await api.get("/chairs");
+      setChairs(data);
+    } catch (error) {
+      console.error("Error fetching chairs:", error);
+      // Fallback  if API fails
+      setChairs(["Networking", "Software", "Database"]);
+    }
+  };
 
   const fetchAnnouncements = async () => {
     setLoading(true);
@@ -39,23 +61,63 @@ const AnnouncementsCOC = () => {
     setLoading(false);
   };
 
+
+
   const handleChange = (e) => {
     setError("");
     setForm({ ...form, [e.target.name]: e.target.value });
+  };
+
+  const handleRoleChange = (e) => {
+    const { value, checked } = e.target;
+    setForm(prev => {
+      const updatedRoles = checked
+        ? [...prev.targetAudience.roles, value]
+        : prev.targetAudience.roles.filter(role => role !== value);
+
+      return {
+        ...prev,
+        targetAudience: {
+          ...prev.targetAudience,
+          roles: updatedRoles
+        }
+      };
+    });
+  };
+
+  const handleChairChange = (e) => {
+    const { value, checked } = e.target;
+    setForm(prev => {
+      const updatedChairs = checked
+        ? [...prev.targetAudience.chairs, value]
+        : prev.targetAudience.chairs.filter(chair => chair !== value);
+
+      return {
+        ...prev,
+        targetAudience: {
+          ...prev.targetAudience,
+          chairs: updatedChairs
+        }
+      };
+    });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
-    if (!form.title || !form.message || !form.validUntil || !form.viewedBy) {
+    if (!form.title || !form.message || !form.validUntil) {
       setError("Please fill in all required fields");
+      return;
+    }
+
+    if (form.targetAudience.roles.length === 0 && form.targetAudience.chairs.length === 0) {
+      setError("Please select at least one role or chair");
       return;
     }
 
     setLoading(true);
     try {
-
       const payload = {
         ...form,
         publishedBy: user?.role || "Unknown",
@@ -63,11 +125,16 @@ const AnnouncementsCOC = () => {
 
       await api.post("/announcements", payload);
       fetchAnnouncements();
-      setForm({ title: "",
+      setForm({
+        title: "",
         message: "",
         validUntil: "",
-        viewedBy: "COC",
-        publishedBy: user?.role || "Unknown"});
+        targetAudience: {
+          roles: [],
+          chairs: []
+        },
+        publishedBy: user?.role || "Unknown"
+      });
       setOpenAddModal(false);
     } catch (error) {
       setError(error.response?.data?.message || "Error creating announcement");
@@ -93,8 +160,23 @@ const AnnouncementsCOC = () => {
     announcement.message.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const formatTargetAudience = (announcement) => {
+    const roles = announcement.targetAudience?.roles || [];
+    const chairs = announcement.targetAudience?.chairs || [];
+
+    let audience = [];
+    if (roles && roles.length > 0) {
+      audience.push(`Roles: ${roles.join(', ')}`);
+    }
+    if (chairs && chairs.length > 0) {
+      audience.push(`Chairs: ${chairs.join(', ')}`);
+    }
+
+    return audience.join(' | ') || 'None specified';
+  };
+
   const MobileAnnouncementCard = ({ announcement }) => (
-    <motion.div 
+    <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -102,15 +184,18 @@ const AnnouncementsCOC = () => {
     >
       <div className="flex justify-between items-start mb-2">
         <h3 className="font-medium text-gray-900">{announcement.title}</h3>
-        <button
-          onClick={() => {
-            setSelectedAnnouncement(announcement);
-            setOpenDeleteModal(true);
-          }}
-          className="p-1.5 rounded-md bg-red-100 text-red-600 hover:bg-red-200"
-        >
-          <Trash2 className="h-4 w-4" />
-        </button>
+        <div className="flex space-x-2">
+
+          <button
+            onClick={() => {
+              setSelectedAnnouncement(announcement);
+              setOpenDeleteModal(true);
+            }}
+            className="p-1.5 rounded-md bg-red-100 text-red-600 hover:bg-red-200"
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
       </div>
       <p className="text-sm text-gray-600 mb-2 line-clamp-2">{announcement.message}</p>
       <div className="text-xs text-gray-500 space-y-1">
@@ -119,9 +204,21 @@ const AnnouncementsCOC = () => {
           <span className="font-medium">{announcement.publishedBy}</span>
         </div>
         <div className="flex justify-between">
+          <span>Target Audience:</span>
+          <span className="font-medium truncate max-w-[60%] text-right">
+            {formatTargetAudience(announcement)}
+          </span>
+        </div>
+        <div className="flex justify-between">
           <span>Valid Until:</span>
           <span className="font-medium">
             {new Date(announcement.validUntil).toLocaleDateString()}
+          </span>
+        </div>
+        <div className="flex justify-between">
+          <span>Read Count:</span>
+          <span className="font-medium">
+            {announcement.readBy?.length || 0} users
           </span>
         </div>
       </div>
@@ -161,7 +258,7 @@ const AnnouncementsCOC = () => {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
-                  {["Title", "Message", "Published By", "Valid Until", "Actions"].map((header) => (
+                  {["Title", "Message", "Published By", "Target Audience", "Valid Until", "Read Count", "Actions"].map((header) => (
                     <th key={header} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       {header}
                     </th>
@@ -179,19 +276,28 @@ const AnnouncementsCOC = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{announcement.title}</td>
                     <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">{announcement.message}</td>
                     <td className="px-6 py-4 text-sm text-gray-500">{announcement.publishedBy}</td>
+                    <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
+                      {formatTargetAudience(announcement)}
+                    </td>
                     <td className="px-6 py-4 text-sm text-gray-500">
                       {new Date(announcement.validUntil).toLocaleDateString()}
                     </td>
+                    <td className="px-6 py-4 text-sm text-gray-500">
+                      {announcement.readBy?.length || 0} users
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <button
-                        onClick={() => {
-                          setSelectedAnnouncement(announcement);
-                          setOpenDeleteModal(true);
-                        }}
-                        className="p-2 rounded-md bg-red-100 text-red-600 hover:bg-red-200"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => {
+                            setSelectedAnnouncement(announcement);
+                            setOpenDeleteModal(true);
+                          }}
+                          className="p-2 rounded-md bg-red-100 text-red-600 hover:bg-red-200"
+                          title="Delete announcement"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
                     </td>
                   </motion.tr>
                 ))}
@@ -211,7 +317,7 @@ const AnnouncementsCOC = () => {
         <Dialog open={openAddModal} onClose={() => setOpenAddModal(false)} className="relative z-50">
           <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
           <div className="fixed inset-0 flex items-center justify-center p-4">
-            <Dialog.Panel className="w-full max-w-xl rounded-lg bg-white p-6">
+            <Dialog.Panel className="w-full max-w-xl rounded-lg bg-white p-6 max-h-[90vh] overflow-y-auto">
               <Dialog.Title className="text-lg font-medium leading-6 text-gray-900 mb-4">
                 Create New Announcement
               </Dialog.Title>
@@ -254,6 +360,65 @@ const AnnouncementsCOC = () => {
                     required
                   />
                 </div>
+
+                {/* Target Audience Section */}
+                <div className="border border-gray-200 rounded-md p-4">
+                  <h3 className="font-medium text-gray-800 mb-3">Target Audience</h3>
+
+                  {/* Roles Selection */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Roles</label>
+                    <div className="space-y-2">
+                      {roleOptions.map(role => (
+                        <div key={role} className="flex items-center">
+                          <input
+                            type="checkbox"
+                            id={`role-${role}`}
+                            value={role}
+                            checked={form.targetAudience.roles.includes(role)}
+                            onChange={handleRoleChange}
+                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                          />
+                          <label htmlFor={`role-${role}`} className="ml-2 text-sm text-gray-700">
+                            {role}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Chairs Selection */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Chairs</label>
+                    <div className="space-y-2 max-h-60 overflow-y-auto p-3 border border-gray-200 rounded-md bg-gray-50">
+                      {chairs.map(chair => (
+                        <div
+                          key={chair._id}
+                          className="flex items-center p-2 hover:bg-gray-100 rounded transition-colors"
+                        >
+                          <input
+                            type="checkbox"
+                            id={`chair-${chair._id}`}
+                            value={chair.name}
+                            checked={form.targetAudience.chairs.includes(chair.name)}
+                            onChange={handleChairChange}
+                            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                          />
+                          <label
+                            htmlFor={`chair-${chair._id}`}
+                            className="ml-3 text-sm text-gray-700 flex-1"
+                          >
+                            <span className="block font-medium">{chair.name}</span>
+                            {chair.description && (
+                              <span className="block text-xs text-gray-500 mt-1">{chair.description}</span>
+                            )}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
                 <div className="flex justify-end space-x-3 pt-4">
                   <button
                     type="button"

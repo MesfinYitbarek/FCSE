@@ -6,23 +6,15 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "react-hot-toast";
 import {
   Home,
-  Users,
-  Circle,
-  UserCheck,
   Book,
-  Settings,
   TrendingUp,
   Bell,
   LogOut,
-  User,
   Menu,
   X,
   FileText,
-  AlertCircle,
   Megaphone,
   ClipboardList,
-  Calendar,
-  BookOpen,
   FileSpreadsheet,
   AlertTriangle,
   Lock,
@@ -32,9 +24,6 @@ import {
   ChevronRight,
   PieChart,
   Database,
-  Shield,
-  Mail,
-  HelpCircle,
   ChevronLeft
 } from "lucide-react";
 import api from "../utils/api";
@@ -86,29 +75,30 @@ const Layout = () => {
       try {
         const response = await api.get('/announcements');
         const now = new Date();
-        
-        // Filter announcements that are still valid
-        const validAnnouncements = response.data.filter(ann => 
-          !ann.validUntil || new Date(ann.validUntil) > now
+
+        // Filter announcements that are still valid AND not already read
+        const validAnnouncements = response.data.filter(ann =>
+          (!ann.validUntil || new Date(ann.validUntil) > now) &&
+          !ann.isRead
         );
 
         setAnnouncements(validAnnouncements);
-        
+
         // Calculate unread count
-        const unread = validAnnouncements.filter(ann => !ann.read).length;
-        setUnreadCount(unread);
+        setUnreadCount(validAnnouncements.length);
       } catch (error) {
         console.error("Error fetching announcements:", error);
       }
     };
 
     fetchAnnouncements();
-    
-    // Set up polling to check for new announcements every 5 minutes
+
+    // Poll every 5 minutes
     const interval = setInterval(fetchAnnouncements, 5 * 60 * 1000);
-    
+
     return () => clearInterval(interval);
-  }, [user?.role]);
+  }, [user?.role, user?.chair]);
+
 
   // Track active path for sidebar highlights
   useEffect(() => {
@@ -142,7 +132,7 @@ const Layout = () => {
       if (isNotificationOpen && notificationRef.current && !notificationRef.current.contains(event.target)) {
         setIsNotificationOpen(false);
       }
-      
+
       if (windowWidth < 1024 && isSidebarOpen && sidebarRef.current && !sidebarRef.current.contains(event.target)) {
         setIsSidebarOpen(false);
       }
@@ -269,21 +259,21 @@ const Layout = () => {
   const handleNotificationClick = async (announcement) => {
     try {
       // Mark announcement as read if not already read
-      if (!announcement.read) {
-        await api.patch(`/announcements/${announcement._id}/read`);
-        
+      if (!announcement.isRead) {
+        await api.post(`/announcements/${announcement._id}/read`);
+
         // Update local state
         setAnnouncements(prev =>
           prev.map(ann =>
-            ann._id === announcement._id ? { ...ann, read: true } : ann
+            ann._id === announcement._id ? { ...ann, isRead: true } : ann
           )
         );
-        
+
         setUnreadCount(prev => prev - 1);
       }
-      
+
       // Navigate to announcements page with the clicked announcement highlighted
-      navigate("/announcementsView", { state: { highlightId: announcement._id } });
+      navigate(user.role == "Instructor" ? `/announcementsInst`: "/announcementsView", { state: { highlightId: announcement._id } });
       setIsNotificationOpen(false);
     } catch (error) {
       console.error("Error handling announcement click:", error);
@@ -292,13 +282,18 @@ const Layout = () => {
 
   const markAllAnnouncementsAsRead = async () => {
     try {
-      await api.patch('/announcements/mark-all-read');
-      
+      // Mark all announcements as read
+      await Promise.all(
+        announcements
+          .filter(ann => !ann.isRead)
+          .map(ann => api.post(`/announcements/${ann._id}/read`))
+      );
+
       // Update local state
       setAnnouncements(prev =>
-        prev.map(ann => ({ ...ann, read: true }))
+        prev.map(ann => ({ ...ann, isRead: true }))
       );
-      
+
       setUnreadCount(0);
       toast.success("All announcements marked as read");
     } catch (error) {
@@ -313,20 +308,20 @@ const Layout = () => {
     return "bg-green-500";
   };
 
-  // Updated dark sidebar styles
+  //sidebar styles
   const navItemClass = `flex items-center gap-3 py-2.5 px-4 rounded-lg transition-all font-medium text-gray-300 hover:bg-gray-700 hover:text-white group`;
   const navGroupClass = `flex items-center justify-between gap-2 py-2.5 px-4 rounded-lg transition-all font-medium text-gray-300 hover:bg-gray-700 hover:text-white cursor-pointer group`;
   const subNavItemClass = `flex items-center gap-3 py-2 px-4 ml-6 rounded-lg transition-all font-medium text-gray-400 hover:bg-gray-700 hover:text-white`;
   const activeNavItemClass = `bg-gray-700 text-white border-l-4 border-indigo-500`;
 
   const sidebarVariants = {
-    open: { 
-      width: windowWidth < 1024 ? "280px" : "300px", 
-      transition: { duration: 0.3, ease: "easeInOut" } 
+    open: {
+      width: windowWidth < 1024 ? "240px" : "260px", // Reduced from 280px/300px
+      transition: { duration: 0.3, ease: "easeInOut" }
     },
-    closed: { 
-      width: windowWidth < 1024 ? "0" : "80px", 
-      transition: { duration: 0.3, ease: "easeInOut" } 
+    closed: {
+      width: windowWidth < 1024 ? "0" : "80px",
+      transition: { duration: 0.3, ease: "easeInOut" }
     }
   };
 
@@ -371,8 +366,8 @@ const Layout = () => {
           {isSidebarOpen && <span className="truncate">{title}</span>}
         </div>
         {isSidebarOpen && (
-          expanded ? <ChevronDown size={16} className="text-gray-400 group-hover:text-white" /> 
-          : <ChevronRight size={16} className="text-gray-400 group-hover:text-white" />
+          expanded ? <ChevronDown size={16} className="text-gray-400 group-hover:text-white" />
+            : <ChevronRight size={16} className="text-gray-400 group-hover:text-white" />
         )}
       </button>
 
@@ -407,27 +402,24 @@ const Layout = () => {
           </div>
           <div className="max-h-96 overflow-y-auto">
             {announcements.map((announcement) => {
-              const isExpired = announcement.validUntil && new Date(announcement.validUntil) < new Date();
-              
+              const isExpired = new Date(announcement.validUntil) < new Date();
+
               return (
                 <button
                   key={announcement._id}
                   onClick={() => handleNotificationClick(announcement)}
-                  className={`w-full p-3 text-left hover:bg-gray-50 transition-colors flex items-start gap-3 ${
-                    announcement.read ? "opacity-75" : "bg-indigo-50/50"
-                  } ${isExpired ? "bg-gray-100" : ""}`}
+                  className={`w-full p-3 text-left hover:bg-gray-50 transition-colors flex items-start gap-3 ${announcement.read ? "opacity-75" : "bg-indigo-50/50"
+                    } ${isExpired ? "bg-gray-100" : ""}`}
                   disabled={isExpired}
                 >
-                  <div className={`mt-1 rounded-full p-2 ${
-                    isExpired ? "bg-gray-200 text-gray-500" : "bg-blue-100 text-blue-600"
-                  }`}>
+                  <div className={`mt-1 rounded-full p-2 ${isExpired ? "bg-gray-200 text-gray-500" : "bg-blue-100 text-blue-600"
+                    }`}>
                     <Megaphone size={16} />
                   </div>
                   <div className="flex-1 text-left">
                     <div className="flex justify-between items-start">
-                      <p className={`text-sm font-medium ${
-                        isExpired ? "text-gray-500" : "text-gray-900"
-                      }`}>
+                      <p className={`text-sm font-medium ${isExpired ? "text-gray-500" : "text-gray-900"
+                        }`}>
                         {announcement.title}
                       </p>
                       {isExpired && (
@@ -444,9 +436,8 @@ const Layout = () => {
                         </span>
                       )}
                     </p>
-                    <p className={`text-xs mt-1 line-clamp-2 ${
-                      isExpired ? "text-gray-500" : "text-gray-700"
-                    }`}>
+                    <p className={`text-xs mt-1 line-clamp-2 ${isExpired ? "text-gray-500" : "text-gray-700"
+                      }`}>
                       {announcement.message}
                     </p>
                   </div>
@@ -476,7 +467,7 @@ const Layout = () => {
         return (
           <>
             <NavItem to="/dashboard" icon={PieChart}>Dashboard</NavItem>
-            
+
             <NavGroup
               title="Management"
               icon={Database}
@@ -487,22 +478,11 @@ const Layout = () => {
               <SubNavItem to="/chairs">Chair Management</SubNavItem>
               <SubNavItem to="/positions">Position Management</SubNavItem>
               <SubNavItem to="/rules">Rule Management</SubNavItem>
-            </NavGroup>
-
-            <NavGroup
-              title="Reports & Analytics"
-              icon={TrendingUp}
-              expanded={expandedGroups.reports}
-              onToggle={() => toggleGroup('reports')}
-            >
-              <SubNavItem to="/reports">View Reports</SubNavItem>
               <SubNavItem to="/weights">Weight Management</SubNavItem>
-              <SubNavItem to="/analytics">Performance Analytics</SubNavItem>
             </NavGroup>
-
+            <NavItem to="/reports" icon={Megaphone}>Reports</NavItem>
             <NavItem to="/announcementsView" icon={Megaphone}>Announcements</NavItem>
-            <NavItem to="/messages" icon={Mail}>Messages</NavItem>
-            <NavItem to="/help" icon={HelpCircle}>Help Center</NavItem>
+
           </>
         );
 
@@ -519,7 +499,6 @@ const Layout = () => {
             >
               <SubNavItem to="/courses">Course Management</SubNavItem>
               <SubNavItem to="/instructorManagement">Instructor Management</SubNavItem>
-              <SubNavItem to="/schedules">Schedule Planning</SubNavItem>
             </NavGroup>
 
             <NavGroup
@@ -536,7 +515,6 @@ const Layout = () => {
             <NavItem to="/complaintsCH" icon={AlertTriangle}>Complaints</NavItem>
             <NavItem to="/reportsCH" icon={TrendingUp}>Reports</NavItem>
             <NavItem to="/announcementsCH" icon={Megaphone}>Announcements</NavItem>
-            <NavItem to="/help" icon={HelpCircle}>Help Center</NavItem>
           </>
         );
 
@@ -560,7 +538,6 @@ const Layout = () => {
             <NavItem to="/complaintsCOC" icon={AlertTriangle}>Complaints</NavItem>
             <NavItem to="/reportsCOC" icon={TrendingUp}>Reports</NavItem>
             <NavItem to="/announcementsCOC" icon={Megaphone}>Announcements</NavItem>
-            <NavItem to="/help" icon={HelpCircle}>Help Center</NavItem>
           </>
         );
 
@@ -570,11 +547,9 @@ const Layout = () => {
             <NavItem to="/dashboard" icon={PieChart}>Dashboard</NavItem>
             <NavItem to="/preferencesInst" icon={ClipboardList}>Submit Preferences</NavItem>
             <NavItem to="/reportsInst" icon={FileText}>My Assignments</NavItem>
-            <NavItem to="/scheduleInst" icon={Calendar}>My Schedule</NavItem>
             <NavItem to="/complaintsInst" icon={AlertTriangle}>File Complaint</NavItem>
             <NavItem to="/announcementsInst" icon={Megaphone}>Announcements</NavItem>
             <NavItem to="/reportInst" icon={TrendingUp}>Reports</NavItem>
-            <NavItem to="/help" icon={HelpCircle}>Help Center</NavItem>
           </>
         );
 
@@ -582,7 +557,6 @@ const Layout = () => {
         return (
           <>
             <NavItem to="/dashboard" icon={PieChart}>Dashboard</NavItem>
-            <NavItem to="/help" icon={HelpCircle}>Help Center</NavItem>
           </>
         );
     }
@@ -604,9 +578,8 @@ const Layout = () => {
         initial={windowWidth < 1024 ? "closed" : "open"}
         animate={isSidebarOpen ? "open" : "closed"}
         variants={sidebarVariants}
-        className={`fixed left-0 top-0 h-full bg-gray-900 shadow-lg z-30 overflow-hidden ${
-          windowWidth < 1024 && !isSidebarOpen ? "w-0" : ""
-        }`}
+        className={`fixed left-0 top-0 h-full bg-gray-900 shadow-lg z-30 overflow-hidden ${windowWidth < 1024 && !isSidebarOpen ? "w-0" : ""
+          }`}
       >
         <div className="flex flex-col h-full">
           {/* Sidebar header */}
@@ -681,19 +654,17 @@ const Layout = () => {
 
       {/* Main content area */}
       <div
-        className={`flex-1 transition-all duration-300 ${
-          windowWidth >= 1024
-            ? (isSidebarOpen ? "ml-[290px]" : "ml-[80px]")
-            : "ml-0"
-        }`}
+        className={`flex-1 transition-all duration-300 ${windowWidth >= 1024
+          ? (isSidebarOpen ? "ml-[260px]" : "ml-[80px]") // Changed from ml-[290px]
+          : "ml-0"
+          }`}
       >
         {/* Top navigation bar */}
         <header className="bg-white shadow-sm h-16 fixed top-0 right-0 z-10 w-full border-b border-gray-200">
-          <div className={`flex items-center justify-between h-full px-4 md:px-6 ${
-            windowWidth >= 1024 
-              ? (isSidebarOpen ? "ml-[300px]" : "ml-[80px]") 
-              : "ml-0"
-          } transition-all duration-300`}>
+          <div className={`flex items-center justify-between h-full px-4 md:px-6 ${windowWidth >= 1024
+            ? (isSidebarOpen ? "ml-[260px]" : "ml-[80px]") // Changed from ml-[300px]
+            : "ml-0"
+            } transition-all duration-300`}>
             {/* Mobile menu button */}
             {windowWidth < 1024 && (
               <button
@@ -707,25 +678,13 @@ const Layout = () => {
 
             {/* Breadcrumbs or page title */}
             <div className="hidden md:flex items-center">
-              <h2 className="text-lg font-semibold text-gray-800">
+              <h2 className="text-lg font-semibold text-gray-800 capitalize">
                 {location.pathname.split('/').pop() || "Dashboard"}
               </h2>
             </div>
 
             {/* Right side controls */}
             <div className="flex items-center gap-3">
-              {/* Search button */}
-              <button className="p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </button>
-
-              {/* Help button */}
-              <button className="p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors hidden md:block">
-                <HelpCircle size={20} />
-              </button>
-
               {/* Notifications */}
               <div className="relative" ref={notificationRef}>
                 <button
@@ -796,16 +755,7 @@ const Layout = () => {
                         </div>
                       </div>
                       <div className="p-2 space-y-1">
-                        <button
-                          onClick={() => {
-                            navigate("/profile");
-                            setIsProfileDropdownOpen(false);
-                          }}
-                          className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
-                        >
-                          <User size={16} />
-                          <span>My Profile</span>
-                        </button>
+
                         <button
                           onClick={() => {
                             setIsChangePasswordOpen(true);
@@ -1019,7 +969,7 @@ const Layout = () => {
         </AnimatePresence>
 
         {/* Main content */}
-        <main 
+        <main
           ref={mainContentRef}
           className="pt-16 h-[calc(100vh-4rem)] overflow-y-auto bg-gray-50"
         >
