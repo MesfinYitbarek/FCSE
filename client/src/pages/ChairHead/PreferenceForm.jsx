@@ -14,11 +14,12 @@ import {
   Save,
   Book,
   Users,
-  Loader,
+  Loader2,
   Info,
   Check,
   Sliders
 } from 'lucide-react';
+import { toast } from "react-hot-toast";
 
 const PreferenceForm = () => {
   const { user } = useSelector((state) => state.auth);
@@ -298,8 +299,10 @@ const PreferenceForm = () => {
       
       if (selectedForm) {
         await api.put(`/preference-forms/${selectedForm._id}`, dataToSubmit);
+        toast.success("Preference form updated successfully");
       } else {
         await api.post("/preference-forms", dataToSubmit);
+        toast.success("Preference form created successfully");
       }
       
       setOpenModal(false);
@@ -322,6 +325,7 @@ const PreferenceForm = () => {
       }
     } catch (error) {
       console.error("Error saving preference form:", error);
+      toast.error(error.response?.data?.message || "Failed to save preference form");
     }
     
     setLoading(false);
@@ -394,8 +398,10 @@ const PreferenceForm = () => {
       if (isFiltered) {
         fetchPreferenceForms();
       }
+      toast.success("Preference form deleted successfully");
     } catch (error) {
       console.error("Error deleting preference form:", error);
+      toast.error(error.response?.data?.message || "Failed to delete preference form");
     }
     setLoading(false);
   };
@@ -415,92 +421,94 @@ const PreferenceForm = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto p-4 md:p-6">
-      <div className="mb-8">
-        <h1 className="text-2xl md:text-3xl font-bold text-gray-800 dark:text-white mb-2">Course Preference Forms</h1>
+    <div className="max-w-7xl mx-auto">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">Course Preference Forms</h1>
         <p className="text-gray-600 dark:text-gray-300">Create and manage preference forms for instructors to submit their course preferences.</p>
       </div>
       
       {/* Search and Filter Section */}
-      <div className="mb-8 bg-gradient-to-r from-blue-50 to-white dark:from-slate-800 dark:to-slate-900 border-l-4 border-blue-500 rounded-lg shadow-sm p-4 lg:p-5">
-        <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-800 dark:text-white mb-4">
-          <Filter size={18} className="text-blue-500" /> Filter Preference Forms
-        </h2>
-        
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="space-y-1">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Academic Year</label>
-            <div className="relative">
-              <select
-                value={filterYear}
-                onChange={(e) => setFilterYear(e.target.value)}
-                className="block w-full bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-md shadow-sm py-2 px-3 pr-8 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-              >
-                {availableYears.map(year => (
-                  <option key={year} value={year}>{year}</option>
-                ))}
-              </select>
-              <ChevronDown size={16} className="absolute right-3 top-2.5 text-gray-500 pointer-events-none" />
-            </div>
-          </div>
+      <div className="mb-6 bg-white dark:bg-slate-900 border border-gray-200 dark:border-gray-800 border-l-4 border-l-indigo-500 rounded-lg shadow-sm">
+        <div className="p-5">
+          <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-800 dark:text-white mb-4">
+            <Filter size={18} className="text-indigo-500" /> Filter Preference Forms
+          </h2>
           
-          <div className="space-y-1">
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Semester</label>
-            <div className="relative">
-              <select
-                value={filterSemester}
-                onChange={(e) => setFilterSemester(e.target.value)}
-                className="block w-full bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-md shadow-sm py-2 px-3 pr-8 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-              >
-                <option value="">All Semesters</option>
-                <option value="Regular 1">Regular 1</option>
-                <option value="Regular 2">Regular 2</option>
-                <option value="Summer">Summer</option>
-                <option value="Extension">Extension</option>
-              </select>
-              <ChevronDown size={16} className="absolute right-3 top-2.5 text-gray-500 pointer-events-none" />
-            </div>
-          </div>
-          
-          {user.role === "admin" && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="space-y-1">
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Department</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Academic Year</label>
               <div className="relative">
                 <select
-                  value={filterChair}
-                  onChange={(e) => setFilterChair(e.target.value)}
-                  className="block w-full bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-md shadow-sm py-2 px-3 pr-8 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  value={filterYear}
+                  onChange={(e) => setFilterYear(e.target.value)}
+                  className="block w-full text-base bg-white dark:bg-slate-800 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                 >
-                  {chairs.map(chair => (
-                    <option key={chair._id} value={chair._id}>{chair.name}</option>
+                  {availableYears.map(year => (
+                    <option key={year} value={year}>{year}</option>
                   ))}
                 </select>
                 <ChevronDown size={16} className="absolute right-3 top-2.5 text-gray-500 pointer-events-none" />
               </div>
             </div>
-          )}
-          
-          <div className={`${user.role === "admin" ? '' : 'sm:col-span-2'} flex items-end space-x-2`}>
-            <button 
-              onClick={handleSearch}
-              disabled={fetchingData}
-              className="flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md shadow-sm text-sm font-medium transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-60"
-            >
-              {fetchingData ? (
-                <Loader size={16} className="animate-spin" />
-              ) : (
-                <Search size={16} />
-              )}
-              Search
-            </button>
             
-            <button 
-              onClick={resetFilters}
-              className="flex items-center justify-center gap-2 border border-gray-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300 py-2 px-4 rounded-md shadow-sm text-sm font-medium transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              <RefreshCw size={16} />
-              Reset
-            </button>
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Semester</label>
+              <div className="relative">
+                <select
+                  value={filterSemester}
+                  onChange={(e) => setFilterSemester(e.target.value)}
+                  className="block w-full text-base bg-white dark:bg-slate-800 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                >
+                  <option value="">All Semesters</option>
+                  <option value="Regular 1">Regular 1</option>
+                  <option value="Regular 2">Regular 2</option>
+                  <option value="Summer">Summer</option>
+                  <option value="Extension">Extension</option>
+                </select>
+                <ChevronDown size={16} className="absolute right-3 top-2.5 text-gray-500 pointer-events-none" />
+              </div>
+            </div>
+            
+            {user.role === "admin" && (
+              <div className="space-y-1">
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Department</label>
+                <div className="relative">
+                  <select
+                    value={filterChair}
+                    onChange={(e) => setFilterChair(e.target.value)}
+                    className="block w-full text-base bg-white dark:bg-slate-800 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  >
+                    {chairs.map(chair => (
+                      <option key={chair._id} value={chair._id}>{chair.name}</option>
+                    ))}
+                  </select>
+                  <ChevronDown size={16} className="absolute right-3 top-2.5 text-gray-500 pointer-events-none" />
+                </div>
+              </div>
+            )}
+            
+            <div className={`${user.role === "admin" ? '' : 'sm:col-span-2'} flex items-end space-x-2`}>
+              <button 
+                onClick={handleSearch}
+                disabled={fetchingData}
+                className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded-md shadow-sm text-sm font-medium transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-60 dark:disabled:opacity-40"
+              >
+                {fetchingData ? (
+                  <Loader2 size={16} className="animate-spin" />
+                ) : (
+                  <Search size={16} />
+                )}
+                Search
+              </button>
+              
+              <button 
+                onClick={resetFilters}
+                className="flex items-center justify-center gap-2 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300 py-2 px-4 rounded-md shadow-sm text-sm font-medium transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              >
+                <RefreshCw size={16} />
+                Reset
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -523,13 +531,13 @@ const PreferenceForm = () => {
             setSelectedCourseDetails({});
             setOpenModal(true);
           }}
-          className="w-full sm:w-auto flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md shadow-sm text-sm font-medium transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          className="w-full sm:w-auto flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded-md shadow-sm text-sm font-medium transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
         >
           <Plus size={16} /> Create Preference Form
         </button>
         
         {isFiltered && (
-          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-gray-300 border border-gray-200 dark:border-slate-700">
+          <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-gray-300 border border-gray-200 dark:border-gray-700">
             Found {preferenceForms.length} forms
           </span>
         )}
@@ -537,28 +545,28 @@ const PreferenceForm = () => {
 
       {/* Preference Forms List */}
       {isFiltered && (
-        <div className="bg-white dark:bg-slate-900 rounded-lg shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-slate-900 rounded-lg shadow-sm overflow-hidden border border-gray-200 dark:border-gray-800">
           {fetchingData ? (
             <div className="flex justify-center items-center p-12">
-              <Loader size={24} className="animate-spin text-blue-500" />
+              <Loader2 size={24} className="animate-spin text-indigo-500" />
             </div>
           ) : preferenceForms.length > 0 ? (
             <>
               {/* Mobile View - Cards */}
-              <div className="md:hidden divide-y divide-gray-200 dark:divide-slate-700">
+              <div className="md:hidden divide-y divide-gray-200 dark:divide-gray-700">
                 {preferenceForms.map((form) => {
                   const now = new Date();
                   const startDate = new Date(form.submissionStart);
                   const endDate = new Date(form.submissionEnd);
                   let status = "Upcoming";
-                  let statusClass = "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
+                  let statusClass = "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200";
                   
                   if (now > endDate) {
                     status = "Closed";
-                    statusClass = "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
+                    statusClass = "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200";
                   } else if (now >= startDate) {
                     status = "Active";
-                    statusClass = "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
+                    statusClass = "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200";
                   }
                   
                   return (
@@ -585,14 +593,14 @@ const PreferenceForm = () => {
                       <div className="flex flex-wrap gap-2 mt-4">
                         <button
                           onClick={() => openEditFormModal(form)}
-                          className="flex-1 flex items-center justify-center gap-1.5 text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/50 py-2 px-3 rounded-md text-sm transition-colors"
+                          className="flex-1 flex items-center justify-center gap-1.5 text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/20 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 py-2 px-3 rounded-md text-sm transition-colors"
                         >
                           <Edit size={14} />
                           Edit
                         </button>
                         <button
                           onClick={() => openDeleteFormModal(form)}
-                          className="flex-1 flex items-center justify-center gap-1.5 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 hover:bg-red-100 dark:hover:bg-red-900/50 py-2 px-3 rounded-md text-sm transition-colors"
+                          className="flex-1 flex items-center justify-center gap-1.5 text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/30 py-2 px-3 rounded-md text-sm transition-colors"
                         >
                           <Trash2 size={14} />
                           Delete
@@ -605,7 +613,7 @@ const PreferenceForm = () => {
               
               {/* Desktop View - Table */}
               <div className="hidden md:block overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200 dark:divide-slate-700">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                   <thead className="bg-gray-50 dark:bg-slate-800">
                     <tr>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Year</th>
@@ -616,20 +624,20 @@ const PreferenceForm = () => {
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-slate-800">
+                  <tbody className="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-gray-800">
                     {preferenceForms.map((form) => {
                       const now = new Date();
                       const startDate = new Date(form.submissionStart);
                       const endDate = new Date(form.submissionEnd);
                       let status = "Upcoming";
-                      let statusClass = "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200";
+                      let statusClass = "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200";
                       
                       if (now > endDate) {
                         status = "Closed";
-                        statusClass = "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
+                        statusClass = "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200";
                       } else if (now >= startDate) {
                         status = "Active";
-                        statusClass = "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
+                        statusClass = "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200";
                       }
                       
                       return (
@@ -652,7 +660,7 @@ const PreferenceForm = () => {
                             <div className="flex items-center gap-2">
                               <button
                                 onClick={() => openEditFormModal(form)}
-                                className="inline-flex items-center gap-1 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 transition-colors"
+                                className="inline-flex items-center gap-1 text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors"
                               >
                                 <Edit size={14} />
                                 <span>Edit</span>
@@ -687,10 +695,10 @@ const PreferenceForm = () => {
 
       {/* Form Creation/Edit Dialog */}
       {openModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-slate-900 rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
             {/* Header */}
-            <div className="sticky top-0 bg-white dark:bg-slate-900 px-4 py-4 border-b border-gray-200 dark:border-slate-700 flex items-center justify-between">
+            <div className="sticky top-0 bg-white dark:bg-slate-900 px-4 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
               <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white">
                 {selectedForm ? "Edit Preference Form" : "Create Preference Form"}
               </h3>
@@ -698,6 +706,7 @@ const PreferenceForm = () => {
                 type="button"
                 className="text-gray-400 hover:text-gray-500 dark:hover:text-gray-300 focus:outline-none"
                 onClick={() => setOpenModal(false)}
+                aria-label="Close modal"
               >
                 <X size={20} />
               </button>
@@ -717,7 +726,7 @@ const PreferenceForm = () => {
                       min={currentYear - 2}
                       max={currentYear + 2}
                       required
-                      className="block w-full bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                      className="block w-full text-base bg-white dark:bg-slate-800 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                     />
                   </div>
                   
@@ -729,7 +738,7 @@ const PreferenceForm = () => {
                         value={formData.semester}
                         onChange={handleChange}
                         required
-                        className="block w-full bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-md shadow-sm py-2 px-3 pr-8 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                        className="block w-full text-base bg-white dark:bg-slate-800 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                       >
                         <option value="Regular 1">Regular 1</option>
                         <option value="Regular 2">Regular 2</option>
@@ -750,7 +759,7 @@ const PreferenceForm = () => {
                       min={1}
                       max={10}
                       required
-                      className="block w-full bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                      className="block w-full text-base bg-white dark:bg-slate-800 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                     />
                   </div>
                   
@@ -762,7 +771,7 @@ const PreferenceForm = () => {
                       value={formData.submissionStart}
                       onChange={handleChange}
                       required
-                      className="block w-full bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                      className="block w-full text-base bg-white dark:bg-slate-800 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                     />
                   </div>
                   
@@ -774,29 +783,29 @@ const PreferenceForm = () => {
                       value={formData.submissionEnd}
                       onChange={handleChange}
                       required
-                      className="block w-full bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                      className="block w-full text-base bg-white dark:bg-slate-800 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                     />
                   </div>
                 </div>
                 
-                <hr className="my-6 border-gray-200 dark:border-slate-700" />
+                <hr className="my-6 border-gray-200 dark:border-gray-700" />
                 
                 {/* Course Selection with Filtering */}
                 <div className="mb-6">
                   <h4 className="flex items-center gap-2 text-base font-medium text-gray-900 dark:text-white mb-3">
-                    <Book size={16} className="text-blue-500" /> Available Courses
+                    <Book size={16} className="text-indigo-500" /> Available Courses
                   </h4>
                   
                   {/* Course Filters */}
-                  <div className="mb-4 p-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-md">
+                  <div className="mb-4 p-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-md">
                     <div className="flex items-center justify-between mb-2">
                       <h5 className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
-                        <Sliders size={14} className="text-blue-500" /> Filter Courses
+                        <Sliders size={14} className="text-indigo-500" /> Filter Courses
                       </h5>
                       <button
                         type="button"
                         onClick={resetCourseFilters}
-                        className="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
+                        className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300"
                       >
                         Reset Filters
                       </button>
@@ -808,7 +817,7 @@ const PreferenceForm = () => {
                         <select
                           value={courseFilterDept}
                           onChange={(e) => setCourseFilterDept(e.target.value)}
-                          className="block w-full bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-md shadow-sm py-1.5 px-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                          className="block w-full bg-white dark:bg-slate-900 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-1.5 px-2 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
                         >
                           <option value="">All Departments</option>
                           {departments.map(dept => (
@@ -822,7 +831,7 @@ const PreferenceForm = () => {
                         <select
                           value={courseFilterYear}
                           onChange={(e) => setCourseFilterYear(e.target.value)}
-                          className="block w-full bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-md shadow-sm py-1.5 px-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                          className="block w-full bg-white dark:bg-slate-900 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-1.5 px-2 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
                         >
                           <option value="">All Years</option>
                           <option value="1">Year 1</option>
@@ -838,7 +847,7 @@ const PreferenceForm = () => {
                         <select
                           value={courseFilterSemester}
                           onChange={(e) => setCourseFilterSemester(e.target.value)}
-                          className="block w-full bg-white dark:bg-slate-900 border border-gray-300 dark:border-slate-700 rounded-md shadow-sm py-1.5 px-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                          className="block w-full bg-white dark:bg-slate-900 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-1.5 px-2 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
                         >
                           <option value="">All Semesters</option>
                           <option value="1">Semester 1</option>
@@ -848,20 +857,20 @@ const PreferenceForm = () => {
                     </div>
                   </div>
                   
-                  <div className="max-h-48 overflow-y-auto p-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-md">
+                  <div className="max-h-48 overflow-y-auto p-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-md">
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                       {filteredCourses.length > 0 ? filteredCourses.map((course) => (
                         <div key={course._id} className={`p-2 border rounded-md ${
                           isCourseSelected(course._id) 
-                            ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800' 
-                            : 'bg-white dark:bg-slate-900 border-gray-200 dark:border-slate-700'
+                            ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800' 
+                            : 'bg-white dark:bg-slate-900 border-gray-200 dark:border-gray-700'
                         }`}>
                           <div className="flex items-center space-x-2 mb-1">
                             <div 
                               onClick={() => handleCourseSelection(course._id)}
                               className={`flex h-5 w-5 items-center justify-center border rounded cursor-pointer transition-colors ${
                                 isCourseSelected(course._id) 
-                                  ? 'bg-blue-500 border-blue-500' 
+                                  ? 'bg-indigo-500 border-indigo-500' 
                                   : 'border-gray-300 dark:border-gray-600'
                               }`}
                             >
@@ -879,14 +888,14 @@ const PreferenceForm = () => {
                           
                           {/* Show course details fields when selected */}
                           {isCourseSelected(course._id) && (
-                            <div className="mt-2 pt-2 border-t border-gray-200 dark:border-slate-700 grid grid-cols-2 gap-2">
+                            <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700 grid grid-cols-2 gap-2">
                               <div>
                                 <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Section</label>
                                 <input
                                   type="text"
                                   value={selectedCourseDetails[course._id]?.section || "A"}
                                   onChange={(e) => handleCourseDetailChange(course._id, "section", e.target.value)}
-                                  className="block w-full bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-md shadow-sm py-1 px-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                  className="block w-full bg-white dark:bg-slate-800 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-1 px-2 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
                                 />
                               </div>
                               
@@ -897,7 +906,7 @@ const PreferenceForm = () => {
                                   min="1"
                                   value={selectedCourseDetails[course._id]?.NoOfSections || 1}
                                   onChange={(e) => handleCourseDetailChange(course._id, "NoOfSections", parseInt(e.target.value, 10))}
-                                  className="block w-full bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-md shadow-sm py-1 px-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                  className="block w-full bg-white dark:bg-slate-800 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-1 px-2 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
                                 />
                               </div>
                               
@@ -906,7 +915,7 @@ const PreferenceForm = () => {
                                 <select
                                   value={selectedCourseDetails[course._id]?.labDivision || "No"}
                                   onChange={(e) => handleCourseDetailChange(course._id, "labDivision", e.target.value)}
-                                  className="block w-full bg-white dark:bg-slate-800 border border-gray-300 dark:border-slate-700 rounded-md shadow-sm py-1 px-2 text-xs focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                                  className="block w-full bg-white dark:bg-slate-800 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-1 px-2 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
                                 >
                                   <option value="Yes">Yes</option>
                                   <option value="No">No</option>
@@ -926,16 +935,16 @@ const PreferenceForm = () => {
                 
                 <div>
                   <h4 className="flex items-center gap-2 text-base font-medium text-gray-900 dark:text-white mb-3">
-                    <Users size={16} className="text-blue-500" /> Available Instructors
+                    <Users size={16} className="text-indigo-500" /> Available Instructors
                   </h4>
                   
                   {/* "All Instructors" toggle */}
-                  <div className="mb-3 p-2 bg-blue-50 dark:bg-blue-900/20 rounded-md border border-blue-200 dark:border-blue-800 flex items-center">
+                  <div className="mb-3 p-2 bg-indigo-50 dark:bg-indigo-900/20 rounded-md border border-indigo-200 dark:border-indigo-800 flex items-center">
                     <div 
                       onClick={handleAllInstructorsToggle}
                       className={`flex h-5 w-5 items-center justify-center border rounded cursor-pointer transition-colors mr-2 ${
                         formData.allInstructors 
-                          ? 'bg-blue-500 border-blue-500' 
+                          ? 'bg-indigo-500 border-indigo-500' 
                           : 'border-gray-300 dark:border-gray-600'
                       }`}
                     >
@@ -952,7 +961,7 @@ const PreferenceForm = () => {
                   </div>
                   
                   {/* Instructor selection (disabled if "All Instructors" is checked) */}
-                  <div className={`max-h-48 overflow-y-auto p-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-slate-700 rounded-md ${formData.allInstructors ? 'opacity-50' : ''}`}>
+                  <div className={`max-h-48 overflow-y-auto p-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-md ${formData.allInstructors ? 'opacity-50' : ''}`}>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                       {instructors.length > 0 ? instructors.map((instructor) => (
                         <div key={instructor._id} className="flex items-center space-x-2">
@@ -962,7 +971,7 @@ const PreferenceForm = () => {
                               formData.allInstructors 
                                 ? 'bg-gray-200 dark:bg-gray-700 border-gray-300 dark:border-gray-600' 
                                 : formData.instructors.includes(instructor._id) 
-                                  ? 'bg-blue-500 border-blue-500' 
+                                  ? 'bg-indigo-500 border-indigo-500' 
                                   : 'border-gray-300 dark:border-gray-600'
                             }`}
                           >
@@ -995,17 +1004,17 @@ const PreferenceForm = () => {
                   <button
                     type="button"
                     onClick={() => setOpenModal(false)}
-                    className="px-4 py-2 border border-gray-300 dark:border-slate-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-slate-900"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={loading}
-                    className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-70"
+                    className="flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-slate-900 disabled:opacity-70"
                   >
                     {loading ? (
-                      <Loader size={16} className="animate-spin" />
+                      <Loader2 size={16} className="animate-spin" />
                     ) : (
                       <Save size={16} />
                     )}

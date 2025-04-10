@@ -24,28 +24,6 @@ const RegularAssignmentCH = () => {
   const [showOptions, setShowOptions] = useState(false);
   const [activeTab, setActiveTab] = useState("manual"); // "manual", "automatic", "assigned"
 
-  // Setup dark mode detection
-  useEffect(() => {
-    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      document.documentElement.classList.add('dark');
-    }
-    
-    const darkModeListener = window.matchMedia('(prefers-color-scheme: dark)');
-    const handleDarkModeChange = (event) => {
-      if (event.matches) {
-        document.documentElement.classList.add('dark');
-      } else {
-        document.documentElement.classList.remove('dark');
-      }
-    };
-    
-    darkModeListener.addEventListener('change', handleDarkModeChange);
-    
-    return () => {
-      darkModeListener.removeEventListener('change', handleDarkModeChange);
-    };
-  }, []);
-
   // Fetch assignments when the component mounts or when filters change
   useEffect(() => {
     if (showOptions) {
@@ -115,46 +93,42 @@ const RegularAssignmentCH = () => {
   };
 
   return (
-    <div className="px-2 sm:px-4 md:px-6 py-3 sm:py-4 md:py-6 w-full max-w-7xl mx-auto">
-      <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-3 sm:p-4 md:p-6 mb-4 sm:mb-6">
-        <div className="mb-4 sm:mb-6">
-          <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-800 dark:text-white">Regular Course Assignment</h1>
-          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
+    <div className="max-w-7xl mx-auto">
+      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm overflow-hidden border border-gray-200 dark:border-gray-800 mb-6">
+        <div className="px-6 py-5 border-b border-gray-200 dark:border-gray-800">
+          <h1 className="text-xl font-bold text-gray-800 dark:text-white">Regular Course Assignment</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
             Assign regular courses to instructors based on preferences and workload
           </p>
         </div>
 
         {/* Search (Filtering Mechanism) */}
-        <div className="space-y-4 sm:space-y-5">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-6">
-            <div className="space-y-1 sm:space-y-2">
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
-                <div className="flex items-center gap-1 sm:gap-2">
-                  <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
-                  <span>Academic Year</span>
-                </div>
+        <div className="p-6 space-y-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                <Calendar className="w-4 h-4 text-indigo-500" />
+                <span>Academic Year</span>
               </label>
               <input
                 type="number"
                 name="year"
                 value={filters.year}
                 onChange={handleFilterChange}
-                className="w-full px-3 py-2.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors text-base sm:text-sm text-gray-900 dark:text-white"
+                className="w-full text-base px-4 py-2.5 bg-white dark:bg-slate-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors text-gray-700 dark:text-gray-200"
               />
             </div>
             
-            <div className="space-y-1 sm:space-y-2">
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
-                <div className="flex items-center gap-1 sm:gap-2">
-                  <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
-                  <span>Semester</span>
-                </div>
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                <FileText className="w-4 h-4 text-indigo-500" />
+                <span>Semester</span>
               </label>
               <select
                 name="semester"
                 value={filters.semester}
                 onChange={handleFilterChange}
-                className="w-full px-3 py-2.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none text-base sm:text-sm text-gray-900 dark:text-white"
+                className="w-full text-base px-4 py-2.5 bg-white dark:bg-slate-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors appearance-none text-gray-700 dark:text-gray-200"
               >
                 <option value="Regular 1">Regular 1</option>
                 <option value="Regular 2">Regular 2</option>
@@ -163,14 +137,12 @@ const RegularAssignmentCH = () => {
               </select>
             </div>
             
-            <div className="space-y-1 sm:space-y-2">
-              <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300">
-                <div className="flex items-center gap-1 sm:gap-2">
-                  <User className="w-3 h-3 sm:w-4 sm:h-4" />
-                  <span>Department Chair</span>
-                </div>
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                <User className="w-4 h-4 text-indigo-500" />
+                <span>Department Chair</span>
               </label>
-              <div className="px-3 py-2.5 bg-gray-100 dark:bg-gray-600 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-700 dark:text-gray-300 text-base sm:text-sm truncate">
+              <div className="px-4 py-2.5 bg-gray-100 dark:bg-slate-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 text-base">
                 {user?.chair || 'Loading chair information...'}
               </div>
             </div>
@@ -180,8 +152,7 @@ const RegularAssignmentCH = () => {
             <button
               onClick={handleSearch}
               disabled={loading}
-              className="flex items-center justify-center px-4 sm:px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-300 disabled:cursor-not-allowed transition-colors shadow-sm w-full sm:w-auto text-base"
-              style={{ minHeight: "44px" }} // Ensure minimum touch target size
+              className="flex items-center justify-center px-6 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-indigo-400 dark:disabled:bg-indigo-700/50 transition-colors shadow-sm"
             >
               {loading ? (
                 <Loader2 className="w-5 h-5 mr-2 animate-spin" />
@@ -195,7 +166,7 @@ const RegularAssignmentCH = () => {
 
         {/* Error message */}
         {error && (
-          <div className="mt-4 sm:mt-6 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 p-3 sm:p-4 rounded-lg border border-red-200 dark:border-red-800/30 flex items-start">
+          <div className="mx-6 mb-6 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 p-4 rounded-lg border border-red-200 dark:border-red-800/30 flex items-start">
             <AlertCircle className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" />
             <span className="text-sm">{error}</span>
           </div>
@@ -203,12 +174,12 @@ const RegularAssignmentCH = () => {
         
         {/* Preferences summary */}
         {preferences && preferences.preferences && preferences.preferences.length > 0 && (
-          <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800/30 rounded-lg">
-            <div className="flex items-center text-blue-700 dark:text-blue-400 flex-wrap">
+          <div className="mx-6 mb-6 p-4 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/30 rounded-lg">
+            <div className="flex items-center text-indigo-700 dark:text-indigo-400">
               <BookOpen className="w-5 h-5 mr-2 flex-shrink-0" />
-              <span className="font-medium text-sm md:text-base">Found {preferences.preferences.length} instructor preference submissions for {filters.semester} {filters.year}</span>
+              <span className="font-medium">Found {preferences.preferences.length} instructor preference submissions for {filters.semester} {filters.year}</span>
             </div>
-            <p className="mt-1 text-sm text-blue-600 dark:text-blue-300">
+            <p className="mt-1 text-sm text-indigo-600 dark:text-indigo-300">
               You can now proceed to assign courses manually or automatically
             </p>
           </div>
@@ -216,19 +187,18 @@ const RegularAssignmentCH = () => {
       </div>
 
       {showOptions && (
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-3 sm:p-4 md:p-6">
+        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm overflow-hidden border border-gray-200 dark:border-gray-800">
           {/* Tabs - Scrollable on mobile */}
-          <div className="border-b border-gray-200 dark:border-gray-700 mb-4 sm:mb-6 overflow-x-auto">
-            <div className="min-w-max">
-              <nav className="flex -mb-px space-x-4 md:space-x-8">
+          <div className="border-b border-gray-200 dark:border-gray-800 overflow-x-auto">
+            <div className="px-6 min-w-max">
+              <nav className="flex -mb-px space-x-8">
                 <button
                   onClick={() => setActiveTab("manual")}
-                  className={`py-3 sm:py-4 px-1 border-b-2 font-medium text-sm ${
+                  className={`py-4 px-1 border-b-2 font-medium text-sm ${
                     activeTab === "manual"
-                      ? "border-blue-500 text-blue-600 dark:text-blue-400"
+                      ? "border-indigo-500 text-indigo-600 dark:text-indigo-400"
                       : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
                   }`}
-                  style={{ minHeight: "44px" }} // Ensure minimum touch target size
                 >
                   <div className="flex items-center">
                     <User className="w-4 h-4 mr-2" />
@@ -238,12 +208,11 @@ const RegularAssignmentCH = () => {
                 
                 <button
                   onClick={() => setActiveTab("automatic")}
-                  className={`py-3 sm:py-4 px-1 border-b-2 font-medium text-sm ${
+                  className={`py-4 px-1 border-b-2 font-medium text-sm ${
                     activeTab === "automatic"
-                      ? "border-blue-500 text-blue-600 dark:text-blue-400"
+                      ? "border-indigo-500 text-indigo-600 dark:text-indigo-400"
                       : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
                   }`}
-                  style={{ minHeight: "44px" }}
                 >
                   <div className="flex items-center">
                     <ArrowRight className="w-4 h-4 mr-2" />
@@ -253,12 +222,11 @@ const RegularAssignmentCH = () => {
                 
                 <button
                   onClick={() => setActiveTab("assigned")}
-                  className={`py-3 sm:py-4 px-1 border-b-2 font-medium text-sm ${
+                  className={`py-4 px-1 border-b-2 font-medium text-sm ${
                     activeTab === "assigned"
-                      ? "border-blue-500 text-blue-600 dark:text-blue-400"
+                      ? "border-indigo-500 text-indigo-600 dark:text-indigo-400"
                       : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
                   }`}
-                  style={{ minHeight: "44px" }}
                 >
                   <div className="flex items-center">
                     <Filter className="w-4 h-4 mr-2" />
@@ -270,7 +238,7 @@ const RegularAssignmentCH = () => {
           </div>
 
           {/* Tab Content */}
-          <div className="mt-4">
+          <div className="p-6">
             {activeTab === "manual" && (
               <ManualAssignment fetchAssignments={fetchAssignments} filters={filters} />
             )}

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Search, Loader2, FileText, Calendar, User, Trash2, AlertTriangle, X } from 'lucide-react';
 import api from '../../utils/api';
 import { useSelector } from 'react-redux';
+import { toast } from 'react-hot-toast';
 
 const PreferenceCH = () => {
   const { user } = useSelector((state) => state.auth);
@@ -21,6 +22,17 @@ const PreferenceCH = () => {
   const [preferenceToDelete, setPreferenceToDelete] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [notification, setNotification] = useState({ show: false, message: '', type: '' });
+  
+  // Responsive width state
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+
+  // Track window width for responsive design
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    handleResize(); // Initial check
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Update chair filter when user data changes
   useEffect(() => {
@@ -97,84 +109,54 @@ const PreferenceCH = () => {
         };
       });
       
-      setNotification({
-        show: true,
-        message: 'Preference deleted successfully',
-        type: 'success'
-      });
-      
+      toast.success('Preference deleted successfully');
       closeDeleteModal();
     } catch (err) {
       console.error('Delete error:', err);
-      setNotification({
-        show: true,
-        message: err.response?.data?.message || 'Failed to delete preference',
-        type: 'error'
-      });
+      toast.error(err.response?.data?.message || 'Failed to delete preference');
     } finally {
       setDeleteLoading(false);
     }
   };
 
   return (
-    <div className="p-4 sm:p-6 max-w-6xl mx-auto bg-white rounded-xl shadow-sm">
-      {/* Notification toast */}
-      {notification.show && (
-        <div className={`fixed top-4 right-4 z-50 flex items-center p-4 rounded-lg shadow-lg ${
-          notification.type === 'success' 
-            ? 'bg-green-50 text-green-800 border border-green-200' 
-            : 'bg-red-50 text-red-800 border border-red-200'
-        }`}>
-          <div className="flex-1 mr-2">
-            {notification.message}
-          </div>
-          <button 
-            onClick={() => setNotification({ ...notification, show: false })}
-            className="p-1 rounded-full hover:bg-gray-200"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-      )}
-      
-      <div className="mb-6">
-        <h1 className="text-xl sm:text-2xl font-bold text-gray-800">Teaching Preferences</h1>
-        <p className="text-gray-500">View instructor course preferences by semester</p>
+    <div className="max-w-6xl mx-auto bg-white dark:bg-slate-900 rounded-xl shadow-sm overflow-hidden">
+      {/* Page header */}
+      <div className="border-b border-gray-200 dark:border-gray-800 px-6 py-5">
+        <h1 className="text-xl font-bold text-gray-800 dark:text-white">Teaching Preferences</h1>
+        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">View instructor course preferences by semester</p>
       </div>
       
-      <div className="bg-gray-50 p-4 sm:p-5 rounded-xl mb-8">
+      {/* Filters */}
+      <div className="bg-gray-50 dark:bg-slate-800/50 p-6 border-b border-gray-200 dark:border-gray-800">
         <form onSubmit={handleSubmit} className="space-y-5">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4" />
-                  <span>Academic Year</span>
-                </div>
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                <Calendar className="w-4 h-4 text-indigo-500" />
+                <span>Academic Year</span>
               </label>
               <input
                 type="number"
                 name="year"
                 value={filters.year}
                 onChange={handleInputChange}
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                className="w-full text-base px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
                 min={currentYear - 5}
                 max={currentYear + 5}
               />
             </div>
             
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">
-                <div className="flex items-center gap-2">
-                  <FileText className="w-4 h-4" />
-                  <span>Semester</span>
-                </div>
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                <FileText className="w-4 h-4 text-indigo-500" />
+                <span>Semester</span>
               </label>
               <select
                 name="semester"
                 value={filters.semester}
                 onChange={handleInputChange}
-                className="w-full px-4 py-2.5 bg-white border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors appearance-none"
+                className="w-full text-base px-4 py-2.5 bg-white dark:bg-slate-900 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors appearance-none"
               >
                 <option value="Regular 1">Regular 1</option>
                 <option value="Regular 2">Regular 2</option>
@@ -186,13 +168,11 @@ const PreferenceCH = () => {
           
           <div className="flex-none">
             <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">
-                <div className="flex items-center gap-2">
-                  <User className="w-4 h-4" />
-                  <span>Department Chair</span>
-                </div>
+              <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                <User className="w-4 h-4 text-indigo-500" />
+                <span>Department Chair</span>
               </label>
-              <div className="px-4 py-2.5 bg-gray-100 border border-gray-200 rounded-lg text-gray-700">
+              <div className="px-4 py-2.5 bg-gray-100 dark:bg-slate-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300">
                 {user?.chair || 'Loading chair information...'}
               </div>
             </div>
@@ -202,7 +182,7 @@ const PreferenceCH = () => {
             <button
               type="submit"
               disabled={loading}
-              className="flex items-center justify-center px-4 sm:px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-blue-300 transition-colors shadow-sm"
+              className="flex items-center justify-center px-4 sm:px-6 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-indigo-400 dark:disabled:bg-indigo-700/50 transition-colors shadow-sm"
             >
               {loading ? (
                 <Loader2 className="w-5 h-5 mr-2 animate-spin" />
@@ -215,11 +195,10 @@ const PreferenceCH = () => {
         </form>
       </div>
 
+      {/* Error message */}
       {error && (
-        <div className="bg-red-50 text-red-600 p-4 rounded-lg mb-6 border border-red-200 flex flex-col sm:flex-row items-start">
-          <svg className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd"></path>
-          </svg>
+        <div className="mx-6 mt-6 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 p-4 rounded-lg border border-red-200 dark:border-red-800 flex flex-col sm:flex-row items-start">
+          <AlertTriangle className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" />
           <div>
             <h3 className="font-medium">Error</h3>
             <p>{error}</p>
@@ -227,56 +206,58 @@ const PreferenceCH = () => {
         </div>
       )}
 
+      {/* Loading state */}
       {loading && (
-        <div className="flex justify-center py-8">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
+        <div className="flex justify-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin text-indigo-600 dark:text-indigo-500" />
         </div>
       )}
 
+      {/* Results */}
       {preferences && preferences.preferences && preferences.preferences.length > 0 ? (
-        <div className="space-y-6">
+        <div className="p-6 space-y-6">
           <div className="flex items-center justify-between flex-wrap gap-2">
-            <h2 className="text-lg sm:text-xl font-semibold text-gray-800">
+            <h2 className="text-lg font-semibold text-gray-800 dark:text-white">
               Preferences for {filters.semester} {filters.year}
             </h2>
-            <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-1 rounded-full">
+            <span className="bg-indigo-100 dark:bg-indigo-900/40 text-indigo-800 dark:text-indigo-300 text-xs font-medium px-2.5 py-1 rounded-full">
               {preferences.preferences.length} instructor{preferences.preferences.length !== 1 ? 's' : ''}
             </span>
           </div>
           
           {/* Desktop table view */}
-          <div className="hidden md:block overflow-hidden shadow ring-1 ring-black ring-opacity-5 rounded-lg">
+          <div className="hidden md:block overflow-hidden shadow ring-1 ring-black ring-opacity-5 dark:ring-opacity-20 rounded-lg">
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead className="bg-gray-50 dark:bg-slate-800">
                   <tr>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Instructor
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Preferences (Ranked)
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Submitted
                     </th>
-                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-gray-800">
                   {preferences.preferences.map((pref, index) => (
-                    <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    <tr key={index} className={index % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-gray-50 dark:bg-slate-800/50'}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
                         {pref.instructorId.fullName}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-700">
+                      <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
                         <ul className="space-y-2">
                           {pref.preferences
                             .sort((a, b) => a.rank - b.rank)
                             .map((p, idx) => (
                               <li key={idx} className="flex items-start">
-                                <span className="flex-shrink-0 flex items-center justify-center w-6 h-6 bg-blue-100 text-blue-800 text-xs font-medium rounded-full mr-2">
+                                <span className="flex-shrink-0 flex items-center justify-center w-6 h-6 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-800 dark:text-indigo-300 text-xs font-medium rounded-full mr-2">
                                   {idx + 1}
                                 </span>
                                 <span>{p.courseId.code} - {p.courseId.name}</span>
@@ -284,7 +265,7 @@ const PreferenceCH = () => {
                             ))}
                         </ul>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                         {new Date(pref.submittedAt).toLocaleDateString(undefined, {
                           year: 'numeric', 
                           month: 'short', 
@@ -294,8 +275,9 @@ const PreferenceCH = () => {
                       <td className="px-6 py-4 whitespace-nowrap text-right">
                         <button 
                           onClick={() => openDeleteModal(pref)}
-                          className="text-red-600 hover:text-red-900 focus:outline-none"
+                          className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 focus:outline-none"
                           title="Delete preference"
+                          aria-label="Delete preference"
                         >
                           <Trash2 className="w-5 h-5" />
                         </button>
@@ -310,11 +292,11 @@ const PreferenceCH = () => {
           {/* Mobile card view */}
           <div className="md:hidden space-y-4">
             {preferences.preferences.map((pref, index) => (
-              <div key={index} className="bg-white border border-gray-200 rounded-lg shadow-sm p-4">
-                <div className="mb-3 pb-2 border-b border-gray-100 flex justify-between items-start">
+              <div key={index} className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm p-4">
+                <div className="mb-3 pb-2 border-b border-gray-100 dark:border-gray-700 flex justify-between items-start">
                   <div>
-                    <div className="font-medium text-gray-900">{pref.instructorId.fullName}</div>
-                    <div className="text-xs text-gray-500 mt-1">
+                    <div className="font-medium text-gray-900 dark:text-white">{pref.instructorId.fullName}</div>
+                    <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                       Submitted: {new Date(pref.submittedAt).toLocaleDateString(undefined, {
                         year: 'numeric', 
                         month: 'short', 
@@ -324,23 +306,24 @@ const PreferenceCH = () => {
                   </div>
                   <button 
                     onClick={() => openDeleteModal(pref)}
-                    className="text-red-600 hover:text-red-900 focus:outline-none p-1"
+                    className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 focus:outline-none p-1"
                     title="Delete preference"
+                    aria-label="Delete preference"
                   >
                     <Trash2 className="w-5 h-5" />
                   </button>
                 </div>
                 <div>
-                  <h4 className="text-xs font-medium text-gray-500 uppercase mb-2">Preferences (Ranked)</h4>
+                  <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase mb-2">Preferences (Ranked)</h4>
                   <ul className="space-y-2">
                     {pref.preferences
                       .sort((a, b) => a.rank - b.rank)
                       .map((p, idx) => (
                         <li key={idx} className="flex items-start">
-                          <span className="flex-shrink-0 flex items-center justify-center w-5 h-5 bg-blue-100 text-blue-800 text-xs font-medium rounded-full mr-2">
+                          <span className="flex-shrink-0 flex items-center justify-center w-5 h-5 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-800 dark:text-indigo-300 text-xs font-medium rounded-full mr-2">
                             {idx + 1}
                           </span>
-                          <span className="text-sm">{p.courseId.code} - {p.courseId.name}</span>
+                          <span className="text-sm text-gray-700 dark:text-gray-300">{p.courseId.code} - {p.courseId.name}</span>
                         </li>
                       ))}
                   </ul>
@@ -350,49 +333,51 @@ const PreferenceCH = () => {
           </div>
         </div>
       ) : preferences && !loading && (
-        <div className="text-center py-10 bg-gray-50 rounded-lg border border-gray-200">
-          <svg className="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M12 20a8 8 0 100-16 8 8 0 000 16z" />
-          </svg>
-          <h3 className="mt-2 text-lg font-medium text-gray-900">No preferences found</h3>
-          <p className="mt-1 text-sm text-gray-500">
-            No instructors have submitted preferences for {filters.semester} {filters.year}.
-          </p>
+        <div className="p-6">
+          <div className="text-center py-10 bg-gray-50 dark:bg-slate-800/50 rounded-lg border border-gray-200 dark:border-gray-700">
+            <svg className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M12 20a8 8 0 100-16 8 8 0 000 16z" />
+            </svg>
+            <h3 className="mt-2 text-lg font-medium text-gray-900 dark:text-white">No preferences found</h3>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              No instructors have submitted preferences for {filters.semester} {filters.year}.
+            </p>
+          </div>
         </div>
       )}
       
       {/* Delete Confirmation Modal */}
       {isDeleteModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
-            <div className="p-5 border-b border-gray-200 flex items-center">
+        <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center p-4 z-50">
+          <div className="bg-white dark:bg-slate-900 rounded-lg shadow-xl max-w-md w-full">
+            <div className="p-5 border-b border-gray-200 dark:border-gray-700 flex items-center">
               <AlertTriangle className="w-6 h-6 text-red-500 mr-2" />
-              <h3 className="text-lg font-medium text-gray-900">Confirm Deletion</h3>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">Confirm Deletion</h3>
             </div>
             
             <div className="p-5">
-              <p className="text-gray-700 mb-4">
+              <p className="text-gray-700 dark:text-gray-300 mb-4">
                 Are you sure you want to delete the preference submission from{' '}
                 <span className="font-semibold">
                   {preferenceToDelete?.instructorId?.fullName}
                 </span>?
               </p>
-              <p className="text-sm text-gray-500 bg-gray-50 p-3 rounded-md border border-gray-200">
+              <p className="text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-slate-800 p-3 rounded-md border border-gray-200 dark:border-gray-700">
                 This action cannot be undone and will permanently remove the preference submission.
               </p>
             </div>
             
-            <div className="p-4 bg-gray-50 border-t border-gray-200 flex justify-end space-x-3 rounded-b-lg">
+            <div className="p-4 bg-gray-50 dark:bg-slate-800/50 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3 rounded-b-lg">
               <button
                 onClick={closeDeleteModal}
-                className="px-4 py-2 bg-white border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                className="px-4 py-2 bg-white dark:bg-slate-700 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-slate-800 focus:ring-indigo-500"
               >
                 Cancel
               </button>
               <button
                 onClick={handleDeletePreference}
                 disabled={deleteLoading}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:bg-red-400 disabled:cursor-not-allowed flex items-center"
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-slate-800 focus:ring-red-500 disabled:bg-red-400 disabled:cursor-not-allowed flex items-center"
               >
                 {deleteLoading ? (
                   <>
