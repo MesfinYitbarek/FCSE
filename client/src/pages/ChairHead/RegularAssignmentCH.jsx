@@ -5,6 +5,7 @@ import {
   Calendar, FileText, Search, Loader2, User, BookOpen, Filter,
   AlertCircle, ArrowRight
 } from "lucide-react";
+import { toast } from "react-hot-toast";
 
 import AutomaticAssignment from "./AutomaticAssignment";
 import AssignedCourses from "./AssignedCourses";
@@ -73,6 +74,7 @@ const RegularAssignmentCH = () => {
     } catch (error) {
       console.error("Error fetching preferences:", error);
       setError(error.response?.data?.message || "Failed to fetch preferences. Please try again.");
+      toast.error(error.response?.data?.message || "Failed to fetch preferences. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -85,26 +87,27 @@ const RegularAssignmentCH = () => {
     try {
       await api.delete(`/assignments/${assignmentId}`);
       fetchAssignments();
+      toast.success("Assignment deleted successfully");
     } catch (error) {
       console.error("Error deleting assignment:", error);
-      setError("Failed to delete assignment. Please try again.");
+      toast.error("Failed to delete assignment. Please try again.");
     }
     setLoading(false);
   };
 
   return (
     <div className="max-w-7xl mx-auto">
-      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm overflow-hidden border border-gray-200 dark:border-gray-800 mb-6">
+      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden mb-6">
         <div className="px-6 py-5 border-b border-gray-200 dark:border-gray-800">
-          <h1 className="text-xl font-bold text-gray-800 dark:text-white">Regular Course Assignment</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+          <h1 className="text-xl font-bold text-gray-800 dark:text-white mb-2">Regular Course Assignment</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             Assign regular courses to instructors based on preferences and workload
           </p>
         </div>
 
         {/* Search (Filtering Mechanism) */}
-        <div className="p-6 space-y-5">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+        <div className="p-6 space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             <div className="space-y-2">
               <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
                 <Calendar className="w-4 h-4 text-indigo-500" />
@@ -115,7 +118,7 @@ const RegularAssignmentCH = () => {
                 name="year"
                 value={filters.year}
                 onChange={handleFilterChange}
-                className="w-full text-base px-4 py-2.5 bg-white dark:bg-slate-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors text-gray-700 dark:text-gray-200"
+                className="w-full px-4 py-2.5 bg-white dark:bg-slate-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors text-base text-gray-900 dark:text-white"
               />
             </div>
             
@@ -128,7 +131,7 @@ const RegularAssignmentCH = () => {
                 name="semester"
                 value={filters.semester}
                 onChange={handleFilterChange}
-                className="w-full text-base px-4 py-2.5 bg-white dark:bg-slate-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors appearance-none text-gray-700 dark:text-gray-200"
+                className="w-full px-4 py-2.5 bg-white dark:bg-slate-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors appearance-none text-base text-gray-900 dark:text-white"
               >
                 <option value="Regular 1">Regular 1</option>
                 <option value="Regular 2">Regular 2</option>
@@ -142,7 +145,7 @@ const RegularAssignmentCH = () => {
                 <User className="w-4 h-4 text-indigo-500" />
                 <span>Department Chair</span>
               </label>
-              <div className="px-4 py-2.5 bg-gray-100 dark:bg-slate-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 text-base">
+              <div className="px-4 py-2.5 bg-gray-100 dark:bg-slate-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 text-base truncate">
                 {user?.chair || 'Loading chair information...'}
               </div>
             </div>
@@ -152,7 +155,7 @@ const RegularAssignmentCH = () => {
             <button
               onClick={handleSearch}
               disabled={loading}
-              className="flex items-center justify-center px-6 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-indigo-400 dark:disabled:bg-indigo-700/50 transition-colors shadow-sm"
+              className="flex items-center justify-center px-6 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-indigo-400 dark:disabled:bg-indigo-700/50 transition-colors shadow-sm w-full sm:w-auto text-base"
             >
               {loading ? (
                 <Loader2 className="w-5 h-5 mr-2 animate-spin" />
@@ -166,7 +169,7 @@ const RegularAssignmentCH = () => {
 
         {/* Error message */}
         {error && (
-          <div className="mx-6 mb-6 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 p-4 rounded-lg border border-red-200 dark:border-red-800/30 flex items-start">
+          <div className="mx-6 mb-6 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 p-4 rounded-lg border border-red-200 dark:border-red-800 flex items-start">
             <AlertCircle className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" />
             <span className="text-sm">{error}</span>
           </div>
@@ -175,9 +178,9 @@ const RegularAssignmentCH = () => {
         {/* Preferences summary */}
         {preferences && preferences.preferences && preferences.preferences.length > 0 && (
           <div className="mx-6 mb-6 p-4 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/30 rounded-lg">
-            <div className="flex items-center text-indigo-700 dark:text-indigo-400">
+            <div className="flex items-center text-indigo-700 dark:text-indigo-400 flex-wrap">
               <BookOpen className="w-5 h-5 mr-2 flex-shrink-0" />
-              <span className="font-medium">Found {preferences.preferences.length} instructor preference submissions for {filters.semester} {filters.year}</span>
+              <span className="font-medium text-base">Found {preferences.preferences.length} instructor preference submissions for {filters.semester} {filters.year}</span>
             </div>
             <p className="mt-1 text-sm text-indigo-600 dark:text-indigo-300">
               You can now proceed to assign courses manually or automatically
@@ -187,10 +190,10 @@ const RegularAssignmentCH = () => {
       </div>
 
       {showOptions && (
-        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm overflow-hidden border border-gray-200 dark:border-gray-800">
+        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
           {/* Tabs - Scrollable on mobile */}
           <div className="border-b border-gray-200 dark:border-gray-800 overflow-x-auto">
-            <div className="px-6 min-w-max">
+            <div className="min-w-max px-6">
               <nav className="flex -mb-px space-x-8">
                 <button
                   onClick={() => setActiveTab("manual")}
@@ -199,6 +202,7 @@ const RegularAssignmentCH = () => {
                       ? "border-indigo-500 text-indigo-600 dark:text-indigo-400"
                       : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
                   }`}
+                  style={{ minHeight: "44px" }} // Ensure minimum touch target size
                 >
                   <div className="flex items-center">
                     <User className="w-4 h-4 mr-2" />
@@ -213,6 +217,7 @@ const RegularAssignmentCH = () => {
                       ? "border-indigo-500 text-indigo-600 dark:text-indigo-400"
                       : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
                   }`}
+                  style={{ minHeight: "44px" }}
                 >
                   <div className="flex items-center">
                     <ArrowRight className="w-4 h-4 mr-2" />
@@ -227,6 +232,7 @@ const RegularAssignmentCH = () => {
                       ? "border-indigo-500 text-indigo-600 dark:text-indigo-400"
                       : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
                   }`}
+                  style={{ minHeight: "44px" }}
                 >
                   <div className="flex items-center">
                     <Filter className="w-4 h-4 mr-2" />

@@ -4,12 +4,13 @@ import { useSelector } from "react-redux";
 import { 
   Check, 
   AlertCircle, 
-  Loader, 
+  Loader2, 
   ChevronDown, 
   BookOpen,
   Users,
   Award
 } from "lucide-react";
+import { toast } from "react-hot-toast";
 
 const ManualAssignment = ({ fetchAssignments, filters }) => {
   const { user } = useSelector((state) => state.auth);
@@ -36,6 +37,7 @@ const ManualAssignment = ({ fetchAssignments, filters }) => {
       fetchCourses();
     } catch (error) {
       setError(error.message);
+      toast.error("Error fetching data: " + error.message);
       console.error("Error fetching data:", error);
     } finally {
       setLoading(false);
@@ -89,7 +91,7 @@ const ManualAssignment = ({ fetchAssignments, filters }) => {
 
   const handleBulkAssign = async () => {
     if (Object.keys(selectedAssignments).length === 0) {
-      alert("Please select at least one instructor and course for assignment.");
+      toast.error("Please select at least one instructor and course for assignment.");
       return;
     }
 
@@ -113,8 +115,10 @@ const ManualAssignment = ({ fetchAssignments, filters }) => {
 
       fetchAssignments();
       setSelectedAssignments({});
+      toast.success("Courses assigned successfully!");
     } catch (error) {
       console.error("Error assigning courses:", error);
+      toast.error("Failed to assign courses: " + (error.response?.data?.message || error.message));
     }
     setLoading(false);
   };
@@ -146,25 +150,25 @@ const ManualAssignment = ({ fetchAssignments, filters }) => {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-lg p-3 sm:p-6 max-w-7xl mx-auto">
+    <div>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
         <div>
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-800">Course Assignment Dashboard</h2>
-          <p className="text-gray-600 mt-1 text-sm">
+          <h2 className="text-xl font-bold text-gray-800 dark:text-white">Course Assignment Dashboard</h2>
+          <p className="text-gray-600 dark:text-gray-400 mt-1 text-sm">
             {filters.semester} Semester, {filters.year}
           </p>
         </div>
         
         <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2 bg-blue-50 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-sm">
-            <Users size={18} className="text-blue-600" />
-            <span className="text-blue-700 font-medium">
+          <div className="flex items-center gap-2 bg-indigo-50 dark:bg-indigo-900/20 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-sm">
+            <Users size={18} className="text-indigo-600 dark:text-indigo-400" />
+            <span className="text-indigo-700 dark:text-indigo-300 font-medium">
               {instructors.length} Instructors
             </span>
           </div>
-          <div className="flex items-center gap-2 bg-green-50 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-sm">
-            <BookOpen size={18} className="text-green-600" />
-            <span className="text-green-700 font-medium">
+          <div className="flex items-center gap-2 bg-green-50 dark:bg-green-900/20 px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-sm">
+            <BookOpen size={18} className="text-green-600 dark:text-green-400" />
+            <span className="text-green-700 dark:text-green-300 font-medium">
               {courses.length} Courses
             </span>
           </div>
@@ -172,45 +176,45 @@ const ManualAssignment = ({ fetchAssignments, filters }) => {
       </div>
 
       {loading && (
-        <div className="flex items-center justify-center p-3 sm:p-4 bg-blue-50 rounded-lg mb-4 text-sm">
-          <Loader className="animate-spin mr-2 text-blue-600" size={18} />
-          <span className="text-blue-700">Processing assignments...</span>
+        <div className="flex items-center justify-center p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-lg mb-4 text-sm">
+          <Loader2 className="animate-spin mr-2 text-indigo-600 dark:text-indigo-400" size={18} />
+          <span className="text-indigo-700 dark:text-indigo-300">Processing assignments...</span>
         </div>
       )}
 
       {error && (
-        <div className="flex items-center p-3 sm:p-4 bg-red-50 rounded-lg mb-4 text-sm">
-          <AlertCircle className="text-red-600 mr-2 flex-shrink-0" size={18} />
-          <span className="text-red-700">{error}</span>
+        <div className="flex items-center p-4 bg-red-50 dark:bg-red-900/20 rounded-lg mb-4 text-sm">
+          <AlertCircle className="text-red-600 dark:text-red-400 mr-2 flex-shrink-0" size={18} />
+          <span className="text-red-700 dark:text-red-300">{error}</span>
         </div>
       )}
 
       <div className="space-y-4">
         {preferences.map((pref) => (
-          <div key={pref.instructorId._id} className="border rounded-lg overflow-hidden">
+          <div key={pref.instructorId._id} className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
             <div 
-              className="flex items-center justify-between p-3 sm:p-4 bg-gray-50 cursor-pointer"
+              className="flex items-center justify-between p-4 bg-gray-50 dark:bg-slate-800 cursor-pointer"
               onClick={() => setExpandedInstructor(
                 expandedInstructor === pref.instructorId._id ? null : pref.instructorId._id
               )}
             >
-              <div className="flex items-center gap-3 sm:gap-4">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
-                  <span className="text-blue-600 font-bold">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-indigo-100 dark:bg-indigo-900/40 rounded-full flex items-center justify-center flex-shrink-0">
+                  <span className="text-indigo-600 dark:text-indigo-400 font-bold">
                     {pref.instructorId.fullName.charAt(0)}
                   </span>
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-800 text-sm sm:text-base">
+                  <h3 className="font-semibold text-gray-800 dark:text-white text-base">
                     {pref.instructorId.fullName}
                   </h3>
-                  <p className="text-xs sm:text-sm text-gray-600">
+                  <p className="text-sm text-gray-600 dark:text-gray-400">
                     {getAssignmentStatus(pref.instructorId._id)} courses assigned
                   </p>
                 </div>
               </div>
               <ChevronDown 
-                className={`transition-transform ${
+                className={`transition-transform text-gray-500 dark:text-gray-400 ${
                   expandedInstructor === pref.instructorId._id ? 'rotate-180' : ''
                 }`}
                 size={20}
@@ -218,22 +222,22 @@ const ManualAssignment = ({ fetchAssignments, filters }) => {
             </div>
 
             {expandedInstructor === pref.instructorId._id && (
-              <div className="p-3 sm:p-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+              <div className="p-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {sortCoursesByPreference(courses, pref.instructorId._id).map((course) => (
                     <div 
                       key={course._id} 
-                      className={`p-3 sm:p-4 rounded-lg border ${
+                      className={`p-4 rounded-lg border ${
                         selectedAssignments[pref.instructorId._id]?.[course._id]
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-200'
+                          ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-900/20 dark:border-indigo-600'
+                          : 'border-gray-200 dark:border-gray-700'
                       }`}
                     >
                       <div className="flex items-center justify-between mb-3 flex-wrap gap-1">
                         <label className="flex items-center gap-2">
                           <input
                             type="checkbox"
-                            className="w-4 h-4 text-blue-600 rounded"
+                            className="w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500 border-gray-300 dark:border-gray-600 dark:bg-slate-800"
                             checked={!!selectedAssignments[pref.instructorId._id]?.[course._id]}
                             onChange={(e) =>
                               handleAssignmentSelection(
@@ -244,12 +248,12 @@ const ManualAssignment = ({ fetchAssignments, filters }) => {
                               )
                             }
                           />
-                          <span className="font-medium text-sm">{course.code}</span>
+                          <span className="font-medium text-sm text-gray-800 dark:text-gray-200">{course.code}</span>
                         </label>
                         <div className={`px-2 py-1 rounded text-xs ${
                           getPreferenceRank(pref.instructorId, course) !== Infinity
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-gray-100 text-gray-700'
+                            ? 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300'
+                            : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
                         }`}>
                           {getPreferenceLabel(getPreferenceRank(pref.instructorId, course))}
                         </div>
@@ -259,7 +263,7 @@ const ManualAssignment = ({ fetchAssignments, filters }) => {
                         <div className="space-y-2">
                           <input
                             type="text"
-                            className="w-full p-2 border rounded text-sm"
+                            className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200 focus:ring-indigo-500 focus:border-indigo-500"
                             placeholder="Section"
                             value={selectedAssignments[pref.instructorId._id][course._id].section}
                             onChange={(e) =>
@@ -272,7 +276,7 @@ const ManualAssignment = ({ fetchAssignments, filters }) => {
                             }
                           />
                           <select
-                            className="w-full p-2 border rounded text-sm"
+                            className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200 focus:ring-indigo-500 focus:border-indigo-500"
                             value={selectedAssignments[pref.instructorId._id][course._id].labDivision}
                             onChange={(e) =>
                               handleAssignmentSelection(
@@ -302,17 +306,17 @@ const ManualAssignment = ({ fetchAssignments, filters }) => {
           onClick={handleBulkAssign}
           disabled={loading}
           className={`
-            flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-3 rounded-lg text-white font-medium
+            flex items-center gap-2 px-6 py-2.5 rounded-lg text-white font-medium
             ${loading 
-              ? 'bg-gray-400 cursor-not-allowed' 
-              : 'bg-blue-600 hover:bg-blue-700 transform transition-transform hover:scale-105'
+              ? 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed' 
+              : 'bg-indigo-600 hover:bg-indigo-700 transition-all hover:shadow-md'
             }
             w-full sm:w-auto
           `}
         >
           {loading ? (
             <>
-              <Loader className="animate-spin" size={18} />
+              <Loader2 className="animate-spin" size={18} />
               <span>Assigning...</span>
             </>
           ) : (

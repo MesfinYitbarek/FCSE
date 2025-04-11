@@ -1,12 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Pencil, Trash2, Save, X, Loader, AlertCircle, BookOpen, 
+  Pencil, Trash2, Save, X, Loader2, AlertCircle, BookOpen, 
   Calendar, User, GraduationCap, BookText, Clock, FileBarChart
 } from 'lucide-react';
 import api from '../../utils/api';
+import { toast } from 'react-hot-toast';
 
-const AssignedCourses = ({ fetchAssignments, assignments, currentFilters }) => {
+const AssignedCourses = ({ fetchAssignments, assignments, handleDelete, currentFilters }) => {
   const [editingData, setEditingData] = useState({
     parentId: null,
     subId: null,
@@ -91,6 +92,7 @@ const AssignedCourses = ({ fetchAssignments, assignments, currentFilters }) => {
       
       // Show success message
       setSuccess("Assignment updated successfully");
+      toast.success("Assignment updated successfully");
       setTimeout(() => setSuccess(null), 3000);
       
       // Refresh assignments
@@ -105,6 +107,7 @@ const AssignedCourses = ({ fetchAssignments, assignments, currentFilters }) => {
     } catch (err) {
       console.error("Error updating assignment:", err);
       setError(err.response?.data?.message || "Failed to update assignment");
+      toast.error(err.response?.data?.message || "Failed to update assignment");
     } finally {
       setLoading(false);
     }
@@ -116,28 +119,6 @@ const AssignedCourses = ({ fetchAssignments, assignments, currentFilters }) => {
       subId: null,
       data: {}
     });
-  };
-
-  const handleDelete = async (parentId, subId) => {
-    if (!window.confirm("Are you sure you want to delete this assignment?")) return;
-    
-    setLoading(true);
-    setError(null);
-    try {
-      await api.delete(`/assignments/sub/${parentId}/${subId}`);
-      
-      // Show success message
-      setSuccess("Assignment deleted successfully");
-      setTimeout(() => setSuccess(null), 3000);
-      
-      // Refresh assignments
-      await fetchAssignments();
-    } catch (err) {
-      console.error("Error deleting assignment:", err);
-      setError(err.response?.data?.message || "Failed to delete assignment");
-    } finally {
-      setLoading(false);
-    }
   };
 
   // Group assignments by program
@@ -152,7 +133,7 @@ const AssignedCourses = ({ fetchAssignments, assignments, currentFilters }) => {
   return (
     <div>
       {/* Header with current filters and stats */}
-      <div className="bg-gradient-to-r from-blue-500 to-indigo-600 rounded-xl p-4 sm:p-6 mb-6 text-white">
+      <div className="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl p-6 mb-6 text-white">
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
           <div>
             <h2 className="text-xl sm:text-2xl font-bold mb-2 text-center sm:text-left">
@@ -163,46 +144,46 @@ const AssignedCourses = ({ fetchAssignments, assignments, currentFilters }) => {
             </p>
           </div>
           <button 
-            onClick={fetchAssignments} 
-            className="bg-white text-blue-600 px-4 py-2 rounded-lg font-medium hover:bg-blue-50 transition-colors text-sm w-full sm:w-auto"
+            onClick={fetchAssignments}
+            className="bg-white text-indigo-600 px-4 py-2 rounded-lg font-medium hover:bg-indigo-50 transition-colors text-sm w-full sm:w-auto"
           >
             Refresh Data
           </button>
         </div>
         
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mt-6">
-          <div className="bg-white/20 backdrop-blur-sm rounded-lg p-3 sm:p-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
+          <div className="bg-white/20 backdrop-blur-sm rounded-lg p-4">
             <div className="flex items-center">
               <div className="p-2 bg-white/20 rounded-lg mr-3 flex-shrink-0">
-                <BookText className="h-5 w-5 sm:h-6 sm:w-6" />
+                <BookText className="h-6 w-6" />
               </div>
               <div>
-                <p className="text-xs sm:text-sm font-medium opacity-80">Total Courses</p>
-                <p className="text-lg sm:text-2xl font-bold">{stats.totalCourses}</p>
+                <p className="text-sm font-medium opacity-80">Total Courses</p>
+                <p className="text-2xl font-bold">{stats.totalCourses}</p>
               </div>
             </div>
           </div>
           
-          <div className="bg-white/20 backdrop-blur-sm rounded-lg p-3 sm:p-4">
+          <div className="bg-white/20 backdrop-blur-sm rounded-lg p-4">
             <div className="flex items-center">
               <div className="p-2 bg-white/20 rounded-lg mr-3 flex-shrink-0">
-                <User className="h-5 w-5 sm:h-6 sm:w-6" />
+                <User className="h-6 w-6" />
               </div>
               <div>
-                <p className="text-xs sm:text-sm font-medium opacity-80">Instructors</p>
-                <p className="text-lg sm:text-2xl font-bold">{stats.totalInstructors}</p>
+                <p className="text-sm font-medium opacity-80">Instructors</p>
+                <p className="text-2xl font-bold">{stats.totalInstructors}</p>
               </div>
             </div>
           </div>
           
-          <div className="bg-white/20 backdrop-blur-sm rounded-lg p-3 sm:p-4">
+          <div className="bg-white/20 backdrop-blur-sm rounded-lg p-4">
             <div className="flex items-center">
               <div className="p-2 bg-white/20 rounded-lg mr-3 flex-shrink-0">
-                <Clock className="h-5 w-5 sm:h-6 sm:w-6" />
+                <Clock className="h-6 w-6" />
               </div>
               <div>
-                <p className="text-xs sm:text-sm font-medium opacity-80">Total Workload</p>
-                <p className="text-lg sm:text-2xl font-bold">{stats.totalWorkload} hrs</p>
+                <p className="text-sm font-medium opacity-80">Total Workload</p>
+                <p className="text-2xl font-bold">{stats.totalWorkload} hrs</p>
               </div>
             </div>
           </div>
@@ -213,10 +194,10 @@ const AssignedCourses = ({ fetchAssignments, assignments, currentFilters }) => {
         <motion.div 
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-3 sm:p-4 flex items-center"
+          className="mb-6 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800/30 rounded-lg p-4 flex items-center"
         >
-          <Loader className="animate-spin text-blue-600 mr-2 sm:mr-3 flex-shrink-0" />
-          <span className="text-blue-700 text-sm">Processing updates...</span>
+          <Loader2 className="animate-spin text-indigo-600 dark:text-indigo-400 mr-3 flex-shrink-0" />
+          <span className="text-indigo-700 dark:text-indigo-300 text-sm">Processing updates...</span>
         </motion.div>
       )}
 
@@ -224,10 +205,10 @@ const AssignedCourses = ({ fetchAssignments, assignments, currentFilters }) => {
         <motion.div 
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-6 bg-red-50 border border-red-200 rounded-lg p-3 sm:p-4 flex items-center"
+          className="mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/30 rounded-lg p-4 flex items-center"
         >
-          <AlertCircle className="text-red-600 mr-2 sm:mr-3 flex-shrink-0" />
-          <span className="text-red-700 text-sm">{error}</span>
+          <AlertCircle className="text-red-600 dark:text-red-400 mr-3 flex-shrink-0" />
+          <span className="text-red-700 dark:text-red-300 text-sm">{error}</span>
         </motion.div>
       )}
 
@@ -235,22 +216,22 @@ const AssignedCourses = ({ fetchAssignments, assignments, currentFilters }) => {
         <motion.div 
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-6 bg-green-50 border border-green-200 rounded-lg p-3 sm:p-4 flex items-center"
+          className="mb-6 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800/30 rounded-lg p-4 flex items-center"
         >
-          <BookOpen className="text-green-600 mr-2 sm:mr-3 flex-shrink-0" />
-          <span className="text-green-700 text-sm">{success}</span>
+          <BookOpen className="text-green-600 dark:text-green-400 mr-3 flex-shrink-0" />
+          <span className="text-green-700 dark:text-green-300 text-sm">{success}</span>
         </motion.div>
       )}
 
       {filteredAssignments.length === 0 ? (
-        <div className="bg-white rounded-xl shadow-sm p-6 sm:p-12 text-center">
-          <div className="inline-flex p-3 sm:p-4 bg-blue-50 rounded-full mb-4">
-            <Calendar className="h-8 w-8 sm:h-10 sm:w-10 text-blue-500" />
+        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-12 text-center">
+          <div className="inline-flex p-4 bg-indigo-50 dark:bg-indigo-900/20 rounded-full mb-4">
+            <Calendar className="h-10 w-10 text-indigo-500 dark:text-indigo-400" />
           </div>
-          <h3 className="text-lg sm:text-xl font-semibold text-gray-800 mb-2">
+          <h3 className="text-xl font-semibold text-gray-800 dark:text-white mb-2">
             No Assignments Found
           </h3>
-          <p className="text-gray-500 max-w-md mx-auto text-sm">
+          <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto text-sm">
             No courses have been assigned for {currentFilters.semester} {currentFilters.year}. 
             Use the Manual or Automatic assignment options to assign courses.
           </p>
@@ -258,91 +239,93 @@ const AssignedCourses = ({ fetchAssignments, assignments, currentFilters }) => {
       ) : (
         <div className="space-y-6">
           {Object.keys(assignmentsByProgram).map(program => (
-            <div key={program} className="bg-white rounded-xl shadow-sm overflow-hidden">
-              <div className="bg-gray-50 px-4 sm:px-6 py-3 sm:py-4 border-b">
+            <div key={program} className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
+              <div className="bg-gray-50 dark:bg-slate-800 px-6 py-4 border-b border-gray-200 dark:border-gray-700">
                 <div className="flex items-center">
-                  <GraduationCap className="h-4 w-4 sm:h-5 sm:w-5 text-gray-500 mr-2 flex-shrink-0" />
-                  <h3 className="text-base sm:text-lg font-semibold text-gray-800">{program} Program</h3>
+                  <GraduationCap className="h-5 w-5 text-gray-500 dark:text-gray-400 mr-2 flex-shrink-0" />
+                  <h3 className="text-lg font-semibold text-gray-800 dark:text-white">{program} Program</h3>
                 </div>
               </div>
               
               {/* Table View for Tablet and Desktop */}
               <div className="hidden sm:block overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                  <thead className="bg-gray-50 dark:bg-slate-800">
                     <tr>
-                      <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         Course
                       </th>
-                      <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         Instructor
                       </th>
-                      <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         Section
                       </th>
-                      <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         Lab Division
                       </th>
-                      <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         Workload
                       </th>
-                      <th scope="col" className="px-3 py-2 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         Actions
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-gray-700">
                     {assignmentsByProgram[program].flatMap(parentAssignment => 
                       parentAssignment.assignments.map((assignment, idx) => (
-                        <tr key={`${parentAssignment._id}-${assignment._id}`} className="hover:bg-gray-50">
-                          <td className="px-3 py-3 whitespace-nowrap">
+                        <tr key={`${parentAssignment._id}-${assignment._id}`} className="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
+                          <td className="px-4 py-3 whitespace-nowrap">
                             <div>
-                              <div className="text-sm font-medium text-gray-900">
+                              <div className="text-sm font-medium text-gray-900 dark:text-white">
                                 {assignment.courseId?.code || "N/A"}
                               </div>
-                              <div className="text-sm text-gray-500 truncate max-w-[200px]">
+                              <div className="text-sm text-gray-500 dark:text-gray-400 truncate max-w-[200px]">
                                 {assignment.courseId?.name || "Unknown Course"}
                               </div>
                             </div>
                           </td>
-                          <td className="px-3 py-3 whitespace-nowrap">
-                            <div className="text-sm text-gray-900 truncate max-w-[200px]">
+                          <td className="px-4 py-3 whitespace-nowrap">
+                            <div className="text-sm text-gray-900 dark:text-white truncate max-w-[200px]">
                               {assignment.instructorId?.fullName || "Unassigned"}
                             </div>
                           </td>
-                          <td className="px-3 py-3 whitespace-nowrap text-sm text-gray-500">
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                             {editingData.parentId === parentAssignment._id && editingData.subId === assignment._id ? (
                               <input
                                 type="text"
                                 name="section"
                                 value={editingData.data.section}
                                 onChange={handleUpdateChange}
-                                className="w-full text-sm p-1 border rounded focus:ring-2 focus:ring-blue-500"
+                                className="w-full text-sm p-1 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200"
                               />
                             ) : (
                               assignment.section || "N/A"
                             )}
                           </td>
-                          <td className="px-3 py-3 whitespace-nowrap">
+                          <td className="px-4 py-3 whitespace-nowrap">
                             {editingData.parentId === parentAssignment._id && editingData.subId === assignment._id ? (
                               <select
                                 name="labDivision"
                                 value={editingData.data.labDivision}
                                 onChange={handleUpdateChange}
-                                className="w-full text-sm p-1 border rounded focus:ring-2 focus:ring-blue-500"
+                                className="w-full text-sm p-1 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200"
                               >
                                 <option value="No">No</option>
                                 <option value="Yes">Yes</option>
                               </select>
                             ) : (
                               <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                assignment.labDivision === "Yes" ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"
+                                assignment.labDivision === "Yes" 
+                                  ? "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200" 
+                                  : "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200"
                               }`}>
                                 {assignment.labDivision || "No"}
                               </span>
                             )}
                           </td>
-                          <td className="px-3 py-3 whitespace-nowrap">
+                          <td className="px-4 py-3 whitespace-nowrap">
                             {editingData.parentId === parentAssignment._id && editingData.subId === assignment._id ? (
                               <input
                                 type="number"
@@ -350,15 +333,15 @@ const AssignedCourses = ({ fetchAssignments, assignments, currentFilters }) => {
                                 step="0.01"
                                 value={editingData.data.workload}
                                 onChange={handleUpdateChange}
-                                className="w-full text-sm p-1 border rounded focus:ring-2 focus:ring-blue-500"
+                                className="w-full text-sm p-1 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200"
                               />
                             ) : (
-                              <span className="text-sm font-medium text-gray-900">
+                              <span className="text-sm font-medium text-gray-900 dark:text-white">
                                 {assignment.workload} hrs
                               </span>
                             )}
                           </td>
-                          <td className="px-3 py-3 whitespace-nowrap text-right text-sm font-medium">
+                          <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
                             {editingData.parentId === parentAssignment._id && editingData.subId === assignment._id ? (
                               <div className="flex justify-end space-x-2">
                                 <button
@@ -369,7 +352,7 @@ const AssignedCourses = ({ fetchAssignments, assignments, currentFilters }) => {
                                 </button>
                                 <button
                                   onClick={handleCancelEdit}
-                                  className="text-white bg-gray-600 hover:bg-gray-700 px-2 py-1 rounded"
+                                  className="text-white bg-gray-600 dark:bg-gray-700 hover:bg-gray-700 dark:hover:bg-gray-600 px-2 py-1 rounded"
                                 >
                                   <X size={16} />
                                 </button>
@@ -378,13 +361,13 @@ const AssignedCourses = ({ fetchAssignments, assignments, currentFilters }) => {
                               <div className="flex justify-end space-x-2">
                                 <button
                                   onClick={() => handleEditClick(parentAssignment, assignment)}
-                                  className="text-blue-600 hover:text-blue-900"
+                                  className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300"
                                 >
                                   <Pencil size={16} />
                                 </button>
                                 <button
                                   onClick={() => handleDelete(parentAssignment._id, assignment._id)}
-                                  className="text-red-600 hover:text-red-900"
+                                  className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
                                 >
                                   <Trash2 size={16} />
                                 </button>
@@ -399,7 +382,7 @@ const AssignedCourses = ({ fetchAssignments, assignments, currentFilters }) => {
               </div>
               
               {/* Card View for Mobile */}
-              <div className="sm:hidden p-3 sm:p-6 space-y-4">
+              <div className="sm:hidden p-4 space-y-4">
                 <div className="grid grid-cols-1 gap-3">
                   {assignmentsByProgram[program].flatMap(parentAssignment => 
                     parentAssignment.assignments.map((assignment, idx) => (
@@ -408,20 +391,20 @@ const AssignedCourses = ({ fetchAssignments, assignments, currentFilters }) => {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: idx * 0.05 }}
-                        className="bg-white border border-gray-200 rounded-lg shadow-sm hover:shadow-md transition-shadow"
+                        className="bg-white dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-sm hover:shadow-md transition-shadow"
                       >
-                        <div className="p-3 border-b border-gray-100">
+                        <div className="p-3 border-b border-gray-100 dark:border-gray-700">
                           <div className="flex justify-between items-start">
                             <div>
-                              <h4 className="font-semibold text-gray-800 text-sm">
+                              <h4 className="font-semibold text-gray-800 dark:text-white text-sm">
                                 {assignment.courseId?.code || "N/A"}
                               </h4>
-                              <p className="text-xs text-gray-600 line-clamp-1">
+                              <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-1">
                                 {assignment.courseId?.name || "Unknown Course"}
                               </p>
                             </div>
                             <div>
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200">
                                 {assignment.workload} hrs
                               </span>
                             </div>
@@ -430,40 +413,40 @@ const AssignedCourses = ({ fetchAssignments, assignments, currentFilters }) => {
                         
                         <div className="p-3 space-y-2">
                           <div className="flex items-center text-xs">
-                            <User className="h-3.5 w-3.5 text-gray-500 mr-1.5 flex-shrink-0" />
-                            <span className="text-gray-700 font-medium truncate">
+                            <User className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400 mr-1.5 flex-shrink-0" />
+                            <span className="text-gray-700 dark:text-gray-300 font-medium truncate">
                               {assignment.instructorId?.fullName || "Unassigned"}
                             </span>
                           </div>
                           
                           {editingData.parentId === parentAssignment._id && editingData.subId === assignment._id ? (
-                            <div className="pt-2 border-t border-gray-100 space-y-2">
+                            <div className="pt-2 border-t border-gray-100 dark:border-gray-700 space-y-2">
                               <div className="grid grid-cols-2 gap-2">
                                 <div>
-                                  <label className="block text-xs text-gray-600 mb-1">Lab Division</label>
+                                  <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Lab Division</label>
                                   <select
                                     name="labDivision"
                                     value={editingData.data.labDivision}
                                     onChange={handleUpdateChange}
-                                    className="w-full text-xs p-1.5 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                    className="w-full text-xs p-1.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200"
                                   >
                                     <option value="No">No Lab</option>
                                     <option value="Yes">With Lab</option>
                                   </select>
                                 </div>
                                 <div>
-                                  <label className="block text-xs text-gray-600 mb-1">Section</label>
+                                  <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Section</label>
                                   <input
                                     name="section"
                                     placeholder="Section"
                                     value={editingData.data.section}
                                     onChange={handleUpdateChange}
-                                    className="w-full text-xs p-1.5 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                    className="w-full text-xs p-1.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200"
                                   />
                                 </div>
                               </div>
                               <div>
-                                <label className="block text-xs text-gray-600 mb-1">Workload</label>
+                                <label className="block text-xs text-gray-600 dark:text-gray-400 mb-1">Workload</label>
                                 <input
                                   type="number"
                                   step="0.01"
@@ -471,7 +454,7 @@ const AssignedCourses = ({ fetchAssignments, assignments, currentFilters }) => {
                                   placeholder="Workload"
                                   value={editingData.data.workload}
                                   onChange={handleUpdateChange}
-                                  className="w-full text-xs p-1.5 border rounded-lg focus:ring-2 focus:ring-blue-500"
+                                  className="w-full text-xs p-1.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200"
                                 />
                               </div>
                               
@@ -485,7 +468,7 @@ const AssignedCourses = ({ fetchAssignments, assignments, currentFilters }) => {
                                 </button>
                                 <button
                                   onClick={handleCancelEdit}
-                                  className="flex items-center text-xs font-medium text-white bg-gray-600 hover:bg-gray-700 px-2 py-1 rounded"
+                                  className="flex items-center text-xs font-medium text-white bg-gray-600 dark:bg-gray-700 hover:bg-gray-700 dark:hover:bg-gray-600 px-2 py-1 rounded"
                                 >
                                   <X className="h-3 w-3 mr-1 flex-shrink-0" />
                                   Cancel
@@ -496,19 +479,19 @@ const AssignedCourses = ({ fetchAssignments, assignments, currentFilters }) => {
                             <>
                               <div className="flex items-center justify-between text-xs flex-wrap gap-y-1">
                                 <div className="flex items-center">
-                                  <FileBarChart className="h-3.5 w-3.5 text-gray-500 mr-1.5 flex-shrink-0" />
-                                  <span className="text-gray-700">Section: {assignment.section || "N/A"}</span>
+                                  <FileBarChart className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400 mr-1.5 flex-shrink-0" />
+                                  <span className="text-gray-700 dark:text-gray-300">Section: {assignment.section || "N/A"}</span>
                                 </div>
                                 <div className="flex items-center">
-                                  <BookOpen className="h-3.5 w-3.5 text-gray-500 mr-1.5 flex-shrink-0" />
-                                  <span className="text-gray-700">Lab: {assignment.labDivision || "No"}</span>
+                                  <BookOpen className="h-3.5 w-3.5 text-gray-500 dark:text-gray-400 mr-1.5 flex-shrink-0" />
+                                  <span className="text-gray-700 dark:text-gray-300">Lab: {assignment.labDivision || "No"}</span>
                                 </div>
                               </div>
                               
-                              <div className="pt-2 border-t border-gray-100 flex justify-between">
+                              <div className="pt-2 border-t border-gray-100 dark:border-gray-700 flex justify-between">
                                 <button
                                   onClick={() => handleEditClick(parentAssignment, assignment)}
-                                  className="text-xs font-medium text-blue-600 hover:text-blue-800"
+                                  className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300"
                                 >
                                   <div className="flex items-center">
                                     <Pencil className="h-3 w-3 mr-1 flex-shrink-0" />
@@ -517,7 +500,7 @@ const AssignedCourses = ({ fetchAssignments, assignments, currentFilters }) => {
                                 </button>
                                 <button
                                   onClick={() => handleDelete(parentAssignment._id, assignment._id)}
-                                  className="text-xs font-medium text-red-600 hover:text-red-800"
+                                  className="text-xs font-medium text-red-600 dark:text-red-400 hover:text-red-800 dark:hover:text-red-300"
                                 >
                                   <div className="flex items-center">
                                     <Trash2 className="h-3 w-3 mr-1 flex-shrink-0" />
