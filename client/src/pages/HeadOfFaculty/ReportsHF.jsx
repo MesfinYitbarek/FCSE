@@ -12,7 +12,8 @@ import {
   AlertTriangle, 
   RefreshCw,
   Briefcase,
-  Layers
+  Layers,
+  Search
 } from 'lucide-react';
 import ReportsFilter from '@/components/ReportsHOF/ReportsFilter';
 import ReportsList from '@/components/ReportsHOF/ReportsList';
@@ -30,6 +31,7 @@ const ReportsHF = () => {
     semester: '',
     program: '',
   });
+  const [searchQuery, setSearchQuery] = useState('');
   const [stats, setStats] = useState({
     totalReports: 0,
     totalAssignments: 0,
@@ -51,27 +53,7 @@ const ReportsHF = () => {
         const response = await api.get(`/reports?${queryParams.toString()}`);
         setReports(response.data);
         setFilteredReports(response.data);
-        
-        // Calculate stats
-        if (response.data.length > 0) {
-          const totalAssignments = response.data.reduce(
-            (sum, report) => sum + (report.assignments?.length || 0), 0
-          );
-          const uniquePrograms = new Set(response.data.map(report => report.program).filter(Boolean)).size;
-          
-          setStats({
-            totalReports: response.data.length,
-            totalAssignments,
-            programs: uniquePrograms
-          });
-        } else {
-          setStats({
-            totalReports: 0,
-            totalAssignments: 0,
-            programs: 0
-          });
-        }
-        
+        updateStats(response.data);
         setError(null);
       } catch (err) {
         setError('Failed to fetch reports. Please try again later.');
@@ -85,9 +67,51 @@ const ReportsHF = () => {
     fetchReports();
   }, [filters]);
 
+  // Update statistics based on reports data
+  const updateStats = (reportsData) => {
+    if (reportsData.length > 0) {
+      const totalAssignments = reportsData.reduce(
+        (sum, report) => sum + (report.assignments?.length || 0), 0
+      );
+      const uniquePrograms = new Set(reportsData.map(report => report.program).filter(Boolean)).size;
+      
+      setStats({
+        totalReports: reportsData.length,
+        totalAssignments,
+        programs: uniquePrograms
+      });
+    } else {
+      setStats({
+        totalReports: 0,
+        totalAssignments: 0,
+        programs: 0
+      });
+    }
+  };
+
+  // Handle search functionality
+  useEffect(() => {
+    if (searchQuery) {
+      const filtered = reports.filter(report => {
+        return (
+          report.program?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          report.semester?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          report.year?.toString().includes(searchQuery) ||
+          report.generatedBy?.name?.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+      });
+      setFilteredReports(filtered);
+      updateStats(filtered);
+    } else {
+      setFilteredReports(reports);
+      updateStats(reports);
+    }
+  }, [searchQuery, reports]);
+
   // Handle filter changes
   const handleFilterChange = (newFilters) => {
     setFilters(newFilters);
+    setSearchQuery(''); // Reset search when filters change
   };
 
   // Handle view report detail
@@ -98,6 +122,16 @@ const ReportsHF = () => {
         ? `/reportInst/${reportId}`
         : `/reportsCH/${reportId}`
     );
+  };
+
+  // Handle reset filters
+  const handleResetFilters = () => {
+    setFilters({
+      year: '',
+      semester: '',
+      program: '',
+    });
+    setSearchQuery('');
   };
 
   // Prepare CSV data
@@ -185,6 +219,29 @@ const ReportsHF = () => {
                 </div>
               </div>
             </motion.div>
+          </div>
+          
+          <div className="mb-6">
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="relative flex-grow">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Search className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  type="text"
+                  placeholder="Search by program, semester, year or creator..."
+                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+              <button
+                onClick={handleResetFilters}
+                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-white rounded-lg transition-colors text-sm"
+              >
+                Reset Filters
+              </button>
+            </div>
           </div>
           
           <ReportsFilter 

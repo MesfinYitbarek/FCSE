@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from "react";
 import api from "../../utils/api";
 import { useSelector } from "react-redux";
 import { 
-  Users, Plus, Search, Trash2, Filter, User, Clock, 
+  Users, Plus, Search, Trash2, Filter, User, 
   ArrowUpDown, ChevronDown, X, AlertCircle, Loader2 
 } from "lucide-react";
 import { toast } from "react-hot-toast";
@@ -21,7 +21,6 @@ const InstructorManagement = () => {
   // Filtering and sorting states
   const [searchTerm, setSearchTerm] = useState("");
   const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' });
-  const [filterWorkload, setFilterWorkload] = useState("");
   const [activeFilters, setActiveFilters] = useState([]);
   const [isFilterDropdownOpen, setIsFilterDropdownOpen] = useState(false);
 
@@ -121,17 +120,6 @@ const InstructorManagement = () => {
       );
     }
 
-    // Apply active filters
-    activeFilters.forEach(filter => {
-      if (filter.type === 'workload') {
-        if (filter.value === 'has-workload') {
-          filtered = filtered.filter(inst => inst.workload.length > 0);
-        } else if (filter.value === 'no-workload') {
-          filtered = filtered.filter(inst => inst.workload.length === 0);
-        }
-      }
-    });
-
     // Apply sorting
     if (sortConfig.key) {
       filtered.sort((a, b) => {
@@ -143,21 +131,13 @@ const InstructorManagement = () => {
           } else {
             return bValue.localeCompare(aValue);
           }
-        } else if (sortConfig.key === 'workload') {
-          let aValue = a.workload.length;
-          let bValue = b.workload.length;
-          if (sortConfig.direction === 'asc') {
-            return aValue - bValue;
-          } else {
-            return bValue - aValue;
-          }
         }
         return 0;
       });
     }
 
     return filtered;
-  }, [instructors, searchTerm, activeFilters, sortConfig]);
+  }, [instructors, searchTerm, sortConfig]);
 
   // Eligible users for adding as instructors (not already instructors)
   const eligibleUsers = useMemo(() => {
@@ -214,41 +194,6 @@ const InstructorManagement = () => {
               className="pl-10 pr-4 py-2.5 w-full border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200 text-base"
             />
           </div>
-          
-          <div className="relative">
-            <button 
-              className="flex items-center px-4 py-2.5 bg-gray-100 dark:bg-slate-800 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-slate-700 transition-colors w-full sm:w-auto justify-center sm:justify-start text-gray-700 dark:text-gray-300"
-              onClick={() => setIsFilterDropdownOpen(!isFilterDropdownOpen)}
-            >
-              <Filter className="w-5 h-5 mr-2 text-gray-600 dark:text-gray-400" />
-              <span>Filters</span>
-              <ChevronDown className="w-4 h-4 ml-2 text-gray-600 dark:text-gray-400" />
-            </button>
-            
-            {isFilterDropdownOpen && (
-              <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-900 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-2 z-10">
-                <div className="p-2">
-                  <h3 className="font-medium text-gray-700 dark:text-gray-300 mb-2">Workload Status</h3>
-                  <div className="space-y-2">
-                    <button 
-                      className="flex items-center w-full px-3 py-2 text-left text-sm rounded-md hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-700 dark:text-gray-300"
-                      onClick={() => addFilter('workload', 'has-workload')}
-                    >
-                      <Clock className="w-4 h-4 mr-2 text-indigo-500" />
-                      Has workload
-                    </button>
-                    <button 
-                      className="flex items-center w-full px-3 py-2 text-left text-sm rounded-md hover:bg-gray-100 dark:hover:bg-slate-800 text-gray-700 dark:text-gray-300"
-                      onClick={() => addFilter('workload', 'no-workload')}
-                    >
-                      <Clock className="w-4 h-4 mr-2 text-gray-500 dark:text-gray-400" />
-                      No workload
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
         </div>
         
         {/* Active filters display */}
@@ -258,7 +203,6 @@ const InstructorManagement = () => {
               <div key={index} className="inline-flex items-center bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-200 dark:border-indigo-800 rounded-full px-3 py-1 text-sm text-indigo-700 dark:text-indigo-300">
                 {filter.type === 'workload' && (
                   <>
-                    <Clock className="w-3 h-3 mr-1" />
                     {filter.value === 'has-workload' ? 'Has workload' : 'No workload'}
                   </>
                 )}
@@ -307,16 +251,6 @@ const InstructorManagement = () => {
                           <ArrowUpDown className={`w-4 h-4 ml-1 ${sortConfig.key === 'name' ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-600'}`} />
                         </div>
                       </th>
-                      <th 
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-slate-700"
-                        onClick={() => requestSort('workload')}
-                      >
-                        <div className="flex items-center">
-                          <Clock className="w-4 h-4 mr-1" />
-                          Workload
-                          <ArrowUpDown className={`w-4 h-4 ml-1 ${sortConfig.key === 'workload' ? 'text-indigo-600 dark:text-indigo-400' : 'text-gray-400 dark:text-gray-600'}`} />
-                        </div>
-                      </th>
                       <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         Actions
                       </th>
@@ -335,26 +269,6 @@ const InstructorManagement = () => {
                               <div className="text-sm text-gray-500 dark:text-gray-400">{inst.userId.email}</div>
                             </div>
                           </div>
-                        </td>
-                        <td className="px-6 py-4">
-                          {inst.workload.length === 0 ? (
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300">
-                              No workload
-                            </span>
-                          ) : (
-                            <div className="space-y-1">
-                              {inst.workload.map((wl, index) => (
-                                <div key={`${wl.year}-${wl.semester}-${wl.program}-${index}`} className="flex items-center">
-                                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-300 mr-2">
-                                    {wl.year} {wl.semester}
-                                  </span>
-                                  <span className="text-sm text-gray-600 dark:text-gray-400">
-                                    {wl.program}: <span className="font-medium">{wl.value} hrs</span>
-                                  </span>
-                                </div>
-                              ))}
-                            </div>
-                          )}
                         </td>
                         <td className="px-6 py-4 text-right">
                           {deleteConfirmId === inst._id ? (
@@ -432,31 +346,6 @@ const InstructorManagement = () => {
                         >
                           <Trash2 className="w-5 h-5" />
                         </button>
-                      )}
-                    </div>
-                    
-                    <div className="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700">
-                      <div className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase mb-2 flex items-center">
-                        <Clock className="w-3 h-3 mr-1" />
-                        Workload
-                      </div>
-                      {inst.workload.length === 0 ? (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300">
-                          No workload
-                        </span>
-                      ) : (
-                        <div className="space-y-2">
-                          {inst.workload.map((wl, index) => (
-                            <div key={`${wl.year}-${wl.semester}-${wl.program}-${index}`} className="flex items-center">
-                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-300 mr-2">
-                                {wl.year} {wl.semester}
-                              </span>
-                              <span className="text-xs text-gray-600 dark:text-gray-400">
-                                {wl.program}: <span className="font-medium">{wl.value} hrs</span>
-                              </span>
-                            </div>
-                          ))}
-                        </div>
                       )}
                     </div>
                   </div>

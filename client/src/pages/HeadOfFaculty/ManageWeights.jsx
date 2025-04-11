@@ -1,14 +1,11 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
 import {
   Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Select, MenuItem,
-  Paper, Typography, Grid, Card, CardContent, Chip, IconButton, InputAdornment, Box,
-  FormControl, InputLabel, Divider, Skeleton, Alert, Snackbar, Tooltip, Avatar
+  Paper, Typography, Grid, Card, CardContent, IconButton, InputAdornment, Box,
+  FormControl, InputLabel, Divider, Skeleton, Alert, Snackbar, Tooltip
 } from "@mui/material";
 import {
-  Add as AddIcon,
   Edit as EditIcon,
-  Delete as DeleteIcon,
   Search as SearchIcon,
   FilterList as FilterIcon,
   SortByAlpha as SortIcon,
@@ -23,10 +20,7 @@ const ManageWeights = () => {
   const [courseExperienceWeights, setCourseExperienceWeights] = useState([]);
   const [form, setForm] = useState({ maxWeight: "", interval: "", type: "preference" });
   const [editingId, setEditingId] = useState(null);
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [selectedWeight, setSelectedWeight] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("");
   const [sortOrder, setSortOrder] = useState("asc");
@@ -56,24 +50,17 @@ const ManageWeights = () => {
     e.preventDefault();
     const { maxWeight, interval, type } = form;
     const url = type === "preference" ? "/preference-weights" : "/course-experience-weights";
-    const endpoint = editingId ? `${url}/${editingId}` : url;
 
     try {
-      if (editingId) {
-        await api.put(endpoint, { maxWeight, interval });
-        showNotification("Weight updated successfully");
-      } else {
-        await api.post(endpoint, { maxWeight, interval });
-        showNotification("Weight created successfully");
-      }
+      await api.put(`${url}/${editingId}`, { maxWeight, interval });
+      showNotification("Weight updated successfully");
       fetchWeights();
       setForm({ maxWeight: "", interval: "", type: "preference" });
       setEditingId(null);
-      setIsAddModalOpen(false);
       setIsEditModalOpen(false);
     } catch (error) {
-      console.error("Error saving weight", error);
-      showNotification("Failed to save weight", "error");
+      console.error("Error updating weight", error);
+      showNotification("Failed to update weight", "error");
     }
   };
 
@@ -81,18 +68,6 @@ const ManageWeights = () => {
     setForm({ maxWeight: weight.maxWeight, interval: weight.interval, type });
     setEditingId(weight._id);
     setIsEditModalOpen(true);
-  };
-
-  const handleDelete = async () => {
-    try {
-      await api.delete(`/${selectedWeight.type === "preference" ? "preference-weights" : "course-experience-weights"}/${selectedWeight._id}`);
-      fetchWeights();
-      setIsDeleteModalOpen(false);
-      showNotification("Weight deleted successfully");
-    } catch (error) {
-      console.error("Error deleting weight", error);
-      showNotification("Failed to delete weight", "error");
-    }
   };
 
   const showNotification = (message, type = "success") => {
@@ -143,25 +118,8 @@ const ManageWeights = () => {
               Manage Weights
             </Typography>
             <Typography variant="subtitle1" color="text.secondary">
-              Manage preference and course experience weights
+              View and edit preference and course experience weights
             </Typography>
-          </Grid>
-          <Grid item>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={() => setIsAddModalOpen(true)}
-              sx={{
-                borderRadius: 2,
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
-                background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
-                '&:hover': {
-                  background: 'linear-gradient(45deg, #1976D2 30%, #00B0FF 90%)',
-                }
-              }}
-            >
-              New Weight
-            </Button>
           </Grid>
         </Grid>
       </Paper>
@@ -260,14 +218,6 @@ const ManageWeights = () => {
                             <EditIcon fontSize="small" />
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title="Delete">
-                          <IconButton onClick={() => {
-                            setSelectedWeight({ ...weight, type: "preference" });
-                            setIsDeleteModalOpen(true);
-                          }}>
-                            <DeleteIcon fontSize="small" color="error" />
-                          </IconButton>
-                        </Tooltip>
                       </Box>
                     </Box>
                   </CardContent>
@@ -298,14 +248,6 @@ const ManageWeights = () => {
                             <EditIcon fontSize="small" />
                           </IconButton>
                         </Tooltip>
-                        <Tooltip title="Delete">
-                          <IconButton onClick={() => {
-                            setSelectedWeight({ ...weight, type: "course" });
-                            setIsDeleteModalOpen(true);
-                          }}>
-                            <DeleteIcon fontSize="small" color="error" />
-                          </IconButton>
-                        </Tooltip>
                       </Box>
                     </Box>
                   </CardContent>
@@ -316,9 +258,9 @@ const ManageWeights = () => {
         </>
       )}
 
-      {/* Add Weight Modal */}
-      <Dialog open={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle>Add New Weight</DialogTitle>
+      {/* Edit Weight Modal */}
+      <Dialog open={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} fullWidth maxWidth="sm">
+        <DialogTitle>Edit Weight</DialogTitle>
         <DialogContent>
           <form onSubmit={handleSubmit}>
             <Grid container spacing={2} sx={{ mt: 1 }}>
@@ -343,50 +285,21 @@ const ManageWeights = () => {
                 />
               </Grid>
               <Grid item xs={12}>
-                <FormControl fullWidth>
-                  <InputLabel>Type</InputLabel>
-                  <Select
-                    value={form.type}
-                    onChange={(e) => setForm({ ...form, type: e.target.value })}
-                    label="Type"
-                  >
-                    <MenuItem value="preference">Preference Weight</MenuItem>
-                    <MenuItem value="course">Course Experience Weight</MenuItem>
-                  </Select>
-                </FormControl>
+                <Typography variant="body2" color="text.secondary">
+                  Type: {form.type === "preference" ? "Preference Weight" : "Course Experience Weight"}
+                </Typography>
               </Grid>
             </Grid>
             <DialogActions sx={{ mt: 2 }}>
-              <Button onClick={() => setIsAddModalOpen(false)} variant="outlined" color="inherit">
+              <Button onClick={() => setIsEditModalOpen(false)} variant="outlined" color="inherit">
                 Cancel
               </Button>
               <Button type="submit" variant="contained" color="primary">
-                Save
+                Update
               </Button>
             </DialogActions>
           </form>
         </DialogContent>
-      </Dialog>
-
-      {/* Delete Confirmation Modal */}
-      <Dialog open={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} fullWidth maxWidth="xs">
-        <DialogTitle>Delete Weight</DialogTitle>
-        <DialogContent>
-          <Alert severity="warning" sx={{ mb: 2 }}>
-            This action cannot be undone.
-          </Alert>
-          <Typography>
-            Are you sure you want to delete this weight?
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setIsDeleteModalOpen(false)} variant="outlined" color="inherit">
-            Cancel
-          </Button>
-          <Button onClick={handleDelete} variant="contained" color="error">
-            Delete
-          </Button>
-        </DialogActions>
       </Dialog>
 
       {/* Notification Snackbar */}

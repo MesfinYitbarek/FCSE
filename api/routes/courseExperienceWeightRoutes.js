@@ -7,18 +7,15 @@ import {
 import { 
   createCourseExperienceWeight, 
   getCourseExperienceWeights, 
-  updateCourseExperienceWeight 
+  updateCourseExperienceWeight, 
+  deleteCourseExperienceWeight
 } from "../controllers/courseExperienceWeightController.js";
 import { authenticate, authorize } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// Preference Weight Routes
-router.post("/", authenticate, authorize(["HeadOfFaculty"]), createPreferenceWeight);
-router.get("/", authenticate, getPreferenceWeights);
-router.put("/:id", authenticate, authorize(["HeadOfFaculty"]), updatePreferenceWeight); // Update preference weight
 
-// Course Experience Weight Routes
+router.delete("/:id", authenticate, deleteCourseExperienceWeight)
 router.post("/", authenticate, authorize(["HeadOfFaculty"]), createCourseExperienceWeight);
 router.get("/", authenticate, getCourseExperienceWeights);
 router.put("/:id", authenticate, authorize(["HeadOfFaculty"]), updateCourseExperienceWeight); // Update course experience weight

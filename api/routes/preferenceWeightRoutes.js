@@ -19,9 +19,6 @@ router.post("/", authenticate, authorize(["HeadOfFaculty"]), createPreferenceWei
 router.get("/", authenticate, getPreferenceWeights);
 router.put("/:id", authenticate, authorize(["HeadOfFaculty"]), updatePreferenceWeight); // Update preference weight
 router.delete("/:id", authenticate, deletePreferenceWeight)
-// Course Experience Weight Routes
-router.post("/", authenticate, authorize(["HeadOfFaculty"]), createCourseExperienceWeight);
-router.get("/", authenticate, getCourseExperienceWeights);
-router.put("/:id", authenticate, authorize(["HeadOfFaculty"]), updateCourseExperienceWeight); // Update course experience weight
+
 
 export default router;
