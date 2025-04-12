@@ -27,17 +27,49 @@ export const updateCourseExperienceWeight = async (req, res) => {
   try {
     const { id } = req.params;
     const { maxWeight, interval } = req.body;
-    const updatedWeight = await CourseExperienceWeight.findByIdAndUpdate(
-      id,
-      { maxWeight, interval },
-      { new: true, runValidators: true }
-    );
-    if (!updatedWeight) return res.status(404).json({ message: "Course experience weight not found" });
-    res.json({ message: "Course experience weight updated", weight: updatedWeight });
+
+    // Validate inputs
+    if (!maxWeight || !interval) {
+      return res.status(400).json({ message: "Both maxWeight and interval are required" });
+    }
+
+    if (maxWeight <= 0 || interval <= 0) {
+      return res.status(400).json({ 
+        message: "Both maxWeight and interval must be positive numbers" 
+      });
+    }
+
+    // Find the existing document
+    const weightDoc = await CourseExperienceWeight.findById(id);
+    if (!weightDoc) {
+      return res.status(404).json({ message: "Course experience weight not found" });
+    }
+
+    // Update values and trigger pre-save hook
+    weightDoc.maxWeight = maxWeight;
+    weightDoc.interval = interval;
+    await weightDoc.save(); // Triggers the pre-save hook to recalculate yearsExperience
+
+    res.status(200).json({ 
+      message: "Course experience weight updated successfully", 
+      weight: weightDoc,
+      details: {
+        maxWeight: weightDoc.maxWeight,
+        interval: weightDoc.interval,
+        yearRange: `0 to ${weightDoc.yearsExperience.length - 1} years`,
+        weightRange: `0 to ${weightDoc.maxWeight}`
+      }
+    });
+
   } catch (error) {
-    res.status(500).json({ message: "Error updating course experience weight settings", error });
+    console.error("Error updating course experience weight:", error);
+    res.status(500).json({ 
+      message: "Error updating course experience weight settings", 
+      error: error.message 
+    });
   }
 };
+
 
 export const deleteCourseExperienceWeight = async (req, res) => {
   try {

@@ -7,13 +7,17 @@ const courseExperienceWeightSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
+// Pre-save middleware to recalculate yearsExperience array
 courseExperienceWeightSchema.pre("save", function (next) {
   this.yearsExperience = [];
-  let currentWeight = this.maxWeight;
-  for (let years = 0; currentWeight > 0; years++) {
-    this.yearsExperience.push({ years, weight: currentWeight });
-    currentWeight -= this.interval;
+
+  const maxYears = Math.floor(this.maxWeight / this.interval);
+
+  for (let years = 0; years <= maxYears; years++) {
+    const weight = Math.min(years * this.interval, this.maxWeight);
+    this.yearsExperience.push({ years, weight });
   }
+
   next();
 });
 

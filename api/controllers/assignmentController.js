@@ -302,7 +302,7 @@ export const autoAssignCommonCourses = async (req, res) => {
           };
         })
       );
-   console.log(instructorWorkloads)
+      console.log(instructorWorkloads);
       instructorWorkloads.sort(
         (a, b) =>
           a.workload + a.locationPriority - (b.workload + b.locationPriority)
@@ -485,9 +485,8 @@ export const autoAssignExtensionCourses = async (req, res) => {
         let totalWorkload = totalExistingWorkload + workload;
         let overload = totalWorkload - expectedLoad;
         let benefit =
-          (overload <= 3
-            ? 0
-            : (overload - 3) * 0.942) + (existingExtensionWorkload?.value || 0);
+          (overload <= 3 ? 0 : (overload - 3) * 0.942) +
+          (existingExtensionWorkload?.value || 0);
         console.log(
           `Instructor: ${instructor.fullName} (ID: ${instructor._id})`
         );
@@ -650,31 +649,46 @@ export const autoAssignSummerCourses = async (req, res) => {
         let existingWorkloads = instructorRecord.workload.filter((w) =>
           ["Regular 1", "Regular 2"].includes(w.semester)
         );
-        let totalExistingWorkload = existingWorkloads.reduce((sum, w) => sum + w.value, 0);
+        let totalExistingWorkload = existingWorkloads.reduce(
+          (sum, w) => sum + w.value,
+          0
+        );
 
         let extensionWorkloads = instructorRecord.workload.filter((w) =>
           ["Extension 1", "Extension 2", "Summer"].includes(w.semester)
         );
-        let totalExtensionWorkload = extensionWorkloads.reduce((sum, w) => sum + w.value, 0);
+        let totalExtensionWorkload = extensionWorkloads.reduce(
+          (sum, w) => sum + w.value,
+          0
+        );
 
         let existingSummerWorkload = instructorRecord.workload.find(
           (w) => w.year === year && w.program === "Summer"
         );
-        let totalWorkload = totalExistingWorkload + (existingSummerWorkload ? existingSummerWorkload.value + workload : workload);
+        let totalWorkload =
+          totalExistingWorkload +
+          (existingSummerWorkload
+            ? existingSummerWorkload.value + workload
+            : workload);
         let overload = totalWorkload - expectedLoad;
-        let benefit = ["Regular 1", "Regular 2"].includes(course.semester) && overload > 3 ? (overload - 3) * 0.942 : 0;
+        let benefit =
+          ["Regular 1", "Regular 2"].includes(course.semester) && overload > 3
+            ? (overload - 3) * 0.942
+            : 0;
 
         // Add extension and summer workload to benefit
         let totalBenefit = benefit + totalExtensionWorkload;
         if (course.chair === instructor._id.toString()) {
           totalBenefit += 2; // Bonus for being chair
         }
-        console.log(`Instructor: ${instructor.fullName} (ID: ${instructor._id})`);
+        console.log(
+          `Instructor: ${instructor.fullName} (ID: ${instructor._id})`
+        );
         console.log(`  - Expected Load: ${expectedLoad}`);
         console.log(`  - Current Workload: ${totalWorkload}`);
         console.log(`  - Overload: ${overload}`);
         console.log(`  - Benefit: ${totalBenefit.toFixed(3)}\n`);
-        
+
         instructorRecord.workload.push({
           year,
           semester: "Summer",
@@ -703,19 +717,21 @@ export const autoAssignSummerCourses = async (req, res) => {
     for (const [courseId, instructorList] of benefitMap.entries()) {
       // Sort by benefit in ascending order
       instructorList.sort((a, b) => a.benefit - b.benefit);
-      
+
       // Get the minimum benefit value
       const minBenefit = instructorList[0].benefit;
-      
+
       // Filter all instructors who have this minimum benefit
       const instructorsWithMinBenefit = instructorList.filter(
-        instructor => instructor.benefit === minBenefit
+        (instructor) => instructor.benefit === minBenefit
       );
-      
+
       // Randomly select one instructor from those with min benefit
-      const selectedInstructor = 
-        instructorsWithMinBenefit[Math.floor(Math.random() * instructorsWithMinBenefit.length)];
-      
+      const selectedInstructor =
+        instructorsWithMinBenefit[
+          Math.floor(Math.random() * instructorsWithMinBenefit.length)
+        ];
+
       assignments.push(selectedInstructor);
     }
 
@@ -739,15 +755,17 @@ export const autoAssignSummerCourses = async (req, res) => {
   }
 };
 
-
 // Update an Assignment
 // PUT /assignments/sub/:parentId/:subId
 export const updateAssignment = async (req, res) => {
   try {
     const { parentId, subId } = req.params;
-    
+
     // Validate both IDs are valid ObjectIds
-    if (!mongoose.Types.ObjectId.isValid(parentId) || !mongoose.Types.ObjectId.isValid(subId)) {
+    if (
+      !mongoose.Types.ObjectId.isValid(parentId) ||
+      !mongoose.Types.ObjectId.isValid(subId)
+    ) {
       return res.status(400).json({ message: "Invalid assignment ID" });
     }
 
@@ -756,12 +774,12 @@ export const updateAssignment = async (req, res) => {
     if (!parentAssignment) {
       return res.status(404).json({ message: "Parent assignment not found" });
     }
-    
+
     // Find sub-assignment
     const subAssignmentIndex = parentAssignment.assignments.findIndex(
-      sub => sub._id.toString() === subId
+      (sub) => sub._id.toString() === subId
     );
-    
+
     if (subAssignmentIndex === -1) {
       return res.status(404).json({ message: "Sub-assignment not found" });
     }
@@ -775,13 +793,19 @@ export const updateAssignment = async (req, res) => {
     if (courseId && mongoose.Types.ObjectId.isValid(courseId)) {
       const course = await Course.findById(courseId);
       if (!course) {
-        return res.status(404).json({ message: `Course not found for ID: ${courseId}` });
+        return res
+          .status(404)
+          .json({ message: `Course not found for ID: ${courseId}` });
       }
 
       if (labDivision === "Yes") {
-        updatedWorkload = course.lecture + 2 * ((2 / 3) * course.lab) + 2 * ((2 / 3) * course.tutorial);
+        updatedWorkload =
+          course.lecture +
+          2 * ((2 / 3) * course.lab) +
+          2 * ((2 / 3) * course.tutorial);
       } else {
-        updatedWorkload = course.lecture + (2 / 3) * course.lab + (2 / 3) * course.tutorial;
+        updatedWorkload =
+          course.lecture + (2 / 3) * course.lab + (2 / 3) * course.tutorial;
       }
       updatedWorkload = Math.round(updatedWorkload * 100) / 100;
     }
@@ -791,14 +815,16 @@ export const updateAssignment = async (req, res) => {
       ...parentAssignment.assignments[subAssignmentIndex].toObject(),
       ...req.body,
       workload: updatedWorkload,
-      _id: subId // Keep the original ID
+      _id: subId, // Keep the original ID
     };
 
     // Save the parent document
     await parentAssignment.save();
 
     // Populate data for response
-    await parentAssignment.populate('assignments.instructorId assignments.courseId');
+    await parentAssignment.populate(
+      "assignments.instructorId assignments.courseId"
+    );
 
     // Also update the instructor workload if needed
     if (instructorId && mongoose.Types.ObjectId.isValid(instructorId)) {
@@ -811,7 +837,7 @@ export const updateAssignment = async (req, res) => {
 
     res.json({
       message: "Assignment updated successfully",
-      assignment: parentAssignment.assignments[subAssignmentIndex]
+      assignment: parentAssignment.assignments[subAssignmentIndex],
     });
   } catch (error) {
     console.error("Error updating sub-assignment:", error);
@@ -824,9 +850,12 @@ export const updateAssignment = async (req, res) => {
 export const deleteAssignment = async (req, res) => {
   try {
     const { parentId, subId } = req.params;
-    
+
     // Validate both IDs are valid ObjectIds
-    if (!mongoose.Types.ObjectId.isValid(parentId) || !mongoose.Types.ObjectId.isValid(subId)) {
+    if (
+      !mongoose.Types.ObjectId.isValid(parentId) ||
+      !mongoose.Types.ObjectId.isValid(subId)
+    ) {
       return res.status(400).json({ message: "Invalid assignment ID" });
     }
 
@@ -835,22 +864,22 @@ export const deleteAssignment = async (req, res) => {
     if (!parentAssignment) {
       return res.status(404).json({ message: "Parent assignment not found" });
     }
-    
+
     // Find sub-assignment
     const subAssignmentIndex = parentAssignment.assignments.findIndex(
-      sub => sub._id.toString() === subId
+      (sub) => sub._id.toString() === subId
     );
-    
+
     if (subAssignmentIndex === -1) {
       return res.status(404).json({ message: "Sub-assignment not found" });
     }
 
     // Get the sub-assignment before removing it
     const subAssignment = parentAssignment.assignments[subAssignmentIndex];
-    
+
     // Remove sub-assignment from the array
     parentAssignment.assignments.splice(subAssignmentIndex, 1);
-    
+
     // If the parent has no more sub-assignments, delete the parent too
     if (parentAssignment.assignments.length === 0) {
       await Assignment.findByIdAndDelete(parentId);
@@ -860,7 +889,10 @@ export const deleteAssignment = async (req, res) => {
     }
 
     // Update instructor workload if needed
-    if (subAssignment.instructorId && mongoose.Types.ObjectId.isValid(subAssignment.instructorId)) {
+    if (
+      subAssignment.instructorId &&
+      mongoose.Types.ObjectId.isValid(subAssignment.instructorId)
+    ) {
       // Handle instructor workload update similar to your existing code
       const instructor = await Instructor.findById(subAssignment.instructorId);
       if (instructor) {
@@ -904,7 +936,9 @@ export const getAutomaticAssignments = async (req, res) => {
 
     let assignedByFilter = assignedBy;
     if (assignedBy === "COC") {
-      assignedByFilter = { $in: ["Programming", "Software", "Database", "Networking","COC"] };
+      assignedByFilter = {
+        $in: ["Programming", "Software", "Database", "Networking", "COC"],
+      };
     }
 
     const assignments = await Assignment.find({
@@ -989,10 +1023,13 @@ export const runAutomaticAssignment = async (req, res) => {
     const { year, semester, program, assignedBy } = req.body;
 
     if (!year || !semester || !program || !assignedBy) {
+      console.log("Missing required parameters in request body");
       return res.status(400).json({
         message: "Year, semester, program, and assignedBy are required.",
       });
     }
+
+    console.log(`Starting automatic assignment for ${year} ${semester} ${program} by ${assignedBy}`);
 
     const preferenceForm = await PreferenceForm.findOne({
       chair: assignedBy,
@@ -1001,9 +1038,9 @@ export const runAutomaticAssignment = async (req, res) => {
     }).populate("courses.course");
 
     if (!preferenceForm) {
+      console.log(`No preference form found for chair ${assignedBy}, ${year} ${semester}`);
       return res.status(404).json({
-        message:
-          "No preference form found for the specified chair, year, and semester.",
+        message: "No preference form found for the specified chair, year, and semester.",
       });
     }
 
@@ -1014,7 +1051,7 @@ export const runAutomaticAssignment = async (req, res) => {
       labDivision: c.labDivision,
     }));
 
-    console.log("Allowed Courses with metadata:", allowedCourses);
+    console.log("Allowed Courses with metadata:", JSON.stringify(allowedCourses, null, 2));
 
     const getCourseMeta = (courseId) => {
       return allowedCourses.find((c) => c.courseId === courseId.toString());
@@ -1026,10 +1063,15 @@ export const runAutomaticAssignment = async (req, res) => {
       .populate("instructorId")
       .populate("preferences.courseId");
 
+    console.log(`Found ${preferences.length} preference submissions`);
+
     const preferenceWeights = await PreferenceWeight.findOne();
     const experienceWeights = await CourseExperienceWeight.findOne();
     let assignedCourses = [];
     let instructorAssigned = new Set();
+
+    console.log("Preference Weights:", JSON.stringify(preferenceWeights, null, 2));
+    console.log("Experience Weights:", JSON.stringify(experienceWeights, null, 2));
 
     const calculateScore = (preferenceRank, yearsExperience) => {
       let preferenceScore =
@@ -1039,60 +1081,133 @@ export const runAutomaticAssignment = async (req, res) => {
         experienceWeights?.yearsExperience?.find(
           (y) => y.years === yearsExperience
         )?.weight || 0;
-      return preferenceScore + experienceScore;
+      const totalScore = preferenceScore + experienceScore;
+      
+      console.log(`Calculating score for rank ${preferenceRank} and ${yearsExperience} years experience: 
+        Preference Score = ${preferenceScore}, 
+        Experience Score = ${experienceScore}, 
+        Total Score = ${totalScore}`);
+      
+      return totalScore;
     };
 
     let courseAssignments = {};
+    console.log("Processing instructor preferences...");
     for (let preference of preferences) {
+      console.log(`Processing preferences for instructor ${preference.instructorId.name} (${preference.instructorId._id})`);
+      
       for (let { courseId, rank } of preference.preferences) {
-        if (!mongoose.Types.ObjectId.isValid(courseId)) continue;
+        if (!mongoose.Types.ObjectId.isValid(courseId)) {
+          console.log(`Skipping invalid course ID: ${courseId}`);
+          continue;
+        }
+        
         courseId = new mongoose.Types.ObjectId(courseId);
         const meta = getCourseMeta(courseId);
-        if (!meta) continue;
+        if (!meta) {
+          console.log(`Course ${courseId} not found in allowed courses, skipping`);
+          continue;
+        }
 
         if (!courseAssignments[courseId]) courseAssignments[courseId] = [];
         const instructorId = preference.instructorId._id;
+        
         let instructor = await Instructor.findOne({
           userId: instructorId,
         }).populate("assignedCourses");
+        
         let experienceYears =
           instructor?.assignedCourses?.filter((c) =>
             c.courseId.equals(courseId)
           ).length || 0;
+          
         let score = calculateScore(rank, experienceYears);
+        
+        console.log(`Instructor ${preference.instructorId.name} (${instructorId}) for course ${courseId}:
+          - Preference Rank: ${rank}
+          - Years Experience: ${experienceYears}
+          - Calculated Score: ${score}
+          - Submitted At: ${preference.submittedAt}`);
 
         courseAssignments[courseId].push({
           instructorId,
           score,
           submittedAt: preference.submittedAt,
+          instructorName: preference.instructorId.name,
+          preferenceRank: rank,
+          experienceYears,
         });
       }
     }
 
+    console.log("\nSorting candidates for each course...");
     for (let courseId in courseAssignments) {
+      console.log(`\nCourse ${courseId} candidates before sorting:`);
+      console.table(courseAssignments[courseId]);
+      
       courseAssignments[courseId].sort(
         (a, b) => b.score - a.score || a.submittedAt - b.submittedAt
       );
+      
+      console.log(`Course ${courseId} candidates after sorting:`);
+      console.table(courseAssignments[courseId]);
+    }
+
+    console.log("\nAssigning courses to instructors...");
+    for (let courseId in courseAssignments) {
+      console.log(`\nProcessing assignments for course ${courseId}`);
+      
       for (let candidate of courseAssignments[courseId]) {
         if (!instructorAssigned.has(candidate.instructorId)) {
+          console.log(`Assigning course ${courseId} to ${candidate.instructorName} (score: ${candidate.score})`);
+          
           assignedCourses.push({
             instructorId: candidate.instructorId,
             courseId,
+            instructorName: candidate.instructorName,
+            score: candidate.score,
+            preferenceRank: candidate.preferenceRank,
+            experienceYears: candidate.experienceYears,
           });
+          
           instructorAssigned.add(candidate.instructorId);
           break;
+        } else {
+          console.log(`Instructor ${candidate.instructorName} already assigned to another course`);
         }
       }
     }
 
+    console.log("\nHandling unassigned courses...");
     for (let courseId in courseAssignments) {
       if (!assignedCourses.some((a) => a.courseId.toString() === courseId)) {
         let selectedInstructor = courseAssignments[courseId][0]?.instructorId;
         if (selectedInstructor) {
-          assignedCourses.push({ instructorId: selectedInstructor, courseId });
+          const instructor = courseAssignments[courseId][0];
+          console.log(`Force assigning unassigned course ${courseId} to ${instructor.instructorName} (top candidate)`);
+          
+          assignedCourses.push({ 
+            instructorId: selectedInstructor, 
+            courseId,
+            instructorName: instructor.instructorName,
+            score: instructor.score,
+            preferenceRank: instructor.preferenceRank,
+            experienceYears: instructor.experienceYears,
+          });
+        } else {
+          console.log(`No available instructors for course ${courseId}`);
         }
       }
     }
+
+    console.log("\nFinal assignments before saving:");
+    console.table(assignedCourses.map(a => ({
+      course: a.courseId,
+      instructor: a.instructorName,
+      score: a.score,
+      preference: a.preferenceRank,
+      experience: a.experienceYears
+    })));
 
     let assignmentData = {
       year,
@@ -1102,19 +1217,28 @@ export const runAutomaticAssignment = async (req, res) => {
       assignedBy,
     };
 
+    console.log("\nProcessing workload calculations...");
     for (const assignment of assignedCourses) {
       const { instructorId, courseId } = assignment;
       const course = await Course.findById(courseId);
-      if (!course) continue;
+      if (!course) {
+        console.log(`Course ${courseId} not found, skipping`);
+        continue;
+      }
 
       const meta = getCourseMeta(courseId);
-      if (!meta) continue;
+      if (!meta) {
+        console.log(`Metadata not found for course ${courseId}, skipping`);
+        continue;
+      }
 
-      const workload = Math.round(
-        (course.lecture + (2 / 3) * course.lab + (2 / 3) * course.tutorial) * 100
-      ) / 100;
+      const workload =
+        Math.round(
+          (course.lecture + (2 / 3) * course.lab + (2 / 3) * course.tutorial) *
+            100
+        ) / 100;
 
-      console.log(`Assigned course ${courseId} with meta:`, meta);
+      console.log(`Calculated workload for course ${courseId}: ${workload} (lecture: ${course.lecture}, lab: ${course.lab}, tutorial: ${course.tutorial})`);
 
       assignmentData.assignments.push({
         instructorId,
@@ -1126,7 +1250,10 @@ export const runAutomaticAssignment = async (req, res) => {
       });
 
       let instructor = await Instructor.findOne({ userId: instructorId });
-      if (!instructor) continue;
+      if (!instructor) {
+        console.log(`Instructor ${assignment.instructorName} (${instructorId}) not found, skipping workload update`);
+        continue;
+      }
 
       const existingWorkloadIndex = instructor.workload.findIndex(
         (entry) =>
@@ -1136,15 +1263,20 @@ export const runAutomaticAssignment = async (req, res) => {
       );
 
       if (existingWorkloadIndex !== -1) {
+        console.log(`Updating existing workload entry for ${assignment.instructorName} (${year} ${semester} ${program})`);
         instructor.workload[existingWorkloadIndex].value += workload;
       } else {
+        console.log(`Creating new workload entry for ${assignment.instructorName} (${year} ${semester} ${program})`);
         instructor.workload.push({ year, semester, program, value: workload });
       }
 
       await instructor.save();
+      console.log(`Workload updated for instructor ${assignment.instructorName}`);
     }
 
-    await Assignment.create(assignmentData);
+    const savedAssignment = await Assignment.create(assignmentData);
+    console.log("\nAssignment saved successfully:", savedAssignment._id);
+
     res.json({
       message: "Courses assigned successfully",
       assignment: assignmentData,
@@ -1154,5 +1286,3 @@ export const runAutomaticAssignment = async (req, res) => {
     res.status(500).json({ message: "Error in automatic assignment", error });
   }
 };
-
-
