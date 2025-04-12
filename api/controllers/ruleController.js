@@ -21,3 +21,42 @@ export const getRules = async (req, res) => {
     res.status(500).json({ message: "Error fetching rules", error });
   }
 };
+
+// Update a rule
+export const updateRule = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { ruleName, description, value } = req.body;
+    
+    const updatedRule = await Rule.findByIdAndUpdate(
+      id, 
+      { ruleName, description, value },
+      { new: true, runValidators: true }
+    );
+    
+    if (!updatedRule) {
+      return res.status(404).json({ message: "Rule not found" });
+    }
+    
+    res.json({ message: "Rule updated successfully", rule: updatedRule });
+  } catch (error) {
+    res.status(500).json({ message: "Error updating rule", error: error.message });
+  }
+};
+
+// Delete a rule
+export const deleteRule = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const deletedRule = await Rule.findByIdAndDelete(id);
+    
+    if (!deletedRule) {
+      return res.status(404).json({ message: "Rule not found" });
+    }
+    
+    res.json({ message: "Rule deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: "Error deleting rule", error: error.message });
+  }
+};

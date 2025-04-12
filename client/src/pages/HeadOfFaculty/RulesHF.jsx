@@ -58,7 +58,16 @@ const RulesHF = () => {
   };
 
   const handleChange = (e) => {
-    setNewRule({ ...newRule, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    // Convert value field to number if it's the value field
+    if (name === "value") {
+      setNewRule({ 
+        ...newRule, 
+        [name]: value === "" ? "" : Number(value) 
+      });
+    } else {
+      setNewRule({ ...newRule, [name]: value });
+    }
   };
 
   const resetForm = () => {
@@ -113,7 +122,11 @@ const RulesHF = () => {
 
   const openEditRuleModal = (rule) => {
     setSelectedRule(rule);
-    setNewRule({ ruleName: rule.ruleName, description: rule.description || "", value: rule.value || "" });
+    setNewRule({ 
+      ruleName: rule.ruleName, 
+      description: rule.description || "", 
+      value: rule.value !== undefined ? rule.value : "" 
+    });
     setOpenEditModal(true);
   };
 
@@ -324,6 +337,15 @@ const RulesHF = () => {
                                   <Typography variant="h6" fontWeight="bold" gutterBottom>
                                     {rule.ruleName}
                                   </Typography>
+                                  {rule.value !== undefined && (
+                                    <Chip 
+                                      label={`Value: ${rule.value}`} 
+                                      color="primary" 
+                                      size="small" 
+                                      variant="outlined"
+                                      sx={{ mb: 1 }}
+                                    />
+                                  )}
                                   {isMobile && expandedRule !== rule._id ? (
                                     <Typography variant="body2" color="text.secondary" noWrap>
                                       {rule.description.substring(0, 80)}...
@@ -437,17 +459,22 @@ const RulesHF = () => {
                 sx={{ mb: 2 }}
               />
             </Grid>
-            <Grid item xs={12}>
+            <Grid item xs={12} md={6}>
               <TextField
                 fullWidth
-                label="Value(if there is)and should be Number"
+                label="Value (Number)"
                 name="value"
+                type="number"
                 value={newRule.value}
                 onChange={handleChange}
-                required
                 variant="outlined"
-                autoFocus
+                placeholder="Enter a numeric value (optional)"
                 sx={{ mb: 2 }}
+                InputProps={{
+                  inputProps: { 
+                    step: "any" // Allows decimal values
+                  }
+                }}
               />
             </Grid>
             <Grid item xs={12}>
@@ -510,6 +537,24 @@ const RulesHF = () => {
                 variant="outlined"
                 autoFocus
                 sx={{ mb: 2 }}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label="Value (Number)"
+                name="value"
+                type="number"
+                value={newRule.value}
+                onChange={handleChange}
+                variant="outlined"
+                placeholder="Enter a numeric value (optional)"
+                sx={{ mb: 2 }}
+                InputProps={{
+                  inputProps: { 
+                    step: "any" // Allows decimal values
+                  }
+                }}
               />
             </Grid>
             <Grid item xs={12}>
