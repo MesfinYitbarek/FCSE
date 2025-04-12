@@ -1,15 +1,15 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useSelector } from "react-redux";
+import api from "../../utils/api";
 import {
-  CheckCircle,
-  Clock,
   ChevronRight,
   Megaphone,
   Users,
   Circle,
   UserCheck,
-  Settings
+  Settings,
+  AlertTriangle
 } from "lucide-react";
 
 const DashboardHF = () => {
@@ -18,26 +18,75 @@ const DashboardHF = () => {
     users: { total: 0, active: 0, inactive: 0 },
     chairs: { total: 0, active: 0, inactive: 0 },
     positions: { total: 0, filled: 0, vacant: 0 },
-    announcements: { total: 0, recent: 0 }
+    announcements: { total: 0, recent: 0, unread: 0 }
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   // Fetch dashboard data
   useEffect(() => {
     const fetchDashboardData = async () => {
-      try {
-        // Mock statistics data
-        const statsData = {
-          users: { total: 150, active: 120, inactive: 30 },
-          chairs: { total: 10, active: 8, inactive: 2 },
-          positions: { total: 50, filled: 45, vacant: 5 },
-          announcements: { total: 8, recent: 3 }
-        };
+      setIsLoading(true);
+      setError(null);
 
-        setStats(statsData);
+      try {
+        const [usersResponse, chairsResponse, announcementsResponse] = await Promise.all([
+          api.get("/users"),
+          api.get("/chairs"),
+          api.get("/announcements")
+        ]);
+
+        // Process users data
+        const users = usersResponse.data;
+        const activeUsers = users.filter(user => user.status === "active" || user.status === true);
+        const inactiveUsers = users.filter(user => user.status === "inactive" || user.status === false);
+
+        // Process chairs data
+        const chairs = chairsResponse.data;
+        const activeChairs = chairs.filter(chair => chair.active === true);
+        const inactiveChairs = chairs.filter(chair => chair.active === false);
+
+        // Process announcements data
+        const announcements = announcementsResponse.data;
+        const currentDate = new Date();
+        // Consider announcements from the last 7 days as recent
+        const sevenDaysAgo = new Date(currentDate);
+        sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+
+        const recentAnnouncements = announcements.filter(
+          announcement => new Date(announcement.publishedAt) >= sevenDaysAgo
+        );
+
+        const unreadAnnouncements = announcements.filter(
+          announcement => !announcement.isRead
+        );
+
+
+
+        // Update state with real data
+        setStats({
+          users: {
+            total: users.length,
+            active: activeUsers.length,
+            inactive: inactiveUsers.length
+          },
+          chairs: {
+            total: chairs.length,
+            active: activeChairs.length,
+            inactive: inactiveChairs.length
+          },
+
+          announcements: {
+            total: announcements.length,
+            recent: recentAnnouncements.length,
+            unread: unreadAnnouncements.length
+          }
+        });
+
         setIsLoading(false);
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
+        setError("Failed to load dashboard data. Please try again later.");
         setIsLoading(false);
       }
     };
@@ -52,6 +101,24 @@ const DashboardHF = () => {
           <div className="h-12 w-12 bg-indigo-200 rounded-full mb-4"></div>
           <div className="h-4 w-36 bg-gray-200 rounded mb-3"></div>
           <div className="h-3 w-24 bg-gray-200 rounded"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="h-64 flex items-center justify-center">
+        <div className="text-center bg-red-50 p-6 rounded-xl shadow-sm">
+          <AlertTriangle size={36} className="text-red-500 mx-auto mb-4" />
+          <h3 className="text-lg font-semibold text-red-800 mb-2">Error Loading Dashboard</h3>
+          <p className="text-red-600">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="mt-4 px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition-colors"
+          >
+            Retry
+          </button>
         </div>
       </div>
     );
@@ -124,8 +191,6 @@ const DashboardHF = () => {
             </div>
           </div>
 
-
-
           <Link
             to="/chairs"
             className="mt-5 text-sm text-indigo-600 hover:text-indigo-800 font-medium inline-flex items-center"
@@ -170,7 +235,7 @@ const DashboardHF = () => {
           </div>
 
           <Link
-            to="/announcements"
+            to="/announcementsView"
             className="mt-4 flex items-center justify-between p-3 bg-indigo-50 rounded-lg hover:bg-indigo-100 transition-colors"
           >
             <div className="flex items-center gap-3">
@@ -179,9 +244,18 @@ const DashboardHF = () => {
               </div>
               <span className="font-medium text-indigo-800">Announcements</span>
             </div>
-            <span className="bg-indigo-200 text-indigo-800 text-xs font-medium px-2 py-1 rounded-full">
-              {stats.announcements.recent} new
-            </span>
+            <div className="flex gap-2">
+              {stats.announcements.recent > 0 && (
+                <span className="bg-indigo-200 text-indigo-800 text-xs font-medium px-2 py-1 rounded-full">
+                  {stats.announcements.recent} new
+                </span>
+              )}
+              {stats.announcements.unread > 0 && (
+                <span className="bg-purple-200 text-purple-800 text-xs font-medium px-2 py-1 rounded-full">
+                  {stats.announcements.unread} unread
+                </span>
+              )}
+            </div>
           </Link>
         </div>
       </div>
