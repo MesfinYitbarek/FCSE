@@ -3,21 +3,28 @@ import mongoose from "mongoose";
 import Assignment from "../models/Assignment.js";
 import Report from "../models/Report.js";
 import Instructor from "../models/Instructor.js"
-// Create a new report
+
 // Create a new report
 export const createReport = async (req, res) => {
   try {
     const { year, semester, program, note } = req.body;
+
+    // Check for existing report with the same criteria
+    const existingReport = await Report.findOne({ year, semester, program });
+    if (existingReport) {
+      return res.status(409).json({
+        message: "A report already exists for the specified year, semester, and program",
+      });
+    }
 
     // Build query to find matching assignments
     const query = { year };
     if (semester) query.semester = semester;
     if (program) query.program = program;
 
-    // Find all assignments matching the criteria
-    const assignments = await Assignment.find(query).populate('assignments.courseId');
+    const assignments = await Assignment.find(query).populate("assignments.courseId");
 
-    if (assignments.length === 0) {
+    if (!assignments.length) {
       return res.status(404).json({ message: "No assignments found for the specified criteria" });
     }
 
@@ -27,66 +34,49 @@ export const createReport = async (req, res) => {
       semester,
       program,
       note,
-      assignments: assignments.map(assignment => assignment._id),
+      assignments: assignments.map(a => a._id),
       generatedBy: "COC",
     });
 
     await report.save();
 
-    // Update instructors' assignedCourses for this report's criteria
-    const instructorUpdates = [];
-    
-    // Get all unique instructor IDs from all assignments
-    const instructorIds = new Set();
-    const instructorCourseMap = new Map(); // To store instructor's courses for this report
+    // Update instructors' assignedCourses
+    for (const assignment of assignments) {
+      for (const item of assignment.assignments) {
+        const instructor = await Instructor.findOne({userId: item.instructorId});
+        if (!instructor) continue;
 
-    // First, collect all course assignments for each instructor
-    assignments.forEach(assignment => {
-      assignment.assignments.forEach(item => {
-        instructorIds.add(item.instructorId.toString());
-        
-        if (!instructorCourseMap.has(item.instructorId.toString())) {
-          instructorCourseMap.set(item.instructorId.toString(), new Set());
-        }
-        
-        // Add course ID to the instructor's set
-        instructorCourseMap.get(item.instructorId.toString()).add(item.courseId._id.toString());
-      });
-    });
+        const alreadyAssigned = instructor.assignedCourses.some(course =>
+          course.course.toString() === item.courseId._id.toString() &&
+          course.year === year &&
+          course.semester === semester &&
+          course.program === program
+        );
 
-    // For each instructor, update their assignedCourses
-    for (const [instructorId, courseIds] of instructorCourseMap) {
-      const update = Instructor.findByIdAndUpdate(
-        instructorId,
-        {
-          $addToSet: {
-            assignedCourses: {
-              $each: Array.from(courseIds).map(courseId => ({
-                course: courseId,
-                year,
-                semester,
-                program
-              }))
-            }
-          }
+        if (!alreadyAssigned) {
+          instructor.assignedCourses.push({
+            course: item.courseId._id,
+            year,
+            semester,
+            program,
+          });
+          await instructor.save();
         }
-      );
-      instructorUpdates.push(update);
+      }
     }
 
-    // Wait for all instructor updates to complete
-    await Promise.all(instructorUpdates);
-
-    res.status(201).json({ 
-      message: "Report created successfully", 
+    res.status(201).json({
+      message: "Report created successfully",
       reportId: report._id,
       assignmentCount: assignments.length,
-      instructorCount: instructorIds.size
     });
+
   } catch (error) {
+    console.error("Error creating report:", error);
     res.status(500).json({ message: "Error creating report", error: error.message });
   }
 };
+
 
 // Get all reports
 // Updated getAllReports to filter by year, semester, and program
@@ -216,14 +206,46 @@ export const updateReport = async (req, res) => {
 // Delete report
 export const deleteReport = async (req, res) => {
   try {
-    const report = await Report.findByIdAndDelete(req.params.id);
-    
+    const report = await Report.findById(req.params.id).populate({
+      path: "assignments",
+      populate: {
+        path: "assignments.courseId",
+      },
+    });
+
     if (!report) {
       return res.status(404).json({ message: "Report not found" });
     }
-    
-    res.status(200).json({ message: "Report deleted successfully" });
+
+    const { year, semester, program } = report;
+
+    // Remove assigned courses from instructors
+    for (const assignment of report.assignments) {
+      for (const item of assignment.assignments) {
+        const instructor = await Instructor.findOne({ userId: item.instructorId });
+        if (!instructor) continue;
+
+        // Filter out the assignedCourse that matches this report's info
+        instructor.assignedCourses = instructor.assignedCourses.filter(course =>
+          !(
+            course.course.toString() === item.courseId._id.toString() &&
+            course.year === year &&
+            course.semester === semester &&
+            course.program === program
+          )
+        );
+
+        await instructor.save();
+      }
+    }
+
+    // Delete the report
+    await Report.findByIdAndDelete(req.params.id);
+
+    res.status(200).json({ message: "Report and associated instructor data deleted successfully" });
+
   } catch (error) {
+    console.error("Error deleting report:", error);
     res.status(500).json({ message: "Error deleting report", error: error.message });
   }
 };

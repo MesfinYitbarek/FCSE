@@ -846,12 +846,10 @@ export const updateAssignment = async (req, res) => {
 };
 
 // Delete an Assignment
-// DELETE /assignments/sub/:parentId/:subId
 export const deleteAssignment = async (req, res) => {
   try {
     const { parentId, subId } = req.params;
 
-    // Validate both IDs are valid ObjectIds
     if (
       !mongoose.Types.ObjectId.isValid(parentId) ||
       !mongoose.Types.ObjectId.isValid(subId)
@@ -859,13 +857,11 @@ export const deleteAssignment = async (req, res) => {
       return res.status(400).json({ message: "Invalid assignment ID" });
     }
 
-    // Find parent assignment
     const parentAssignment = await Assignment.findById(parentId);
     if (!parentAssignment) {
       return res.status(404).json({ message: "Parent assignment not found" });
     }
 
-    // Find sub-assignment
     const subAssignmentIndex = parentAssignment.assignments.findIndex(
       (sub) => sub._id.toString() === subId
     );
@@ -874,38 +870,53 @@ export const deleteAssignment = async (req, res) => {
       return res.status(404).json({ message: "Sub-assignment not found" });
     }
 
-    // Get the sub-assignment before removing it
     const subAssignment = parentAssignment.assignments[subAssignmentIndex];
 
-    // Remove sub-assignment from the array
+    // Extract context
+    const { instructorId, workload } = subAssignment;
+    const { year, semester, program } = parentAssignment;
+
+    // Remove the sub-assignment
     parentAssignment.assignments.splice(subAssignmentIndex, 1);
 
-    // If the parent has no more sub-assignments, delete the parent too
     if (parentAssignment.assignments.length === 0) {
       await Assignment.findByIdAndDelete(parentId);
     } else {
-      // Otherwise save the parent with the sub-assignment removed
       await parentAssignment.save();
     }
 
-    // Update instructor workload if needed
-    if (
-      subAssignment.instructorId &&
-      mongoose.Types.ObjectId.isValid(subAssignment.instructorId)
-    ) {
-      // Handle instructor workload update similar to your existing code
-      const instructor = await Instructor.findById(subAssignment.instructorId);
+    if (instructorId && mongoose.Types.ObjectId.isValid(instructorId)) {
+      const instructor = await Instructor.findOne({ userId: instructorId });
+
       if (instructor) {
-        // Update workload logic here...
+        // Decrease workload for the same year, semester, and program
+        const index = instructor.workload.findIndex(
+          (entry) =>
+            entry.year === year &&
+            entry.semester === semester &&
+            entry.program === program
+        );
+
+        if (index !== -1) {
+          instructor.workload[index].value -= workload;
+          if (instructor.workload[index].value <= 0) {
+            instructor.workload.splice(index, 1);
+          }
+        }
+
+        await instructor.save();
       }
     }
 
     res.json({ message: "Assignment deleted successfully" });
   } catch (error) {
     console.error("Error deleting sub-assignment:", error);
-    res.status(500).json({ message: "Error deleting sub-assignment", error });
+    res
+      .status(500)
+      .json({ message: "Error deleting sub-assignment", error: error.message });
   }
 };
+
 // Get All Assignments
 export const getAllAssignments = async (req, res) => {
   try {
@@ -1091,6 +1102,20 @@ export const runAutomaticAssignment = async (req, res) => {
       return totalScore;
     };
 
+    // Function to get course experience from assigned courses
+    const getInstructorCourseExperience = async (instructorId, courseId) => {
+      const instructor = await Instructor.findOne({ userId: instructorId });
+      if (!instructor) return 0;
+      
+      // Count how many times this instructor has taught this course before
+      const experience = instructor.assignedCourses.filter(c => 
+        c.course.toString() === courseId.toString()
+      ).length;
+      
+      console.log(`Instructor ${instructorId} has ${experience} years of experience teaching course ${courseId}`);
+      return experience;
+    };
+
     let courseAssignments = {};
     console.log("Processing instructor preferences...");
     for (let preference of preferences) {
@@ -1112,14 +1137,8 @@ export const runAutomaticAssignment = async (req, res) => {
         if (!courseAssignments[courseId]) courseAssignments[courseId] = [];
         const instructorId = preference.instructorId._id;
         
-        let instructor = await Instructor.findOne({
-          userId: instructorId,
-        }).populate("assignedCourses");
-        
-        let experienceYears =
-          instructor?.assignedCourses?.filter((c) =>
-            c.courseId.equals(courseId)
-          ).length || 0;
+        // Get years of experience teaching this course
+        const experienceYears = await getInstructorCourseExperience(instructorId, courseId);
           
         let score = calculateScore(rank, experienceYears);
         
@@ -1217,7 +1236,7 @@ export const runAutomaticAssignment = async (req, res) => {
       assignedBy,
     };
 
-    console.log("\nProcessing workload calculations...");
+    console.log("\nProcessing workload calculations and updating instructor records...");
     for (const assignment of assignedCourses) {
       const { instructorId, courseId } = assignment;
       const course = await Course.findById(courseId);
@@ -1255,6 +1274,7 @@ export const runAutomaticAssignment = async (req, res) => {
         continue;
       }
 
+      // Update instructor workload
       const existingWorkloadIndex = instructor.workload.findIndex(
         (entry) =>
           entry.year === year &&
@@ -1270,8 +1290,10 @@ export const runAutomaticAssignment = async (req, res) => {
         instructor.workload.push({ year, semester, program, value: workload });
       }
 
+
+
       await instructor.save();
-      console.log(`Workload updated for instructor ${assignment.instructorName}`);
+      console.log(`Instructor ${assignment.instructorName} workload updated`);
     }
 
     const savedAssignment = await Assignment.create(assignmentData);
