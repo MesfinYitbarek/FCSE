@@ -26,35 +26,40 @@ const InstructorDashboard = () => {
   // Fetch dashboard data
   useEffect(() => {
     const fetchDashboardData = async () => {
+      setIsLoading(true);
+      setError(null);
+      
       try {
-        setIsLoading(true);
-        setError(null);
+        // Fetch complaints data - handle errors gracefully
+        let complaintsData = { total: 0, resolved: 0, pending: 0, rejected: 0 };
         
-        // Fetch complaints data
-        const complaintsResponse = await api.get(`/complaints/${user._id}`);
-        const complaints = complaintsResponse.data;
+        try {
+          const complaintsResponse = await api.get(`/complaints/${user._id}`);
+          const complaints = complaintsResponse.data;
+          
+          // Process complaints data
+          complaintsData = {
+            total: complaints.length,
+            resolved: complaints.filter(c => c.status === "Resolved").length,
+            pending: complaints.filter(c => c.status === "Pending").length,
+            rejected: complaints.filter(c => c.status === "Rejected").length
+          };
+        } catch (complaintError) {
+          // Just log the error but continue with zeros for complaints
+          console.error("Error fetching complaints data:", complaintError);
+          // Keep the default zeros in complaintsData
+        }
         
         // Fetch announcements data
         const announcementsResponse = await api.get('/announcements');
         const announcements = announcementsResponse.data;
-        
-        // Process complaints data
-        const totalComplaints = complaints.length;
-        const resolvedComplaints = complaints.filter(c => c.status === "Resolved").length;
-        const pendingComplaints = complaints.filter(c => c.status === "Pending").length;
-        const rejectedComplaints = complaints.filter(c => c.status === "Rejected").length;
         
         // Process announcements data
         const totalAnnouncements = announcements.length;
         const unreadAnnouncements = announcements.filter(a => !a.isRead).length;
         
         setStats({
-          complaints: {
-            total: totalComplaints,
-            resolved: resolvedComplaints,
-            pending: pendingComplaints,
-            rejected: rejectedComplaints
-          },
+          complaints: complaintsData,
           announcements: {
             total: totalAnnouncements,
             unread: unreadAnnouncements
