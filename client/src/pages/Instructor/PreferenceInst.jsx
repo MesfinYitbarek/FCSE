@@ -49,7 +49,7 @@ const PreferencesInst = () => {
   useEffect(() => {
     if (user?.role === "Instructor") {
       fetchPreferences();
-      fetchPreferenceForm();
+      // Don't fetch preference form automatically - only fetch on search click
     }
   }, [user, year, semester]);
 
@@ -445,6 +445,7 @@ const PreferencesInst = () => {
                               <th className="p-3 text-left font-semibold text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700">Course</th>
                               <th className="p-3 text-left font-semibold text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700">Code</th>
                               <th className="p-3 text-left font-semibold text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700">Section</th>
+                              <th className="p-3 text-left font-semibold text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700">No of Sections</th>
                               <th className="p-3 text-left font-semibold text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700">Chair</th>
                             </tr>
                           </thead>
@@ -472,11 +473,9 @@ const PreferencesInst = () => {
                                     </td>
                                     <td className="p-3 border-b border-gray-200 dark:border-gray-700 text-gray-800 dark:text-white">
                                       {course.section}
-                                      {course.NoOfSections > 1 && 
-                                        <span className="ml-1 text-xs bg-gray-100 dark:bg-gray-700 px-1 rounded">
-                                          ({course.NoOfSections} sections)
-                                        </span>
-                                      }
+                                    </td>
+                                    <td className="p-3 border-b border-gray-200 dark:border-gray-700 text-gray-800 dark:text-white">
+                                      {course.NoOfSections}
                                     </td>
                                     <td className="p-3 border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400">
                                       {pref.courseId.chair || course.chair}
@@ -486,7 +485,7 @@ const PreferencesInst = () => {
                               })
                             ) : (
                               <tr>
-                                <td colSpan="5" className="p-4 text-center text-gray-500 dark:text-gray-400">No preferences found</td>
+                                <td colSpan="6" className="p-4 text-center text-gray-500 dark:text-gray-400">No preferences found</td>
                               </tr>
                             )}
                           </tbody>
@@ -518,11 +517,9 @@ const PreferencesInst = () => {
                                 </div>
                                 <div className="text-sm text-gray-500 dark:text-gray-400">
                                   Section {course.section}
-                                  {course.NoOfSections > 1 && 
-                                    <span className="ml-1 text-xs bg-gray-100 dark:bg-gray-700 px-1 rounded">
-                                      ({course.NoOfSections} sections)
-                                    </span>
-                                  }
+                                </div>
+                                <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                  No of Sections: {course.NoOfSections}
                                 </div>
                               </div>
                             ) : null;
@@ -565,6 +562,7 @@ const PreferencesInst = () => {
                               <th className="p-3 text-left font-semibold text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700">Course</th>
                               <th className="p-3 text-left font-semibold text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700">Code</th>
                               <th className="p-3 text-left font-semibold text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700">Section</th>
+                              <th className="p-3 text-left font-semibold text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700">No of Sections</th>
                               <th className="p-3 text-left font-semibold text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700">Chair</th>
                               <th className="p-3 text-left font-semibold text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700">Details</th>
                               <th className="p-3 text-left font-semibold text-gray-700 dark:text-gray-300 border-b border-gray-200 dark:border-gray-700">Preference Rank</th>
@@ -573,7 +571,7 @@ const PreferencesInst = () => {
                           <tbody>
                             {filteredCourses.length === 0 ? (
                               <tr>
-                                <td colSpan="6" className="p-4 text-center text-gray-500 dark:text-gray-400">No courses match your search criteria</td>
+                                <td colSpan="7" className="p-4 text-center text-gray-500 dark:text-gray-400">No courses match your search criteria</td>
                               </tr>
                             ) : (
                               filteredCourses.map((course) => (
@@ -589,11 +587,9 @@ const PreferencesInst = () => {
                                   </td>
                                   <td className="p-3 border-b border-gray-200 dark:border-gray-700 text-gray-800 dark:text-white">
                                     {course.section}
-                                    {course.NoOfSections > 1 && 
-                                      <span className="ml-1 text-xs bg-gray-100 dark:bg-gray-700 px-1 rounded">
-                                        ({course.NoOfSections} sections)
-                                      </span>
-                                    }
+                                  </td>
+                                  <td className="p-3 border-b border-gray-200 dark:border-gray-700 text-gray-800 dark:text-white">
+                                    {course.NoOfSections}
                                   </td>
                                   <td className="p-3 border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400">
                                     {course.chair}
@@ -649,11 +645,9 @@ const PreferencesInst = () => {
                                   </div>
                                   <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                                     Section {course.section}
-                                    {course.NoOfSections > 1 && 
-                                      <span className="ml-1 text-xs bg-gray-100 dark:bg-gray-700 px-1 rounded">
-                                        ({course.NoOfSections} sections)
-                                      </span>
-                                    }
+                                  </div>
+                                  <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                    No of Sections: {course.NoOfSections}
                                   </div>
                                 </div>
                                 <div className="flex items-center gap-2">
