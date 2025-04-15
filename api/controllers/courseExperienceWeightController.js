@@ -69,8 +69,6 @@ export const updateCourseExperienceWeight = async (req, res) => {
     });
   }
 };
-
-
 export const deleteCourseExperienceWeight = async (req, res) => {
   try {
     const report = await CourseExperienceWeight.findByIdAndDelete(req.params.id);
