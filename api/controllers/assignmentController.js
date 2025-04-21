@@ -18,7 +18,7 @@ export const manualAssignment = async (req, res) => {
         .status(400)
         .json({ message: "At least one assignment is required" });
     }
-
+    
     const bulkAssignments = [];
 
     // Process each assignment
@@ -1289,8 +1289,6 @@ export const runAutomaticAssignment = async (req, res) => {
         console.log(`Creating new workload entry for ${assignment.instructorName} (${year} ${semester} ${program})`);
         instructor.workload.push({ year, semester, program, value: workload });
       }
-
-
 
       await instructor.save();
       console.log(`Instructor ${assignment.instructorName} workload updated`);

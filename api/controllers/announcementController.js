@@ -60,9 +60,6 @@ export const getAnnouncements = async (req, res) => {
 };
 
 
-
-
-
 // Get announcements published by the current user
 export const getAnnouncementsForPublisher = async (req, res) => {
   try {
@@ -180,3 +177,6 @@ export const getAnnouncementReadStats = async (req, res) => {
     res.status(500).json({ message: "Error fetching announcement statistics", error: error.message });
   }
 };
+
+
+
