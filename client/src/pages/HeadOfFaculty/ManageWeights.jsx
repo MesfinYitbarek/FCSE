@@ -1,12 +1,8 @@
 import { useEffect, useState } from "react";
-import {
-  Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField,
-  Paper, Typography, Grid, Card, CardContent, IconButton, Box,
-  Skeleton, Alert, Snackbar, Tooltip
-} from "@mui/material";
-import { Edit as EditIcon } from "@mui/icons-material";
 import { motion } from "framer-motion";
+import { toast } from "react-hot-toast";
 import api from "../../utils/api";
+import { Edit2, X, AlertTriangle, Save } from "lucide-react";
 
 const ManageWeights = () => {
   const [preferenceWeights, setPreferenceWeights] = useState([]);
@@ -14,7 +10,6 @@ const ManageWeights = () => {
   const [form, setForm] = useState({ maxWeight: "", interval: "", type: "preference" });
   const [editingId, setEditingId] = useState(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [notification, setNotification] = useState({ open: false, message: "", type: "success" });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -30,7 +25,7 @@ const ManageWeights = () => {
       setCourseExperienceWeights(expRes.data);
     } catch (error) {
       console.error("Error fetching weights", error);
-      showNotification("Failed to fetch weights", "error");
+      toast.error("Failed to fetch weights");
     } finally {
       setLoading(false);
     }
@@ -43,14 +38,14 @@ const ManageWeights = () => {
 
     try {
       await api.put(`${url}/${editingId}`, { maxWeight, interval });
-      showNotification("Weight updated successfully");
+      toast.success("Weight updated successfully");
       fetchWeights();
       setForm({ maxWeight: "", interval: "", type: "preference" });
       setEditingId(null);
       setIsEditModalOpen(false);
     } catch (error) {
       console.error("Error updating weight", error);
-      showNotification("Failed to update weight", "error");
+      toast.error("Failed to update weight");
     }
   };
 
@@ -60,156 +55,185 @@ const ManageWeights = () => {
     setIsEditModalOpen(true);
   };
 
-  const showNotification = (message, type = "success") => {
-    setNotification({ open: true, message, type });
-  };
-
-  const closeNotification = () => {
-    setNotification({ ...notification, open: false });
-  };
-
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.4 }}
-      className="p-6"
-    >
-      {/* Header */}
-      <Paper elevation={0} sx={{ p: 3, borderRadius: 2, mb: 3, background: 'linear-gradient(135deg, #f6f9fc 0%, #edf2f7 100%)' }}>
-        <Typography variant="h4" component="h1" fontWeight="bold" color="primary">
-          Manage Weights
-        </Typography>
-        <Typography variant="subtitle1" color="text.secondary">
+    <div className="animate-fadeIn">
+      {/* Page Header */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 mb-6">
+        <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Manage Weights</h1>
+        <p className="text-gray-600 dark:text-gray-400 mt-1">
           View and edit preference and course experience weights
-        </Typography>
-      </Paper>
+        </p>
+      </div>
 
-      {/* Weights List */}
+      {/* Loading State */}
       {loading ? (
-        <Box sx={{ mt: 2 }}>
-          <Skeleton variant="rectangular" height={400} />
-        </Box>
+        <div className="space-y-4">
+          {[...Array(4)].map((_, index) => (
+            <div key={index} className="h-20 bg-gray-200 dark:bg-gray-700 animate-pulse rounded-lg"></div>
+          ))}
+        </div>
       ) : (
-        <Grid container spacing={2}>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Preference Weights */}
-          <Grid item xs={12} md={6}>
-            <Typography variant="h6" gutterBottom>
+          <div>
+            <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">
               Preference Weights
-            </Typography>
-            {preferenceWeights.map((weight) => (
-              <Card key={weight._id} sx={{ mb: 2, borderRadius: 2, boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)' }}>
-                <CardContent>
-                  <Box display="flex" justifyContent="space-between" alignItems="center">
-                    <Box>
-                      <Typography variant="body1" fontWeight="bold">
+            </h2>
+            <div className="space-y-4">
+              {preferenceWeights.map((weight) => (
+                <motion.div
+                  key={weight._id}
+                  whileHover={{ y: -2 }}
+                  transition={{ duration: 0.2 }}
+                  className="bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-all p-4"
+                >
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="font-bold text-gray-900 dark:text-white">
                         Max Weight: {weight.maxWeight}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
+                      </p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                         Interval: {weight.interval}
-                      </Typography>
-                    </Box>
-                    <Box>
-                      <Tooltip title="Edit">
-                        <IconButton onClick={() => handleEdit(weight, "preference")}>
-                          <EditIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    </Box>
-                  </Box>
-                </CardContent>
-              </Card>
-            ))}
-          </Grid>
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => handleEdit(weight, "preference")}
+                      className="p-2 text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+                      aria-label="Edit weight"
+                    >
+                      <Edit2 size={18} />
+                    </button>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
 
           {/* Course Experience Weights */}
-          <Grid item xs={12} md={6}>
-            <Typography variant="h6" gutterBottom>
+          <div>
+            <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">
               Course Experience Weights
-            </Typography>
-            {courseExperienceWeights.map((weight) => (
-              <Card key={weight._id} sx={{ mb: 2, borderRadius: 2, boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)' }}>
-                <CardContent>
-                  <Box display="flex" justifyContent="space-between" alignItems="center">
-                    <Box>
-                      <Typography variant="body1" fontWeight="bold">
+            </h2>
+            <div className="space-y-4">
+              {courseExperienceWeights.map((weight) => (
+                <motion.div
+                  key={weight._id}
+                  whileHover={{ y: -2 }}
+                  transition={{ duration: 0.2 }}
+                  className="bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-all p-4"
+                >
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="font-bold text-gray-900 dark:text-white">
                         Max Weight: {weight.maxWeight}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
+                      </p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                         Interval: {weight.interval}
-                      </Typography>
-                    </Box>
-                    <Box>
-                      <Tooltip title="Edit">
-                        <IconButton onClick={() => handleEdit(weight, "course")}>
-                          <EditIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    </Box>
-                  </Box>
-                </CardContent>
-              </Card>
-            ))}
-          </Grid>
-        </Grid>
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => handleEdit(weight, "course")}
+                      className="p-2 text-indigo-600 hover:text-indigo-800 dark:text-indigo-400 dark:hover:text-indigo-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full transition-colors"
+                      aria-label="Edit weight"
+                    >
+                      <Edit2 size={18} />
+                    </button>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Edit Weight Modal */}
-      <Dialog open={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle>Edit Weight</DialogTitle>
-        <DialogContent>
-          <form onSubmit={handleSubmit}>
-            <Grid container spacing={2} sx={{ mt: 1 }}>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Max Weight"
-                  type="number"
-                  value={form.maxWeight}
-                  onChange={(e) => setForm({ ...form, maxWeight: e.target.value })}
-                  required
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="Interval"
-                  type="number"
-                  value={form.interval}
-                  onChange={(e) => setForm({ ...form, interval: e.target.value })}
-                  required
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <Typography variant="body2" color="text.secondary">
-                  Type: {form.type === "preference" ? "Preference Weight" : "Course Experience Weight"}
-                </Typography>
-              </Grid>
-            </Grid>
-            <DialogActions sx={{ mt: 2 }}>
-              <Button onClick={() => setIsEditModalOpen(false)} variant="outlined" color="inherit">
-                Cancel
-              </Button>
-              <Button type="submit" variant="contained" color="primary">
-                Update
-              </Button>
-            </DialogActions>
-          </form>
-        </DialogContent>
-      </Dialog>
+      {isEditModalOpen && (
+        <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 dark:bg-gray-900 dark:bg-opacity-75 transition-opacity" aria-hidden="true"></div>
 
-      {/* Notification Snackbar */}
-      <Snackbar
-        open={notification.open}
-        autoHideDuration={4000}
-        onClose={closeNotification}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert onClose={closeNotification} severity={notification.type} variant="filled">
-          {notification.message}
-        </Alert>
-      </Snackbar>
-    </motion.div>
+            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+            <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+              <div className="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div className="sm:flex sm:items-start">
+                  <div className="mt-3 text-center sm:mt-0 sm:text-left w-full">
+                    <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white" id="modal-title">
+                      Edit Weight
+                    </h3>
+                    <div className="mt-4 space-y-4">
+                      <div>
+                        <label htmlFor="maxWeight" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Max Weight
+                        </label>
+                        <input
+                          type="number"
+                          name="maxWeight"
+                          id="maxWeight"
+                          value={form.maxWeight}
+                          onChange={(e) => setForm({ ...form, maxWeight: e.target.value })}
+                          required
+                          className="mt-1 block w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                          placeholder="Enter max weight"
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="interval" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Interval
+                        </label>
+                        <input
+                          type="number"
+                          name="interval"
+                          id="interval"
+                          value={form.interval}
+                          onChange={(e) => setForm({ ...form, interval: e.target.value })}
+                          required
+                          className="mt-1 block w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                          placeholder="Enter interval"
+                        />
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          Type: {form.type === "preference" ? "Preference Weight" : "Course Experience Weight"}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  className="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm"
+                >
+                  <Save size={16} className="mr-2" />
+                  Update
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsEditModalOpen(false)}
+                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:w-auto sm:text-sm"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style jsx="true">{`
+        .animate-fadeIn {
+          animation: fadeIn 0.4s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+      `}</style>
+    </div>
   );
 };
 

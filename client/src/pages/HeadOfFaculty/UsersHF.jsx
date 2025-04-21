@@ -10,7 +10,7 @@ import {
   UserPlus,
   Search,
   Filter,
-  Edit,
+  Edit2,
   Trash2,
   UserCheck,
   X,
@@ -222,8 +222,8 @@ const UsersManagement = () => {
       return <ChevronDown size={14} className="opacity-50" />;
     }
     return sortConfig.direction === 'asc' 
-      ? <ChevronUp size={14} className="text-indigo-600" /> 
-      : <ChevronDown size={14} className="text-indigo-600" />;
+      ? <ChevronUp size={14} className="text-indigo-600 dark:text-indigo-400" /> 
+      : <ChevronDown size={14} className="text-indigo-600 dark:text-indigo-400" />;
   };
 
   const resetFilters = () => {
@@ -410,15 +410,15 @@ const UsersManagement = () => {
   const getRoleBadgeColor = (role) => {
     switch (role) {
       case "HeadOfFaculty":
-        return "bg-purple-100 text-purple-800";
+        return "bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300";
       case "ChairHead":
-        return "bg-blue-100 text-blue-800";
+        return "bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300";
       case "COC":
-        return "bg-green-100 text-green-800";
+        return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300";
       case "Instructor":
-        return "bg-gray-100 text-gray-800";
+        return "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300";
       default:
-        return "bg-gray-100 text-gray-800";
+        return "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300";
     }
   };
 
@@ -491,11 +491,11 @@ const UsersManagement = () => {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="animate-pulse text-center">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-indigo-100 mb-4">
-            <Users className="h-8 w-8 text-indigo-500" />
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-indigo-100 dark:bg-indigo-900 mb-4">
+            <Users className="h-8 w-8 text-indigo-500 dark:text-indigo-300" />
           </div>
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Loading users...</h3>
-          <p className="text-gray-500">Please wait while we fetch the user data</p>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">Loading users...</h3>
+          <p className="text-gray-500 dark:text-gray-400">Please wait while we fetch the user data</p>
         </div>
       </div>
     );
@@ -504,13 +504,13 @@ const UsersManagement = () => {
   if (error) {
     return (
       <div className="h-full flex items-center justify-center">
-        <div className="text-center bg-red-50 p-6 rounded-xl max-w-md mx-4">
-          <AlertTriangle className="h-12 w-12 text-red-500 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-red-800 mb-2">Failed to Load Users</h3>
-          <p className="text-red-600 mb-4">{error}</p>
+        <div className="text-center bg-red-50 dark:bg-red-900/20 p-6 rounded-xl max-w-md mx-4">
+          <AlertTriangle className="h-12 w-12 text-red-500 dark:text-red-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-red-800 dark:text-red-300 mb-2">Failed to Load Users</h3>
+          <p className="text-red-600 dark:text-red-400 mb-4">{error}</p>
           <button
             onClick={fetchUsers}
-            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-red-700 dark:text-red-200 bg-red-100 dark:bg-red-900/50 hover:bg-red-200 dark:hover:bg-red-900/70 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
           >
             <RefreshCw className="w-4 h-4 mr-2" />
             Try Again
@@ -523,18 +523,13 @@ const UsersManagement = () => {
   const isMobile = windowWidth < 768;
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.3 }}
-      className="h-full flex flex-col"
-    >
+    <div className="animate-fadeIn">
       {/* Page header */}
       <div className="mb-4 sm:mb-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
           <div className="mb-3 sm:mb-0">
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">User Management</h1>
-            <p className="mt-1 text-xs sm:text-sm text-gray-500">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">User Management</h1>
+            <p className="mt-1 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
               Manage faculty members, chairs, and instructors
             </p>
           </div>
@@ -543,7 +538,7 @@ const UsersManagement = () => {
               resetForm();
               setIsAddUserOpen(true);
             }}
-            className="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            className="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
           >
             <UserPlus className="w-4 h-4 mr-1.5" />
             Add New User
@@ -552,8 +547,8 @@ const UsersManagement = () => {
       </div>
 
       {/* Filters & Search */}
-      <div className="bg-white shadow rounded-lg mb-4">
-        <div className="p-3 sm:p-4 border-b border-gray-200">
+      <div className="bg-white dark:bg-gray-800 shadow rounded-lg mb-4">
+        <div className="p-3 sm:p-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
             {/* Search */}
             <div className="relative flex-1">
@@ -563,7 +558,7 @@ const UsersManagement = () => {
               <input
                 ref={searchInputRef}
                 type="text"
-                className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-9 pr-9 py-2"
+                className="bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-9 pr-9 py-2"
                 placeholder="Search users..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -573,7 +568,7 @@ const UsersManagement = () => {
                   className="absolute inset-y-0 right-0 flex items-center pr-2.5"
                   onClick={() => setSearchTerm("")}
                 >
-                  <XCircle className="w-4 h-4 text-gray-400 hover:text-gray-600" />
+                  <XCircle className="w-4 h-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" />
                 </button>
               )}
             </div>
@@ -583,12 +578,12 @@ const UsersManagement = () => {
               <div className="relative" ref={filtersRef}>
                 <button
                   onClick={() => setShowFilters(!showFilters)}
-                  className="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                  className="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 border border-gray-300 dark:border-gray-600 shadow-sm text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                 >
                   <Filter className="w-4 h-4 mr-1.5" />
                   {isMobile ? "" : "Filters"}
                   {(filters.role || filters.chair) && (
-                    <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                    <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-300">
                       {Object.values(filters).filter(Boolean).length}
                     </span>
                   )}
@@ -596,13 +591,13 @@ const UsersManagement = () => {
 
                 {/* Filter dropdown */}
                 {showFilters && (
-                  <div className="absolute right-0 mt-2 w-64 bg-white border border-gray-200 rounded-md shadow-lg z-10">
+                  <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-10">
                     <div className="p-3">
                       <div className="flex justify-between items-center mb-3">
-                        <h3 className="text-sm font-medium text-gray-900">Filters</h3>
+                        <h3 className="text-sm font-medium text-gray-900 dark:text-white">Filters</h3>
                         <button
                           onClick={resetFilters}
-                          className="text-xs text-indigo-600 hover:text-indigo-800"
+                          className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300"
                         >
                           Reset all
                         </button>
@@ -611,13 +606,13 @@ const UsersManagement = () => {
                       <div className="space-y-3">
                         {/* Role filter */}
                         <div>
-                          <label className="block text-xs font-medium text-gray-700 mb-1">
+                          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                             Role
                           </label>
                           <select
                             value={filters.role}
                             onChange={(e) => handleFilterChange("role", e.target.value)}
-                            className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2"
+                            className="bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2"
                           >
                             <option value="">All Roles</option>
                             <option value="HeadOfFaculty">Head of Faculty</option>
@@ -629,13 +624,13 @@ const UsersManagement = () => {
 
                         {/* Chair filter */}
                         <div>
-                          <label className="block text-xs font-medium text-gray-700 mb-1">
+                          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                             Chair
                           </label>
                           <select
                             value={filters.chair}
                             onChange={(e) => handleFilterChange("chair", e.target.value)}
-                            className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2"
+                            className="bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2"
                           >
                             <option value="">All Chairs</option>
                             {availableChairs.map((chair) => (
@@ -654,7 +649,7 @@ const UsersManagement = () => {
               {/* Export Button */}
               <button
                 onClick={exportToCSV}
-                className="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                className="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 border border-gray-300 dark:border-gray-600 shadow-sm text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
               >
                 <Download className="w-4 h-4 mr-1.5" />
                 {isMobile ? "" : "Export"}
@@ -665,16 +660,16 @@ const UsersManagement = () => {
 
         {/* Active filters */}
         {(searchTerm || filters.role || filters.chair) && (
-          <div className="px-3 sm:px-4 py-2 border-b border-gray-200 bg-gray-50">
+          <div className="px-3 sm:px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
             <div className="flex flex-wrap items-center gap-1.5">
-              <span className="text-xs font-medium text-gray-500">Filters:</span>
+              <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Filters:</span>
               
               {searchTerm && (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200">
                   Search: {searchTerm.length > 15 ? searchTerm.substring(0, 15) + '...' : searchTerm}
                   <button
                     onClick={() => setSearchTerm("")}
-                    className="ml-1 text-gray-500 hover:text-gray-700"
+                    className="ml-1 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300"
                   >
                     <X size={12} />
                   </button>
@@ -682,11 +677,11 @@ const UsersManagement = () => {
               )}
               
               {filters.role && (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900/60 text-indigo-800 dark:text-indigo-300">
                   Role: {filters.role}
                   <button
                     onClick={() => handleFilterChange("role", "")}
-                    className="ml-1 text-indigo-600 hover:text-indigo-800"
+                    className="ml-1 text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300"
                   >
                     <X size={12} />
                   </button>
@@ -694,11 +689,11 @@ const UsersManagement = () => {
               )}
               
               {filters.chair && (
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/60 text-blue-800 dark:text-blue-300">
                   Chair: {filters.chair}
                   <button
                     onClick={() => handleFilterChange("chair", "")}
-                    className="ml-1 text-blue-600 hover:text-blue-800"
+                    className="ml-1 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300"
                   >
                     <X size={12} />
                   </button>
@@ -707,7 +702,7 @@ const UsersManagement = () => {
               
               <button
                 onClick={resetFilters}
-                className="text-xs text-indigo-600 hover:text-indigo-800 ml-auto"
+                className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 ml-auto"
               >
                 Clear all
               </button>
@@ -717,17 +712,17 @@ const UsersManagement = () => {
       </div>
 
       {/* Users Table/Cards */}
-      <div className="bg-white shadow rounded-lg overflow-hidden flex-1 flex flex-col">
+      <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden flex-1 flex flex-col">
         {loading && users.length > 0 ? (
           <div className="flex justify-center items-center h-16">
-            <RefreshCw className="w-5 h-5 text-indigo-500 animate-spin" />
-            <span className="ml-2 text-sm text-gray-600">Refreshing users...</span>
+            <RefreshCw className="w-5 h-5 text-indigo-500 dark:text-indigo-400 animate-spin" />
+            <span className="ml-2 text-sm text-gray-600 dark:text-gray-400">Refreshing users...</span>
           </div>
         ) : filteredUsers.length === 0 ? (
           <div className="p-4 sm:p-6 text-center">
-            <Users className="h-10 w-10 text-gray-400 mx-auto mb-2" />
-            <h3 className="text-base sm:text-lg font-medium text-gray-900 mb-1">No users found</h3>
-            <p className="text-sm text-gray-500 mb-4">
+            <Users className="h-10 w-10 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
+            <h3 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white mb-1">No users found</h3>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
               {searchTerm || filters.role || filters.chair
                 ? "Try adjusting your search or filters"
                 : "Add your first user to get started"}
@@ -736,7 +731,7 @@ const UsersManagement = () => {
             {searchTerm || filters.role || filters.chair ? (
               <button
                 onClick={resetFilters}
-                className="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                className="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 border border-gray-300 dark:border-gray-600 shadow-sm text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
               >
                 <X className="w-4 h-4 mr-1.5" />
                 Clear Filters
@@ -747,7 +742,7 @@ const UsersManagement = () => {
                   resetForm();
                   setIsAddUserOpen(true);
                 }}
-                className="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                className="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
               >
                 <UserPlus className="w-4 h-4 mr-1.5" />
                 Add New User
@@ -758,31 +753,31 @@ const UsersManagement = () => {
           <>
             {/* Mobile view (cards) */}
             {isMobile ? (
-              <div className="divide-y divide-gray-200 overflow-y-auto flex-1">
+              <div className="divide-y divide-gray-200 dark:divide-gray-700 overflow-y-auto flex-1">
                 {paginatedUsers.map((user) => (
-                  <div key={user._id} className="p-3 hover:bg-gray-50">
+                  <div key={user._id} className="p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-9 w-9 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-center text-white font-medium">
                           {user.fullName ? user.fullName.charAt(0).toUpperCase() : "?"}
                         </div>
                         <div className="ml-3">
-                          <div className="text-sm font-medium text-gray-900">{user.fullName}</div>
-                          <div className="text-xs text-gray-500">@{user.username}</div>
+                          <div className="text-sm font-medium text-gray-900 dark:text-white">{user.fullName}</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400">@{user.username}</div>
                         </div>
                       </div>
                       <div className="relative">
                         <button 
-                          className="p-1 rounded-full text-gray-400 hover:bg-gray-100"
+                          className="p-1 rounded-full text-gray-400 dark:text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-700"
                           onClick={() => openDetailModal(user)}
                         >
                           <Info size={16} />
                         </button>
                       </div>
                     </div>
-                    <div className="mt-2 text-xs text-gray-500 grid grid-cols-2 gap-x-2 gap-y-1">
+                    <div className="mt-2 text-xs text-gray-500 dark:text-gray-400 grid grid-cols-2 gap-x-2 gap-y-1">
                       <div className="flex items-center col-span-2">
-                        <Mail size={12} className="text-gray-400 mr-1.5" />
+                        <Mail size={12} className="text-gray-400 dark:text-gray-500 mr-1.5" />
                         <span className="truncate">{user.email}</span>
                       </div>
                       <div className="flex items-center">
@@ -796,13 +791,13 @@ const UsersManagement = () => {
                       <div className="flex items-center justify-end">
                         <button
                           onClick={() => openEditModal(user)}
-                          className="text-indigo-600 p-1 rounded-full hover:bg-indigo-50 mr-1"
+                          className="text-indigo-600 dark:text-indigo-400 p-1 rounded-full hover:bg-indigo-50 dark:hover:bg-indigo-900/50 mr-1"
                         >
-                          <Edit size={14} />
+                          <Edit2 size={14} />
                         </button>
                         <button
                           onClick={() => openDeleteModal(user)}
-                          className="text-red-600 p-1 rounded-full hover:bg-red-50"
+                          className="text-red-600 dark:text-red-400 p-1 rounded-full hover:bg-red-50 dark:hover:bg-red-900/50"
                         >
                           <Trash2 size={14} />
                         </button>
@@ -814,12 +809,12 @@ const UsersManagement = () => {
             ) : (
               // Desktop view (table)
               <div className="overflow-y-auto flex-1">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50 sticky top-0 z-10">
+                <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                  <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0 z-10">
                     <tr>
                       <th 
                         scope="col" 
-                        className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                        className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer"
                         onClick={() => requestSort('fullName')}
                       >
                         <div className="flex items-center">
@@ -829,7 +824,7 @@ const UsersManagement = () => {
                       </th>
                       <th 
                         scope="col" 
-                        className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                        className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer"
                         onClick={() => requestSort('email')}
                       >
                         <div className="flex items-center">
@@ -839,7 +834,7 @@ const UsersManagement = () => {
                       </th>
                       <th 
                         scope="col" 
-                        className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                        className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer"
                         onClick={() => requestSort('role')}
                       >
                         <div className="flex items-center">
@@ -849,7 +844,7 @@ const UsersManagement = () => {
                       </th>
                       <th 
                         scope="col" 
-                        className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer"
+                        className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer"
                         onClick={() => requestSort('chair')}
                       >
                         <div className="flex items-center">
@@ -859,7 +854,7 @@ const UsersManagement = () => {
                       </th>
                       <th 
                         scope="col" 
-                        className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hidden md:table-cell"
+                        className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hidden md:table-cell"
                         onClick={() => requestSort('createdAt')}
                       >
                         <div className="flex items-center">
@@ -867,16 +862,16 @@ const UsersManagement = () => {
                           <div className="ml-1">{getSortIcon('createdAt')}</div>
                         </div>
                       </th>
-                      <th scope="col" className="px-3 py-2.5 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      <th scope="col" className="px-3 py-2.5 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         Actions
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                     {paginatedUsers.map((user) => (
                       <tr 
                         key={user._id} 
-                        className="hover:bg-gray-50 transition-colors"
+                        className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
                       >
                         <td className="px-3 py-2.5 whitespace-nowrap">
                           <div className="flex items-center">
@@ -884,22 +879,22 @@ const UsersManagement = () => {
                               {user.fullName ? user.fullName.charAt(0).toUpperCase() : "?"}
                             </div>
                             <div className="ml-3">
-                              <div className="text-sm font-medium text-gray-900 truncate max-w-[120px] md:max-w-none">
+                              <div className="text-sm font-medium text-gray-900 dark:text-white truncate max-w-[120px] md:max-w-none">
                                 {user.fullName}
                               </div>
-                              <div className="text-xs text-gray-500">@{user.username}</div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400">@{user.username}</div>
                             </div>
                           </div>
                         </td>
                         <td className="px-3 py-2.5 whitespace-nowrap">
                           <div className="flex items-center">
-                            <Mail size={14} className="text-gray-400 mr-1.5" />
-                            <span className="text-sm text-gray-900 truncate max-w-[120px] md:max-w-none">{user.email}</span>
+                            <Mail size={14} className="text-gray-400 dark:text-gray-500 mr-1.5" />
+                            <span className="text-sm text-gray-900 dark:text-white truncate max-w-[120px] md:max-w-none">{user.email}</span>
                           </div>
                           {user.phone && (
                             <div className="flex items-center mt-0.5">
-                              <Phone size={14} className="text-gray-400 mr-1.5" />
-                              <span className="text-xs text-gray-500">{user.phone}</span>
+                              <Phone size={14} className="text-gray-400 dark:text-gray-500 mr-1.5" />
+                              <span className="text-xs text-gray-500 dark:text-gray-400">{user.phone}</span>
                             </div>
                           )}
                         </td>
@@ -915,23 +910,23 @@ const UsersManagement = () => {
                         <td className="px-3 py-2.5 whitespace-nowrap">
                           {user.chair ? (
                             <div className="flex items-center">
-                              <Building size={14} className="text-gray-400 mr-1.5" />
-                              <span className="text-sm text-gray-900 truncate max-w-[100px]">{user.chair}</span>
+                              <Building size={14} className="text-gray-400 dark:text-gray-500 mr-1.5" />
+                              <span className="text-sm text-gray-900 dark:text-white truncate max-w-[100px]">{user.chair}</span>
                             </div>
                           ) : (
-                            <span className="text-sm text-gray-400">--</span>
+                            <span className="text-sm text-gray-400 dark:text-gray-500">--</span>
                           )}
                           
                           {user.location && (
                             <div className="flex items-center mt-0.5">
-                              <MapPin size={12} className="text-gray-400 mr-1" />
-                              <span className="text-xs text-gray-500 truncate max-w-[100px]">{user.location}</span>
+                              <MapPin size={12} className="text-gray-400 dark:text-gray-500 mr-1" />
+                              <span className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[100px]">{user.location}</span>
                             </div>
                           )}
                         </td>
-                        <td className="px-3 py-2.5 whitespace-nowrap text-sm text-gray-500 hidden md:table-cell">
+                        <td className="px-3 py-2.5 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 hidden md:table-cell">
                           <div className="flex items-center">
-                            <Clock size={14} className="text-gray-400 mr-1.5" />
+                            <Clock size={14} className="text-gray-400 dark:text-gray-500 mr-1.5" />
                             <span>
                               {user.createdAt 
                                 ? dayjs(user.createdAt).format('MMM D, YYYY') 
@@ -943,14 +938,14 @@ const UsersManagement = () => {
                           <div className="flex justify-end space-x-1">
                             <button
                               onClick={() => openEditModal(user)}
-                              className="text-indigo-600 hover:text-indigo-900 p-1 rounded-full hover:bg-indigo-50"
+                              className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300 p-1 rounded-full hover:bg-indigo-50 dark:hover:bg-indigo-900/50"
                             >
-                              <Edit size={16} />
+                              <Edit2 size={16} />
                               <span className="sr-only">Edit</span>
                             </button>
                             <button
                               onClick={() => openDeleteModal(user)}
-                              className="text-red-600 hover:text-red-900 p-1 rounded-full hover:bg-red-50"
+                              className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 p-1 rounded-full hover:bg-red-50 dark:hover:bg-red-900/50"
                             >
                               <Trash2 size={16} />
                               <span className="sr-only">Delete</span>
@@ -965,20 +960,20 @@ const UsersManagement = () => {
             )}
             
             {/* Pagination */}
-            <div className="bg-white px-3 py-2 flex items-center justify-between border-t border-gray-200 sm:px-4">
+            <div className="bg-white dark:bg-gray-800 px-3 py-2 flex items-center justify-between border-t border-gray-200 dark:border-gray-700 sm:px-4">
               <div className="flex flex-1 justify-between sm:hidden">
                 <button
                   onClick={() => setPage(Math.max(1, page - 1))}
                   disabled={page <= 1}
                   className={`relative inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md ${
                     page <= 1 
-                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                      : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                      ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed' 
+                      : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-300 dark:border-gray-600'
                   }`}
                 >
                   Previous
                 </button>
-                <div className="text-sm text-gray-700">
+                <div className="text-sm text-gray-700 dark:text-gray-300">
                   Page {page} of {totalPages}
                 </div>
                 <button
@@ -986,8 +981,8 @@ const UsersManagement = () => {
                   disabled={page >= totalPages}
                   className={`relative inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-md ${
                     page >= totalPages 
-                      ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                      : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-300'
+                      ? 'bg-gray-100 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed' 
+                      : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 border border-gray-300 dark:border-gray-600'
                   }`}
                 >
                   Next
@@ -995,7 +990,7 @@ const UsersManagement = () => {
               </div>
               <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
                 <div>
-                  <p className="text-sm text-gray-700">
+                  <p className="text-sm text-gray-700 dark:text-gray-300">
                     Showing <span className="font-medium">{filteredUsers.length > 0 ? (page - 1) * itemsPerPage + 1 : 0}</span> to{' '}
                     <span className="font-medium">
                       {Math.min(page * itemsPerPage, filteredUsers.length)}
@@ -1008,10 +1003,10 @@ const UsersManagement = () => {
                     <button
                       onClick={() => setPage(Math.max(1, page - 1))}
                       disabled={page <= 1}
-                      className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium ${
+                      className={`relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium ${
                         page <= 1 
-                          ? 'text-gray-300 cursor-not-allowed' 
-                          : 'text-gray-500 hover:bg-gray-50'
+                          ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed' 
+                          : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
                       }`}
                     >
                       <span className="sr-only">Previous</span>
@@ -1035,8 +1030,8 @@ const UsersManagement = () => {
                             onClick={() => setPage(pageNum)}
                             className={`relative inline-flex items-center px-3 py-2 border text-sm font-medium ${
                               isCurrentPage
-                                ? 'z-10 bg-indigo-50 border-indigo-500 text-indigo-600'
-                                : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                                ? 'z-10 bg-indigo-50 dark:bg-indigo-900/50 border-indigo-500 dark:border-indigo-500 text-indigo-600 dark:text-indigo-300'
+                                : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
                             }`}
                           >
                             {pageNum}
@@ -1050,7 +1045,7 @@ const UsersManagement = () => {
                         return (
                           <span
                             key={i}
-                            className="relative inline-flex items-center px-3 py-2 border border-gray-300 bg-white text-sm font-medium text-gray-700"
+                            className="relative inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-300"
                           >
                             ...
                           </span>
@@ -1062,10 +1057,10 @@ const UsersManagement = () => {
                     <button
                       onClick={() => setPage(Math.min(totalPages, page + 1))}
                       disabled={page >= totalPages}
-                      className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium ${
+                      className={`relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-sm font-medium ${
                         page >= totalPages 
-                          ? 'text-gray-300 cursor-not-allowed' 
-                          : 'text-gray-500 hover:bg-gray-50'
+                          ? 'text-gray-300 dark:text-gray-600 cursor-not-allowed' 
+                          : 'text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
                       }`}
                     >
                       <span className="sr-only">Next</span>
@@ -1087,7 +1082,7 @@ const UsersManagement = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black bg-opacity-50 z-40"
+              className="fixed inset-0 bg-black bg-opacity-50 z-40 dark:bg-opacity-70"
               onClick={() => setIsDetailOpen(false)}
             />
             <motion.div
@@ -1097,12 +1092,12 @@ const UsersManagement = () => {
               transition={{ duration: 0.2 }}
               className="fixed inset-x-0 bottom-0 z-50 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:transform sm:-translate-x-1/2 sm:-translate-y-1/2 sm:max-w-lg sm:w-full"
             >
-              <div className="bg-white rounded-t-xl sm:rounded-xl shadow-xl overflow-hidden max-h-[90vh] overflow-y-auto">
-                <div className="px-4 py-3 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white">
-                  <h3 className="text-lg font-medium">User Details</h3>
+              <div className="bg-white dark:bg-gray-800 rounded-t-xl sm:rounded-xl shadow-xl overflow-hidden max-h-[90vh] overflow-y-auto">
+                <div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center sticky top-0 bg-white dark:bg-gray-800">
+                  <h3 className="text-lg font-medium text-gray-900 dark:text-white">User Details</h3>
                   <button
                     onClick={() => setIsDetailOpen(false)}
-                    className="text-gray-400 hover:text-gray-500"
+                    className="text-gray-400 dark:text-gray-500 hover:text-gray-500 dark:hover:text-gray-400"
                   >
                     <X className="h-5 w-5" />
                   </button>
@@ -1114,35 +1109,35 @@ const UsersManagement = () => {
                       {selectedUser?.fullName ? selectedUser.fullName.charAt(0).toUpperCase() : "?"}
                     </div>
                     <div className="ml-4">
-                      <h4 className="text-lg font-medium text-gray-900">{selectedUser?.fullName}</h4>
-                      <p className="text-sm text-gray-500">@{selectedUser?.username}</p>
+                      <h4 className="text-lg font-medium text-gray-900 dark:text-white">{selectedUser?.fullName}</h4>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">@{selectedUser?.username}</p>
                     </div>
                   </div>
                   
                   <div className="space-y-2 text-sm">
                     <div className="flex items-start">
-                      <Mail className="w-4 h-4 text-gray-400 mt-0.5 mr-2" />
+                      <Mail className="w-4 h-4 text-gray-400 dark:text-gray-500 mt-0.5 mr-2" />
                       <div>
-                        <p className="text-sm font-medium text-gray-900">Email</p>
-                        <p className="text-sm text-gray-500">{selectedUser?.email}</p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">Email</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">{selectedUser?.email}</p>
                       </div>
                     </div>
                     
                     {selectedUser?.phone && (
                       <div className="flex items-start">
-                        <Phone className="w-4 h-4 text-gray-400 mt-0.5 mr-2" />
+                        <Phone className="w-4 h-4 text-gray-400 dark:text-gray-500 mt-0.5 mr-2" />
                         <div>
-                          <p className="text-sm font-medium text-gray-900">Phone</p>
-                          <p className="text-sm text-gray-500">{selectedUser.phone}</p>
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">Phone</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">{selectedUser.phone}</p>
                         </div>
                       </div>
                     )}
                     
                     <div className="flex items-start">
-                      <Shield className="w-4 h-4 text-gray-400 mt-0.5 mr-2" />
+                      <Shield className="w-4 h-4 text-gray-400 dark:text-gray-500 mt-0.5 mr-2" />
                       <div>
-                        <p className="text-sm font-medium text-gray-900">Role</p>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">Role</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
                           <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getRoleBadgeColor(selectedUser?.role)}`}>
                             {getRoleIcon(selectedUser?.role)}
                             {selectedUser?.role === "HeadOfFaculty" ? "Head of Faculty" : 
@@ -1155,50 +1150,50 @@ const UsersManagement = () => {
                     
                     {selectedUser?.chair && (
                       <div className="flex items-start">
-                        <Building className="w-4 h-4 text-gray-400 mt-0.5 mr-2" />
+                        <Building className="w-4 h-4 text-gray-400 dark:text-gray-500 mt-0.5 mr-2" />
                         <div>
-                          <p className="text-sm font-medium text-gray-900">Chair</p>
-                          <p className="text-sm text-gray-500">{selectedUser.chair}</p>
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">Chair</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">{selectedUser.chair}</p>
                         </div>
                       </div>
                     )}
                     
                     {selectedUser?.position && (
                       <div className="flex items-start">
-                        <Briefcase className="w-4 h-4 text-gray-400 mt-0.5 mr-2" />
+                        <Briefcase className="w-4 h-4 text-gray-400 dark:text-gray-500 mt-0.5 mr-2" />
                         <div>
-                          <p className="text-sm font-medium text-gray-900">Position</p>
-                          <p className="text-sm text-gray-500">{selectedUser.position}</p>
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">Position</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">{selectedUser.position}</p>
                         </div>
                       </div>
                     )}
                     
                     {selectedUser?.rank && (
                       <div className="flex items-start">
-                        <Award className="w-4 h-4 text-gray-400 mt-0.5 mr-2" />
+                        <Award className="w-4 h-4 text-gray-400 dark:text-gray-500 mt-0.5 mr-2" />
                         <div>
-                          <p className="text-sm font-medium text-gray-900">Rank</p>
-                          <p className="text-sm text-gray-500">{selectedUser.rank}</p>
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">Rank</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">{selectedUser.rank}</p>
                         </div>
                       </div>
                     )}
                     
                     {selectedUser?.location && (
                       <div className="flex items-start">
-                        <MapPin className="w-4 h-4 text-gray-400 mt-0.5 mr-2" />
+                        <MapPin className="w-4 h-4 text-gray-400 dark:text-gray-500 mt-0.5 mr-2" />
                         <div>
-                          <p className="text-sm font-medium text-gray-900">Location</p>
-                          <p className="text-sm text-gray-500">{selectedUser.location}</p>
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">Location</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">{selectedUser.location}</p>
                         </div>
                       </div>
                     )}
                     
                     {selectedUser?.createdAt && (
                       <div className="flex items-start">
-                        <Clock className="w-4 h-4 text-gray-400 mt-0.5 mr-2" />
+                        <Clock className="w-4 h-4 text-gray-400 dark:text-gray-500 mt-0.5 mr-2" />
                         <div>
-                          <p className="text-sm font-medium text-gray-900">Created</p>
-                          <p className="text-sm text-gray-500">
+                          <p className="text-sm font-medium text-gray-900 dark:text-white">Created</p>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">
                             {dayjs(selectedUser.createdAt).format('MMM D, YYYY')}
                             {' '}({dayjs(selectedUser.createdAt).fromNow()})
                           </p>
@@ -1213,9 +1208,9 @@ const UsersManagement = () => {
                         setIsDetailOpen(false);
                         openEditModal(selectedUser);
                       }}
-                      className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                      className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                     >
-                      <Edit className="w-4 h-4 mr-1.5" />
+                      <Edit2 className="w-4 h-4 mr-1.5" />
                       Edit
                     </button>
                     <button
@@ -1223,7 +1218,7 @@ const UsersManagement = () => {
                         setIsDetailOpen(false);
                         openDeleteModal(selectedUser);
                       }}
-                      className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                      className="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                     >
                       <Trash2 className="w-4 h-4 mr-1.5" />
                       Delete
@@ -1244,7 +1239,7 @@ const UsersManagement = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black bg-opacity-50 z-40"
+              className="fixed inset-0 bg-black bg-opacity-50 z-40 dark:bg-opacity-70"
               onClick={() => setIsAddUserOpen(false)}
             />
             <motion.div
@@ -1257,13 +1252,13 @@ const UsersManagement = () => {
             >
               <div 
                 ref={modalRef}
-                className="bg-white rounded-lg shadow-xl w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto"
+                className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto"
               >
-                <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b">
-                  <h2 className="text-lg sm:text-xl font-semibold text-gray-900">Add New User</h2>
+                <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                  <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Add New User</h2>
                   <button 
                     onClick={() => setIsAddUserOpen(false)}
-                    className="text-gray-400 hover:text-gray-500"
+                    className="text-gray-400 dark:text-gray-500 hover:text-gray-500 dark:hover:text-gray-400"
                   >
                     <X className="h-5 w-5" />
                   </button>
@@ -1273,8 +1268,8 @@ const UsersManagement = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Name field */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Full Name <span className="text-red-500">*</span>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Full Name <span className="text-red-500 dark:text-red-400">*</span>
                       </label>
                       <input
                         type="text"
@@ -1282,18 +1277,18 @@ const UsersManagement = () => {
                         value={newUser.fullName}
                         onChange={handleChange}
                         className={`w-full px-3 py-2 border ${
-                          formErrors.fullName ? "border-red-500" : "border-gray-300"
-                        } rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500`}
+                          formErrors.fullName ? "border-red-500 dark:border-red-400" : "border-gray-300 dark:border-gray-600"
+                        } rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
                       />
                       {formErrors.fullName && (
-                        <p className="mt-1 text-xs text-red-600">{formErrors.fullName}</p>
+                        <p className="mt-1 text-xs text-red-600 dark:text-red-400">{formErrors.fullName}</p>
                       )}
                     </div>
                     
                     {/* Username field */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Username <span className="text-red-500">*</span>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Username <span className="text-red-500 dark:text-red-400">*</span>
                       </label>
                       <input
                         type="text"
@@ -1301,18 +1296,18 @@ const UsersManagement = () => {
                         value={newUser.username}
                         onChange={handleChange}
                         className={`w-full px-3 py-2 border ${
-                          formErrors.username ? "border-red-500" : "border-gray-300"
-                        } rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500`}
+                          formErrors.username ? "border-red-500 dark:border-red-400" : "border-gray-300 dark:border-gray-600"
+                        } rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
                       />
                       {formErrors.username && (
-                        <p className="mt-1 text-xs text-red-600">{formErrors.username}</p>
+                        <p className="mt-1 text-xs text-red-600 dark:text-red-400">{formErrors.username}</p>
                       )}
                     </div>
                     
                     {/* Email field */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Email <span className="text-red-500">*</span>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Email <span className="text-red-500 dark:text-red-400">*</span>
                       </label>
                       <input
                         type="email"
@@ -1320,17 +1315,17 @@ const UsersManagement = () => {
                         value={newUser.email}
                         onChange={handleChange}
                         className={`w-full px-3 py-2 border ${
-                          formErrors.email ? "border-red-500" : "border-gray-300"
-                        } rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500`}
+                          formErrors.email ? "border-red-500 dark:border-red-400" : "border-gray-300 dark:border-gray-600"
+                        } rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
                       />
                       {formErrors.email && (
-                        <p className="mt-1 text-xs text-red-600">{formErrors.email}</p>
+                        <p className="mt-1 text-xs text-red-600 dark:text-red-400">{formErrors.email}</p>
                       )}
                     </div>
                     
                     {/* Phone field */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Phone
                       </label>
                       <input
@@ -1339,18 +1334,18 @@ const UsersManagement = () => {
                         value={newUser.phone}
                         onChange={handleChange}
                         className={`w-full px-3 py-2 border ${
-                          formErrors.phone ? "border-red-500" : "border-gray-300"
-                        } rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500`}
+                          formErrors.phone ? "border-red-500 dark:border-red-400" : "border-gray-300 dark:border-gray-600"
+                        } rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
                       />
                       {formErrors.phone && (
-                        <p className="mt-1 text-xs text-red-600">{formErrors.phone}</p>
+                        <p className="mt-1 text-xs text-red-600 dark:text-red-400">{formErrors.phone}</p>
                       )}
                     </div>
                     
                     {/* Password field */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Password <span className="text-red-500">*</span>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Password <span className="text-red-500 dark:text-red-400">*</span>
                       </label>
                       <div className="relative">
                         <input
@@ -1359,8 +1354,8 @@ const UsersManagement = () => {
                           value={newUser.password}
                           onChange={handleChange}
                           className={`w-full px-3 py-2 border ${
-                            formErrors.password ? "border-red-500" : "border-gray-300"
-                          } rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500`}
+                            formErrors.password ? "border-red-500 dark:border-red-400" : "border-gray-300 dark:border-gray-600"
+                          } rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
                         />
                         <button
                           type="button"
@@ -1368,21 +1363,21 @@ const UsersManagement = () => {
                           onClick={() => setShowPassword(!showPassword)}
                         >
                           {showPassword ? (
-                            <EyeOff className="h-4 w-4 text-gray-400" />
+                            <EyeOff className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                           ) : (
-                            <Eye className="h-4 w-4 text-gray-400" />
+                            <Eye className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                           )}
                         </button>
                       </div>
                       {formErrors.password && (
-                        <p className="mt-1 text-xs text-red-600">{formErrors.password}</p>
+                        <p className="mt-1 text-xs text-red-600 dark:text-red-400">{formErrors.password}</p>
                       )}
                     </div>
                     
                     {/* Confirm Password field */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Confirm Password <span className="text-red-500">*</span>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Confirm Password <span className="text-red-500 dark:text-red-400">*</span>
                       </label>
                       <input
                         type={showPassword ? "text" : "password"}
@@ -1390,26 +1385,26 @@ const UsersManagement = () => {
                         value={newUser.confirmPassword}
                         onChange={handleChange}
                         className={`w-full px-3 py-2 border ${
-                          formErrors.confirmPassword ? "border-red-500" : "border-gray-300"
-                        } rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500`}
+                          formErrors.confirmPassword ? "border-red-500 dark:border-red-400" : "border-gray-300 dark:border-gray-600"
+                        } rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
                       />
                       {formErrors.confirmPassword && (
-                        <p className="mt-1 text-xs text-red-600">{formErrors.confirmPassword}</p>
+                        <p className="mt-1 text-xs text-red-600 dark:text-red-400">{formErrors.confirmPassword}</p>
                       )}
                     </div>
                     
                     {/* Role field */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Role <span className="text-red-500">*</span>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Role <span className="text-red-500 dark:text-red-400">*</span>
                       </label>
                       <select
                         name="role"
                         value={newUser.role}
                         onChange={handleChange}
                         className={`w-full px-3 py-2 border ${
-                          formErrors.role ? "border-red-500" : "border-gray-300"
-                        } rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500`}
+                          formErrors.role ? "border-red-500 dark:border-red-400" : "border-gray-300 dark:border-gray-600"
+                        } rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
                       >
                         <option value="Instructor">Instructor</option>
                         <option value="COC">COC</option>
@@ -1417,20 +1412,20 @@ const UsersManagement = () => {
                         <option value="HeadOfFaculty">Head of Faculty</option>
                       </select>
                       {formErrors.role && (
-                        <p className="mt-1 text-xs text-red-600">{formErrors.role}</p>
+                        <p className="mt-1 text-xs text-red-600 dark:text-red-400">{formErrors.role}</p>
                       )}
                     </div>
                     
                     {/* Chair field */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Chair
                       </label>
                       <select
                         name="chair"
                         value={newUser.chair}
                         onChange={handleChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                       >
                         <option value="">Select Chair</option>
                         {availableChairs.map((chair) => (
@@ -1443,14 +1438,14 @@ const UsersManagement = () => {
                     
                     {/* Position field */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Position
                       </label>
                       <select
                         name="position"
                         value={newUser.position}
                         onChange={handleChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                       >
                         <option value="">Select Position</option>
                         {availablePositions.map((position) => (
@@ -1463,7 +1458,7 @@ const UsersManagement = () => {
                     
                     {/* Rank field */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Rank
                       </label>
                       <input
@@ -1471,13 +1466,13 @@ const UsersManagement = () => {
                         name="rank"
                         value={newUser.rank}
                         onChange={handleChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                       />
                     </div>
                     
                     {/* Location field */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Location
                       </label>
                       <input
@@ -1485,7 +1480,7 @@ const UsersManagement = () => {
                         name="location"
                         value={newUser.location}
                         onChange={handleChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                       />
                     </div>
                   </div>
@@ -1494,14 +1489,14 @@ const UsersManagement = () => {
                     <button
                       type="button"
                       onClick={() => setIsAddUserOpen(false)}
-                      className="px-3 py-1.5 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                      className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
                       disabled={loading}
-                      className="px-3 py-1.5 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-indigo-400 disabled:cursor-not-allowed"
+                      className="px-3 py-1.5 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-indigo-400 dark:disabled:bg-indigo-700 disabled:cursor-not-allowed"
                     >
                       {loading ? "Adding..." : "Add User"}
                     </button>
@@ -1521,7 +1516,7 @@ const UsersManagement = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black bg-opacity-50 z-40"
+              className="fixed inset-0 bg-black bg-opacity-50 z-40 dark:bg-opacity-70"
               onClick={() => setIsEditUserOpen(false)}
             />
             <motion.div
@@ -1534,15 +1529,15 @@ const UsersManagement = () => {
             >
               <div 
                 ref={modalRef}
-                className="bg-white rounded-lg shadow-xl w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto"
+                className="bg-white dark:bg-gray-800 rounded-lg shadow-xl w-full max-w-3xl mx-4 max-h-[90vh] overflow-y-auto"
               >
-                <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b">
-                  <h2 className="text-lg sm:text-xl font-semibold text-gray-900">
+                <div className="flex items-center justify-between px-4 sm:px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+                  <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">
                     Edit User: {selectedUser?.fullName}
                   </h2>
                   <button 
                     onClick={() => setIsEditUserOpen(false)}
-                    className="text-gray-400 hover:text-gray-500"
+                    className="text-gray-400 dark:text-gray-500 hover:text-gray-500 dark:hover:text-gray-400"
                   >
                     <X className="h-5 w-5" />
                   </button>
@@ -1552,8 +1547,8 @@ const UsersManagement = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {/* Name field */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Full Name <span className="text-red-500">*</span>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Full Name <span className="text-red-500 dark:text-red-400">*</span>
                       </label>
                       <input
                         type="text"
@@ -1561,18 +1556,18 @@ const UsersManagement = () => {
                         value={newUser.fullName}
                         onChange={handleChange}
                         className={`w-full px-3 py-2 border ${
-                          formErrors.fullName ? "border-red-500" : "border-gray-300"
-                        } rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500`}
+                          formErrors.fullName ? "border-red-500 dark:border-red-400" : "border-gray-300 dark:border-gray-600"
+                        } rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
                       />
                       {formErrors.fullName && (
-                        <p className="mt-1 text-xs text-red-600">{formErrors.fullName}</p>
+                        <p className="mt-1 text-xs text-red-600 dark:text-red-400">{formErrors.fullName}</p>
                       )}
                     </div>
                     
                     {/* Username field */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Username <span className="text-red-500">*</span>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Username <span className="text-red-500 dark:text-red-400">*</span>
                       </label>
                       <input
                         type="text"
@@ -1580,18 +1575,18 @@ const UsersManagement = () => {
                         value={newUser.username}
                         onChange={handleChange}
                         className={`w-full px-3 py-2 border ${
-                          formErrors.username ? "border-red-500" : "border-gray-300"
-                        } rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500`}
+                          formErrors.username ? "border-red-500 dark:border-red-400" : "border-gray-300 dark:border-gray-600"
+                        } rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
                       />
                       {formErrors.username && (
-                        <p className="mt-1 text-xs text-red-600">{formErrors.username}</p>
+                        <p className="mt-1 text-xs text-red-600 dark:text-red-400">{formErrors.username}</p>
                       )}
                     </div>
                     
                     {/* Email field */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Email <span className="text-red-500">*</span>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Email <span className="text-red-500 dark:text-red-400">*</span>
                       </label>
                       <input
                         type="email"
@@ -1599,17 +1594,17 @@ const UsersManagement = () => {
                         value={newUser.email}
                         onChange={handleChange}
                         className={`w-full px-3 py-2 border ${
-                          formErrors.email ? "border-red-500" : "border-gray-300"
-                        } rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500`}
+                          formErrors.email ? "border-red-500 dark:border-red-400" : "border-gray-300 dark:border-gray-600"
+                        } rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
                       />
                       {formErrors.email && (
-                        <p className="mt-1 text-xs text-red-600">{formErrors.email}</p>
+                        <p className="mt-1 text-xs text-red-600 dark:text-red-400">{formErrors.email}</p>
                       )}
                     </div>
                     
                     {/* Phone field */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Phone
                       </label>
                       <input
@@ -1618,18 +1613,18 @@ const UsersManagement = () => {
                         value={newUser.phone}
                         onChange={handleChange}
                         className={`w-full px-3 py-2 border ${
-                          formErrors.phone ? "border-red-500" : "border-gray-300"
-                        } rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500`}
+                          formErrors.phone ? "border-red-500 dark:border-red-400" : "border-gray-300 dark:border-gray-600"
+                        } rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
                       />
                       {formErrors.phone && (
-                        <p className="mt-1 text-xs text-red-600">{formErrors.phone}</p>
+                        <p className="mt-1 text-xs text-red-600 dark:text-red-400">{formErrors.phone}</p>
                       )}
                     </div>
                     
                     {/* Password field (optional for edit) */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Password <span className="text-gray-500 text-xs">(leave empty to keep current)</span>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Password <span className="text-gray-500 dark:text-gray-400 text-xs">(leave empty to keep current)</span>
                       </label>
                       <div className="relative">
                         <input
@@ -1638,8 +1633,8 @@ const UsersManagement = () => {
                           value={newUser.password}
                           onChange={handleChange}
                           className={`w-full px-3 py-2 border ${
-                            formErrors.password ? "border-red-500" : "border-gray-300"
-                          } rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500`}
+                            formErrors.password ? "border-red-500 dark:border-red-400" : "border-gray-300 dark:border-gray-600"
+                          } rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
                         />
                         <button
                           type="button"
@@ -1647,20 +1642,20 @@ const UsersManagement = () => {
                           onClick={() => setShowPassword(!showPassword)}
                         >
                           {showPassword ? (
-                            <EyeOff className="h-4 w-4 text-gray-400" />
+                            <EyeOff className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                           ) : (
-                            <Eye className="h-4 w-4 text-gray-400" />
+                            <Eye className="h-4 w-4 text-gray-400 dark:text-gray-500" />
                           )}
                         </button>
                       </div>
                       {formErrors.password && (
-                        <p className="mt-1 text-xs text-red-600">{formErrors.password}</p>
+                        <p className="mt-1 text-xs text-red-600 dark:text-red-400">{formErrors.password}</p>
                       )}
                     </div>
                     
                     {/* Confirm Password field */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Confirm Password
                       </label>
                       <input
@@ -1669,26 +1664,26 @@ const UsersManagement = () => {
                         value={newUser.confirmPassword}
                         onChange={handleChange}
                         className={`w-full px-3 py-2 border ${
-                          formErrors.confirmPassword ? "border-red-500" : "border-gray-300"
-                        } rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500`}
+                          formErrors.confirmPassword ? "border-red-500 dark:border-red-400" : "border-gray-300 dark:border-gray-600"
+                        } rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
                       />
                       {formErrors.confirmPassword && (
-                        <p className="mt-1 text-xs text-red-600">{formErrors.confirmPassword}</p>
+                        <p className="mt-1 text-xs text-red-600 dark:text-red-400">{formErrors.confirmPassword}</p>
                       )}
                     </div>
                     
                     {/* Role field */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Role <span className="text-red-500">*</span>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Role <span className="text-red-500 dark:text-red-400">*</span>
                       </label>
                       <select
                         name="role"
                         value={newUser.role}
                         onChange={handleChange}
                         className={`w-full px-3 py-2 border ${
-                          formErrors.role ? "border-red-500" : "border-gray-300"
-                        } rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500`}
+                          formErrors.role ? "border-red-500 dark:border-red-400" : "border-gray-300 dark:border-gray-600"
+                        } rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
                       >
                         <option value="Instructor">Instructor</option>
                         <option value="COC">COC</option>
@@ -1696,20 +1691,20 @@ const UsersManagement = () => {
                         <option value="HeadOfFaculty">Head of Faculty</option>
                       </select>
                       {formErrors.role && (
-                        <p className="mt-1 text-xs text-red-600">{formErrors.role}</p>
+                        <p className="mt-1 text-xs text-red-600 dark:text-red-400">{formErrors.role}</p>
                       )}
                     </div>
                     
                     {/* Chair field */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Chair
                       </label>
                       <select
                         name="chair"
                         value={newUser.chair}
                         onChange={handleChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                       >
                         <option value="">Select Chair</option>
                         {availableChairs.map((chair) => (
@@ -1722,14 +1717,14 @@ const UsersManagement = () => {
                     
                     {/* Position field */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Position
                       </label>
                       <select
                         name="position"
                         value={newUser.position}
                         onChange={handleChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                       >
                         <option value="">Select Position</option>
                         {availablePositions.map((position) => (
@@ -1742,7 +1737,7 @@ const UsersManagement = () => {
                     
                     {/* Rank field */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Rank
                       </label>
                       <input
@@ -1750,13 +1745,13 @@ const UsersManagement = () => {
                         name="rank"
                         value={newUser.rank}
                         onChange={handleChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                       />
                     </div>
                     
                     {/* Location field */}
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Location
                       </label>
                       <input
@@ -1764,7 +1759,7 @@ const UsersManagement = () => {
                         name="location"
                         value={newUser.location}
                         onChange={handleChange}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                       />
                     </div>
                   </div>
@@ -1773,14 +1768,14 @@ const UsersManagement = () => {
                     <button
                       type="button"
                       onClick={() => setIsEditUserOpen(false)}
-                      className="px-3 py-1.5 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                      className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                     >
                       Cancel
                     </button>
                     <button
                       type="submit"
                       disabled={loading}
-                      className="px-3 py-1.5 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-indigo-400 disabled:cursor-not-allowed"
+                      className="px-3 py-1.5 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-500 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-indigo-400 dark:disabled:bg-indigo-700 disabled:cursor-not-allowed"
                     >
                       {loading ? "Updating..." : "Update User"}
                     </button>
@@ -1800,7 +1795,7 @@ const UsersManagement = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black bg-opacity-50 z-40"
+              className="fixed inset-0 bg-black bg-opacity-50 z-40 dark:bg-opacity-70"
               onClick={() => setIsDeleteUserOpen(false)}
             />
             <motion.div
@@ -1810,23 +1805,23 @@ const UsersManagement = () => {
               transition={{ duration: 0.2 }}
               className="fixed inset-x-0 bottom-0 sm:inset-auto sm:top-1/2 sm:left-1/2 sm:transform sm:-translate-x-1/2 sm:-translate-y-1/2 z-50 sm:max-w-md w-full"
             >
-              <div className="bg-white rounded-t-xl sm:rounded-xl shadow-xl overflow-hidden">
+              <div className="bg-white dark:bg-gray-800 rounded-t-xl sm:rounded-xl shadow-xl overflow-hidden">
                 <div className="p-4 sm:p-6">
-                  <div className="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 rounded-full mb-4">
-                    <AlertTriangle className="h-6 w-6 text-red-600" />
+                  <div className="flex items-center justify-center w-12 h-12 mx-auto bg-red-100 dark:bg-red-900/50 rounded-full mb-4">
+                    <AlertTriangle className="h-6 w-6 text-red-600 dark:text-red-400" />
                   </div>
-                  <h3 className="text-lg font-medium text-center text-gray-900 mb-2">
+                  <h3 className="text-lg font-medium text-center text-gray-900 dark:text-white mb-2">
                     Delete User
                   </h3>
-                  <p className="text-sm text-center text-gray-500 mb-4">
-                    Are you sure you want to delete <strong>{selectedUser?.fullName}</strong>? This action cannot be undone.
+                  <p className="text-sm text-center text-gray-500 dark:text-gray-400 mb-4">
+                    Are you sure you want to delete <strong className="text-gray-700 dark:text-gray-300">{selectedUser?.fullName}</strong>? This action cannot be undone.
                   </p>
                   
                   <div className="flex justify-center space-x-3">
                     <button
                       type="button"
                       onClick={() => setIsDeleteUserOpen(false)}
-                      className="px-3 py-1.5 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                      className="px-3 py-1.5 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                     >
                       Cancel
                     </button>
@@ -1834,7 +1829,7 @@ const UsersManagement = () => {
                       type="button"
                       onClick={handleDeleteUser}
                       disabled={loading}
-                      className="px-3 py-1.5 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:bg-red-400 disabled:cursor-not-allowed"
+                      className="px-3 py-1.5 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:bg-red-400 dark:disabled:bg-red-700 disabled:cursor-not-allowed"
                     >
                       {loading ? "Deleting..." : "Delete User"}
                     </button>
@@ -1845,7 +1840,18 @@ const UsersManagement = () => {
           </>
         )}
       </AnimatePresence>
-    </motion.div>
+
+      <style jsx="true">{`
+        .animate-fadeIn {
+          animation: fadeIn 0.4s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+      `}</style>
+    </div>
   );
 };
 

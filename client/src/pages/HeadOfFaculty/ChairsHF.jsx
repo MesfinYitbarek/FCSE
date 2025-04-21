@@ -1,22 +1,21 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import api from "../../utils/api";
 import { useSelector } from "react-redux";
-import { 
-  Dialog, DialogTitle, DialogContent, DialogActions, Button, TextField, Select, MenuItem,
-  Paper, Typography, Grid, Card, CardContent, Chip, IconButton, InputAdornment, Box,
-  FormControl, InputLabel, Divider, Skeleton, Alert, Snackbar, Tooltip, Avatar
-} from "@mui/material";
-import { 
-  Add as AddIcon, 
-  Edit as EditIcon, 
-  Delete as DeleteIcon, 
-  Search as SearchIcon, 
-  FilterList as FilterIcon,
-  SortByAlpha as SortIcon,
-  Refresh as RefreshIcon,
-  Clear as ClearIcon
-} from "@mui/icons-material";
 import { motion } from "framer-motion";
+import { toast } from "react-hot-toast";
+import {
+  Search,
+  Plus,
+  Edit2,
+  Trash2,
+  RefreshCw,
+  X,
+  ChevronDown,
+  ChevronUp,
+  SortAsc,
+  SortDesc,
+  Filter
+} from "lucide-react";
 
 const ChairsHF = () => {
   const { user } = useSelector((state) => state.auth);
@@ -31,8 +30,6 @@ const ChairsHF = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterHead, setFilterHead] = useState("");
   const [sortOrder, setSortOrder] = useState("asc");
-  const [notification, setNotification] = useState({ open: false, message: "", type: "success" });
-  const [filtersVisible, setFiltersVisible] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -40,7 +37,7 @@ const ChairsHF = () => {
       try {
         await Promise.all([fetchChairs(), fetchChairHeads()]);
       } catch (error) {
-        showNotification("Failed to load data", "error");
+        toast.error("Failed to load data");
       } finally {
         setLoading(false);
       }
@@ -87,10 +84,10 @@ const ChairsHF = () => {
       resetForm();
       await fetchChairs();
       setOpenAddModal(false);
-      showNotification("Chair added successfully");
+      toast.success("Chair added successfully");
     } catch (error) {
       console.error("Error adding chair:", error);
-      showNotification("Failed to add chair", "error");
+      toast.error("Failed to add chair");
     }
     setLoading(false);
   };
@@ -103,10 +100,10 @@ const ChairsHF = () => {
       resetForm();
       await fetchChairs();
       setOpenEditModal(false);
-      showNotification("Chair updated successfully");
+      toast.success("Chair updated successfully");
     } catch (error) {
       console.error("Error updating chair:", error);
-      showNotification("Failed to update chair", "error");
+      toast.error("Failed to update chair");
     }
     setLoading(false);
   };
@@ -117,10 +114,10 @@ const ChairsHF = () => {
       await api.delete(`/chairs/${selectedChair._id}`);
       await fetchChairs();
       setOpenDeleteModal(false);
-      showNotification("Chair deleted successfully");
+      toast.success("Chair deleted successfully");
     } catch (error) {
       console.error("Error deleting chair:", error);
-      showNotification("Failed to delete chair", "error");
+      toast.error("Failed to delete chair");
     }
     setLoading(false);
   };
@@ -136,14 +133,6 @@ const ChairsHF = () => {
     setOpenDeleteModal(true);
   };
 
-  const showNotification = (message, type = "success") => {
-    setNotification({ open: true, message, type });
-  };
-
-  const closeNotification = () => {
-    setNotification({ ...notification, open: false });
-  };
-
   const toggleSortOrder = () => {
     setSortOrder(sortOrder === "asc" ? "desc" : "asc");
   };
@@ -151,10 +140,6 @@ const ChairsHF = () => {
   const resetFilters = () => {
     setSearchTerm("");
     setFilterHead("");
-  };
-
-  const toggleFiltersVisibility = () => {
-    setFiltersVisible(!filtersVisible);
   };
 
   // Memoized filtered and sorted chairs
@@ -177,410 +162,397 @@ const ChairsHF = () => {
     return result;
   }, [chairs, searchTerm, filterHead, sortOrder]);
 
-  // Loading skeleton
-  if (loading && chairs.length === 0) {
-    return (
-      <Box p={3}>
-        <Skeleton variant="rectangular" height={60} sx={{ mb: 2 }} />
-        <Skeleton variant="rectangular" height={100} sx={{ mb: 2 }} />
-        <Skeleton variant="rectangular" height={400} />
-      </Box>
-    );
-  }
-
   return (
-    <motion.div 
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.4 }}
-      className="p-6"
-    >
-      <Paper elevation={0} sx={{ p: 3, borderRadius: 2, mb: 3, background: 'linear-gradient(135deg, #f6f9fc 0%, #edf2f7 100%)' }}>
-        <Grid container alignItems="center" justifyContent="space-between" spacing={2}>
-          <Grid item>
-            <Typography variant="h4" component="h1" fontWeight="bold" color="primary">
-              Chair Departments
-            </Typography>
-            <Typography variant="subtitle1" color="text.secondary">
+    <div className="animate-fadeIn">
+      {/* Page Header */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 mb-6">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Chair Departments</h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">
               Manage academic chair departments and their heads
-            </Typography>
-          </Grid>
-          <Grid item>
-            <Button 
-              variant="contained" 
-              startIcon={<AddIcon />}
-              onClick={() => setOpenAddModal(true)}
-              sx={{ 
-                borderRadius: 2,
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
-                background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
-                '&:hover': {
-                  background: 'linear-gradient(45deg, #1976D2 30%, #00B0FF 90%)',
-                }
-              }}
+            </p>
+          </div>
+          <button
+            onClick={() => setOpenAddModal(true)}
+            className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white py-2 px-4 rounded-lg hover:from-indigo-700 hover:to-indigo-600 transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
+          >
+            <Plus size={18} />
+            <span>New Chair</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Filters and Search */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="col-span-1 md:col-span-2">
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Search size={18} className="text-gray-400" />
+              </div>
+              <input
+                type="text"
+                placeholder="Search by chair name..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="block w-full pl-10 pr-10 py-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm("")}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
+                >
+                  <X size={18} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300" />
+                </button>
+              )}
+            </div>
+          </div>
+          <div>
+            <select
+              value={filterHead}
+              onChange={(e) => setFilterHead(e.target.value)}
+              className="block w-full py-2.5 px-3 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
             >
-              New Chair
-            </Button>
-          </Grid>
-        </Grid>
-      </Paper>
-
-      <Box mb={3}>
-        <Card sx={{ borderRadius: 2, boxShadow: '0 4px 12px rgba(0, 0, 0, 0.05)' }}>
-          <CardContent>
-            <Grid container spacing={2} alignItems="center">
-              <Grid item xs={12} md={6}>
-                <TextField
-                  fullWidth
-                  variant="outlined"
-                  placeholder="Search by chair name..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <SearchIcon color="action" />
-                      </InputAdornment>
-                    ),
-                    endAdornment: searchTerm && (
-                      <InputAdornment position="end">
-                        <IconButton size="small" onClick={() => setSearchTerm("")}>
-                          <ClearIcon fontSize="small" />
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                    sx: { borderRadius: 2 }
-                  }}
-                />
-              </Grid>
-              <Grid item xs={8} md={4}>
-                <FormControl fullWidth variant="outlined">
-                  <InputLabel>Filter by Chair Head</InputLabel>
-                  <Select
-                    value={filterHead}
-                    onChange={(e) => setFilterHead(e.target.value)}
-                    label="Filter by Chair Head"
-                    sx={{ borderRadius: 2 }}
-                  >
-                    <MenuItem value="">All Chair Heads</MenuItem>
-                    {chairHeads.map((ch) => (
-                      <MenuItem key={ch._id} value={ch._id}>
-                        {ch.fullName}
-                      </MenuItem>
-                    ))}
-                  </Select>
-                </FormControl>
-              </Grid>
-              <Grid item xs={4} md={2}>
-                <Box display="flex" justifyContent="flex-end" gap={1}>
-                  <Tooltip title="Toggle sort order">
-                    <IconButton onClick={toggleSortOrder} color={sortOrder === "desc" ? "primary" : "default"}>
-                      <SortIcon />
-                    </IconButton>
-                  </Tooltip>
-                  <Tooltip title="Reset filters">
-                    <IconButton onClick={resetFilters} disabled={!searchTerm && !filterHead}>
-                      <RefreshIcon />
-                    </IconButton>
-                  </Tooltip>
-                </Box>
-              </Grid>
-            </Grid>
-          </CardContent>
-        </Card>
-      </Box>
-
-      {loading ? (
-        <Box sx={{ mt: 2 }}>
-          <Skeleton variant="rectangular" height={400} />
-        </Box>
-      ) : (
-        <>
-          <Box sx={{ position: 'relative' }}>
-            <Box
-              sx={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                mb: 2
-              }}
+              <option value="">All Chair Heads</option>
+              {chairHeads.map((ch) => (
+                <option key={ch._id} value={ch._id}>
+                  {ch.fullName}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+        
+        <div className="flex justify-between items-center mt-4">
+          <button
+            onClick={resetFilters}
+            disabled={!searchTerm && !filterHead}
+            className={`flex items-center gap-1.5 text-sm py-1.5 px-3 rounded-lg ${
+              !searchTerm && !filterHead
+                ? "text-gray-400 dark:text-gray-600 bg-gray-100 dark:bg-gray-800 cursor-not-allowed"
+                : "text-gray-700 dark:text-gray-300 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600"
+            }`}
+          >
+            <RefreshCw size={14} />
+            <span>Reset Filters</span>
+          </button>
+          
+          <div className="flex items-center gap-2">
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              Showing {filteredChairs.length} of {chairs.length} chairs
+            </p>
+            <button
+              onClick={toggleSortOrder}
+              className="flex items-center gap-1 text-sm py-1.5 px-2 rounded-lg text-gray-700 dark:text-gray-300 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600"
             >
-              <Typography variant="subtitle1">
-                Showing {filteredChairs.length} of {chairs.length} chairs
-              </Typography>
-            </Box>
+              {sortOrder === "asc" ? <SortAsc size={16} /> : <SortDesc size={16} />}
+            </button>
+          </div>
+        </div>
+      </div>
 
-            {filteredChairs.length === 0 ? (
-              <Alert severity="info" sx={{ mt: 2 }}>
-                No chairs found matching your search criteria.
-              </Alert>
-            ) : (
-              <Grid container spacing={2}>
-                {filteredChairs.map((chair) => (
-                  <Grid item xs={12} sm={6} md={4} key={chair._id}>
-                    <motion.div
-                      whileHover={{ y: -5 }}
-                      transition={{ duration: 0.2 }}
+      {/* Loading State */}
+      {loading && chairs.length === 0 && (
+        <div className="space-y-4">
+          <div className="h-24 bg-gray-200 dark:bg-gray-700 animate-pulse rounded-lg"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[...Array(6)].map((_, index) => (
+              <div key={index} className="h-48 bg-gray-200 dark:bg-gray-700 animate-pulse rounded-lg"></div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Empty State */}
+      {!loading && filteredChairs.length === 0 && (
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-8 text-center">
+          <div className="mx-auto w-16 h-16 flex items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-300 mb-4">
+            <Filter size={24} />
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 dark:text-white">No chairs found</h3>
+          <p className="mt-2 text-gray-500 dark:text-gray-400">
+            No chairs matching your search criteria. Try adjusting your filters.
+          </p>
+          <button
+            onClick={resetFilters}
+            className="mt-4 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+          >
+            <RefreshCw size={16} className="mr-2" />
+            Reset Filters
+          </button>
+        </div>
+      )}
+
+      {/* Chair Grid */}
+      {!loading && filteredChairs.length > 0 && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredChairs.map((chair) => (
+            <motion.div
+              key={chair._id}
+              whileHover={{ y: -5 }}
+              transition={{ duration: 0.2 }}
+              className="bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-all overflow-hidden"
+            >
+              <div className="p-6">
+                <div className="flex justify-between items-start mb-4">
+                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">{chair.name}</h3>
+                  <div className="flex gap-1">
+                    <button
+                      onClick={() => openEditChairModal(chair)}
+                      className="p-1.5 text-gray-600 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full focus:outline-none"
+                      aria-label="Edit chair"
                     >
-                      <Card sx={{ 
-                        borderRadius: 2,
-                        height: '100%',
-                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.08)',
-                        transition: 'box-shadow 0.3s ease',
-                        '&:hover': {
-                          boxShadow: '0 8px 20px rgba(0, 0, 0, 0.12)'
-                        }
-                      }}>
-                        <CardContent>
-                          <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
-                            <Typography variant="h6" fontWeight="bold" gutterBottom>
-                              {chair.name}
-                            </Typography>
-                            <Box>
-                              <Tooltip title="Edit">
-                                <IconButton 
-                                  size="small" 
-                                  onClick={() => openEditChairModal(chair)}
-                                  sx={{ mr: 1 }}
-                                >
-                                  <EditIcon fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-                              <Tooltip title="Delete">
-                                <IconButton 
-                                  size="small" 
-                                  color="error" 
-                                  onClick={() => openDeleteChairModal(chair)}
-                                >
-                                  <DeleteIcon fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-                            </Box>
-                          </Box>
-                          
-                          <Divider sx={{ mb: 2 }} />
-                          
-                          <Box display="flex" alignItems="center">
-                            <Avatar 
-                              sx={{ 
-                                width: 40, 
-                                height: 40, 
-                                mr: 2,
-                                background: chair.head 
-                                  ? 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)'
-                                  : 'linear-gradient(45deg, #9e9e9e 30%, #bdbdbd 90%)'
-                              }}
-                            >
-                              {chair.head?.fullName?.charAt(0) || '?'}
-                            </Avatar>
-                            <Box>
-                              <Typography variant="body2" color="text.secondary">
-                                Chair Head
-                              </Typography>
-                              <Typography variant="body1">
-                                {chair.head ? chair.head.fullName : "Not Assigned"}
-                              </Typography>
-                            </Box>
-                          </Box>
-                        </CardContent>
-                      </Card>
-                    </motion.div>
-                  </Grid>
-                ))}
-              </Grid>
-            )}
-          </Box>
-        </>
+                      <Edit2 size={16} />
+                    </button>
+                    <button
+                      onClick={() => openDeleteChairModal(chair)}
+                      className="p-1.5 text-gray-600 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full focus:outline-none"
+                      aria-label="Delete chair"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+                </div>
+                
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+                  <div className="flex items-center">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-center text-white font-medium text-lg mr-3">
+                      {chair.head?.fullName?.charAt(0) || '?'}
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Chair Head</p>
+                      <p className="font-medium text-gray-900 dark:text-white">
+                        {chair.head ? chair.head.fullName : "Not Assigned"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          ))}
+        </div>
       )}
 
       {/* Add Chair Modal */}
-      <Dialog 
-        open={openAddModal} 
-        onClose={() => setOpenAddModal(false)}
-        fullWidth
-        maxWidth="sm"
-      >
-        <DialogTitle>
-          <Typography variant="h6" fontWeight="bold">Add New Chair</Typography>
-        </DialogTitle>
-        <DialogContent dividers>
-          <Grid container spacing={2}>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Chair Name"
-                name="name"
-                value={newChair.name}
-                onChange={handleChange}
-                required
-                variant="outlined"
-                autoFocus
-                sx={{ mb: 2 }}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <FormControl fullWidth variant="outlined">
-                <InputLabel>Chair Head</InputLabel>
-                <Select
-                  name="head"
-                  value={newChair.head}
-                  onChange={handleChange}
-                  label="Chair Head"
+      {openAddModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 dark:bg-gray-900 dark:bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+
+            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+            <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+              <div className="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div className="sm:flex sm:items-start">
+                  <div className="mt-3 text-center sm:mt-0 sm:text-left w-full">
+                    <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white" id="modal-title">
+                      Add New Chair
+                    </h3>
+                    <div className="mt-4 space-y-4">
+                      <div>
+                        <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Chair Name
+                        </label>
+                        <input
+                          type="text"
+                          name="name"
+                          id="name"
+                          value={newChair.name}
+                          onChange={handleChange}
+                          className="mt-1 block w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                          placeholder="Enter chair name"
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="head" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Chair Head
+                        </label>
+                        <select
+                          id="head"
+                          name="head"
+                          value={newChair.head}
+                          onChange={handleChange}
+                          className="mt-1 block w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        >
+                          <option value="">Select Chair Head</option>
+                          {chairHeads.map((ch) => (
+                            <option key={ch._id} value={ch._id}>
+                              {ch.fullName}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button
+                  type="button"
+                  onClick={handleAddChair}
+                  disabled={loading || !newChair.name}
+                  className={`w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 text-base font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm ${
+                    loading || !newChair.name
+                      ? "bg-indigo-400 cursor-not-allowed"
+                      : "bg-indigo-600 hover:bg-indigo-700"
+                  }`}
                 >
-                  <MenuItem value="">Select Chair Head</MenuItem>
-                  {chairHeads.map((ch) => (
-                    <MenuItem key={ch._id} value={ch._id}>
-                      {ch.fullName}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button 
-            onClick={() => setOpenAddModal(false)}
-            variant="outlined"
-            color="inherit"
-          >
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleAddChair} 
-            variant="contained" 
-            color="primary"
-            disabled={loading || !newChair.name}
-            startIcon={loading ? null : <AddIcon />}
-            sx={{ borderRadius: 2 }}
-          >
-            {loading ? "Adding..." : "Add Chair"}
-          </Button>
-        </DialogActions>
-      </Dialog>
+                  {loading ? "Adding..." : "Add Chair"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOpenAddModal(false)}
+                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:w-auto sm:text-sm"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Edit Chair Modal */}
-      <Dialog 
-        open={openEditModal} 
-        onClose={() => setOpenEditModal(false)}
-        fullWidth
-        maxWidth="sm"
-      >
-        <DialogTitle>
-          <Typography variant="h6" fontWeight="bold">Edit Chair</Typography>
-        </DialogTitle>
-        <DialogContent dividers>
-          <Grid container spacing={2}>
-            <Grid item xs={12}>
-              <TextField
-                fullWidth
-                label="Chair Name"
-                name="name"
-                value={newChair.name}
-                onChange={handleChange}
-                required
-                variant="outlined"
-                autoFocus
-                sx={{ mb: 2 }}
-              />
-            </Grid>
-            <Grid item xs={12}>
-              <FormControl fullWidth variant="outlined">
-                <InputLabel>Chair Head</InputLabel>
-                <Select
-                  name="head"
-                  value={newChair.head}
-                  onChange={handleChange}
-                  label="Chair Head"
+      {openEditModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 dark:bg-gray-900 dark:bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+
+            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+            <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+              <div className="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div className="sm:flex sm:items-start">
+                  <div className="mt-3 text-center sm:mt-0 sm:text-left w-full">
+                    <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white" id="modal-title">
+                      Edit Chair
+                    </h3>
+                    <div className="mt-4 space-y-4">
+                      <div>
+                        <label htmlFor="edit-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Chair Name
+                        </label>
+                        <input
+                          type="text"
+                          name="name"
+                          id="edit-name"
+                          value={newChair.name}
+                          onChange={handleChange}
+                          className="mt-1 block w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                          placeholder="Enter chair name"
+                        />
+                      </div>
+                      <div>
+                        <label htmlFor="edit-head" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                          Chair Head
+                        </label>
+                        <select
+                          id="edit-head"
+                          name="head"
+                          value={newChair.head}
+                          onChange={handleChange}
+                          className="mt-1 block w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+                        >
+                          <option value="">Select Chair Head</option>
+                          {chairHeads.map((ch) => (
+                            <option key={ch._id} value={ch._id}>
+                              {ch.fullName}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button
+                  type="button"
+                  onClick={handleEditChair}
+                  disabled={loading || !newChair.name}
+                  className={`w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 text-base font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm ${
+                    loading || !newChair.name
+                      ? "bg-indigo-400 cursor-not-allowed"
+                      : "bg-indigo-600 hover:bg-indigo-700"
+                  }`}
                 >
-                  <MenuItem value="">Select Chair Head</MenuItem>
-                  {chairHeads.map((ch) => (
-                    <MenuItem key={ch._id} value={ch._id}>
-                      {ch.fullName}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Grid>
-          </Grid>
-        </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button 
-            onClick={() => setOpenEditModal(false)}
-            variant="outlined"
-            color="inherit"
-          >
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleEditChair} 
-            variant="contained" 
-            color="primary"
-            disabled={loading || !newChair.name}
-            startIcon={loading ? null : <EditIcon />}
-            sx={{ borderRadius: 2 }}
-          >
-            {loading ? "Updating..." : "Update Chair"}
-          </Button>
-        </DialogActions>
-      </Dialog>
+                  {loading ? "Updating..." : "Update Chair"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOpenEditModal(false)}
+                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:w-auto sm:text-sm"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Delete Confirmation Modal */}
-      <Dialog 
-        open={openDeleteModal} 
-        onClose={() => setOpenDeleteModal(false)}
-        fullWidth
-        maxWidth="xs"
-      >
-        <DialogTitle>
-          <Typography variant="h6" fontWeight="bold">Delete Chair</Typography>
-        </DialogTitle>
-        <DialogContent>
-          <Alert severity="warning" sx={{ mb: 2 }}>
-            This action cannot be undone.
-          </Alert>
-          <Typography>
-            Are you sure you want to delete the chair "{selectedChair?.name}"?
-          </Typography>
-        </DialogContent>
-        <DialogActions sx={{ p: 2 }}>
-          <Button 
-            onClick={() => setOpenDeleteModal(false)}
-            variant="outlined"
-            color="inherit"
-          >
-            Cancel
-          </Button>
-          <Button 
-            onClick={handleDeleteChair} 
-            variant="contained" 
-            color="error"
-            disabled={loading}
-            startIcon={loading ? null : <DeleteIcon />}
-            sx={{ borderRadius: 2 }}
-          >
-            {loading ? "Deleting..." : "Delete"}
-          </Button>
-        </DialogActions>
-      </Dialog>
+      {openDeleteModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 dark:bg-gray-900 dark:bg-opacity-75 transition-opacity" aria-hidden="true"></div>
 
-      {/* Notification Snackbar */}
-      <Snackbar
-        open={notification.open}
-        autoHideDuration={4000}
-        onClose={closeNotification}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
-      >
-        <Alert 
-          onClose={closeNotification} 
-          severity={notification.type}
-          variant="filled"
-          sx={{ width: '100%' }}
-        >
-          {notification.message}
-        </Alert>
-      </Snackbar>
-    </motion.div>
+            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+            <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+              <div className="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                <div className="sm:flex sm:items-start">
+                  <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-900 sm:mx-0 sm:h-10 sm:w-10">
+                    <Trash2 className="h-6 w-6 text-red-600 dark:text-red-300" />
+                  </div>
+                  <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                    <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white" id="modal-title">
+                      Delete Chair
+                    </h3>
+                    <div className="mt-2">
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        Are you sure you want to delete the chair "{selectedChair?.name}"? This action cannot be undone.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button
+                  type="button"
+                  onClick={handleDeleteChair}
+                  disabled={loading}
+                  className={`w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 text-base font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm ${
+                    loading ? "bg-red-400 cursor-not-allowed" : "bg-red-600 hover:bg-red-700"
+                  }`}
+                >
+                  {loading ? "Deleting..." : "Delete"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setOpenDeleteModal(false)}
+                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:w-auto sm:text-sm"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style jsx="true">{`
+        .animate-fadeIn {
+          animation: fadeIn 0.4s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+      `}</style>
+    </div>
   );
 };
 
