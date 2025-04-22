@@ -96,21 +96,21 @@ const RegularAssignmentCH = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto">
-      <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden mb-6">
-        <div className="px-6 py-5 border-b border-gray-200 dark:border-gray-800">
-          <h1 className="text-xl font-bold text-gray-800 dark:text-white mb-2">Regular Course Assignment</h1>
+    <div className="animate-fadeIn">
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden mb-6">
+        <div className="px-4 sm:px-6 py-4 sm:py-5 border-b border-gray-200 dark:border-gray-700">
+          <h1 className="text-xl font-bold text-gray-800 dark:text-white mb-1">Regular Course Assignment</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400">
             Assign regular courses to instructors based on preferences and workload
           </p>
         </div>
 
         {/* Search (Filtering Mechanism) */}
-        <div className="p-6 space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="p-4 sm:p-6 space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             <div className="space-y-2">
               <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                <Calendar className="w-4 h-4 text-indigo-500" />
+                <Calendar className="w-4 h-4 text-indigo-500 dark:text-indigo-400" />
                 <span>Academic Year</span>
               </label>
               <input
@@ -118,20 +118,20 @@ const RegularAssignmentCH = () => {
                 name="year"
                 value={filters.year}
                 onChange={handleFilterChange}
-                className="w-full px-4 py-2.5 bg-white dark:bg-slate-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors text-base text-gray-900 dark:text-white"
+                className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors text-gray-900 dark:text-white text-base"
               />
             </div>
             
             <div className="space-y-2">
               <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                <FileText className="w-4 h-4 text-indigo-500" />
+                <FileText className="w-4 h-4 text-indigo-500 dark:text-indigo-400" />
                 <span>Semester</span>
               </label>
               <select
                 name="semester"
                 value={filters.semester}
                 onChange={handleFilterChange}
-                className="w-full px-4 py-2.5 bg-white dark:bg-slate-800 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors appearance-none text-base text-gray-900 dark:text-white"
+                className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors appearance-none text-gray-900 dark:text-white text-base"
               >
                 <option value="Regular 1">Regular 1</option>
                 <option value="Regular 2">Regular 2</option>
@@ -142,10 +142,10 @@ const RegularAssignmentCH = () => {
             
             <div className="space-y-2">
               <label className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                <User className="w-4 h-4 text-indigo-500" />
+                <User className="w-4 h-4 text-indigo-500 dark:text-indigo-400" />
                 <span>Department Chair</span>
               </label>
-              <div className="px-4 py-2.5 bg-gray-100 dark:bg-slate-700 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 text-base truncate">
+              <div className="px-3 py-2 bg-gray-100 dark:bg-gray-600 border border-gray-200 dark:border-gray-500 rounded-lg text-gray-700 dark:text-gray-300 text-base truncate">
                 {user?.chair || 'Loading chair information...'}
               </div>
             </div>
@@ -155,7 +155,7 @@ const RegularAssignmentCH = () => {
             <button
               onClick={handleSearch}
               disabled={loading}
-              className="flex items-center justify-center px-6 py-2.5 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-indigo-400 dark:disabled:bg-indigo-700/50 transition-colors shadow-sm w-full sm:w-auto text-base"
+              className="flex items-center justify-center px-4 sm:px-6 py-2 bg-indigo-600 dark:bg-indigo-500 text-white rounded-lg hover:bg-indigo-700 dark:hover:bg-indigo-600 disabled:bg-indigo-400 dark:disabled:bg-indigo-700/50 transition-colors shadow-sm w-full sm:w-auto text-base"
             >
               {loading ? (
                 <Loader2 className="w-5 h-5 mr-2 animate-spin" />
@@ -169,7 +169,7 @@ const RegularAssignmentCH = () => {
 
         {/* Error message */}
         {error && (
-          <div className="mx-6 mb-6 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 p-4 rounded-lg border border-red-200 dark:border-red-800 flex items-start">
+          <div className="mx-4 sm:mx-6 mb-6 bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 p-3 sm:p-4 rounded-lg border border-red-200 dark:border-red-800 flex items-start">
             <AlertCircle className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" />
             <span className="text-sm">{error}</span>
           </div>
@@ -177,7 +177,7 @@ const RegularAssignmentCH = () => {
         
         {/* Preferences summary */}
         {preferences && preferences.preferences && preferences.preferences.length > 0 && (
-          <div className="mx-6 mb-6 p-4 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/30 rounded-lg">
+          <div className="mx-4 sm:mx-6 mb-6 p-3 sm:p-4 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/30 rounded-lg">
             <div className="flex items-center text-indigo-700 dark:text-indigo-400 flex-wrap">
               <BookOpen className="w-5 h-5 mr-2 flex-shrink-0" />
               <span className="font-medium text-base">Found {preferences.preferences.length} instructor preference submissions for {filters.semester} {filters.year}</span>
@@ -190,14 +190,14 @@ const RegularAssignmentCH = () => {
       </div>
 
       {showOptions && (
-        <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
           {/* Tabs - Scrollable on mobile */}
-          <div className="border-b border-gray-200 dark:border-gray-800 overflow-x-auto">
-            <div className="min-w-max px-6">
-              <nav className="flex -mb-px space-x-8">
+          <div className="border-b border-gray-200 dark:border-gray-700 overflow-x-auto">
+            <div className="min-w-max px-4 sm:px-6">
+              <nav className="flex -mb-px space-x-6 sm:space-x-8">
                 <button
                   onClick={() => setActiveTab("manual")}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  className={`py-3 sm:py-4 px-1 border-b-2 font-medium text-sm ${
                     activeTab === "manual"
                       ? "border-indigo-500 text-indigo-600 dark:text-indigo-400"
                       : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
@@ -212,7 +212,7 @@ const RegularAssignmentCH = () => {
                 
                 <button
                   onClick={() => setActiveTab("automatic")}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  className={`py-3 sm:py-4 px-1 border-b-2 font-medium text-sm ${
                     activeTab === "automatic"
                       ? "border-indigo-500 text-indigo-600 dark:text-indigo-400"
                       : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
@@ -227,7 +227,7 @@ const RegularAssignmentCH = () => {
                 
                 <button
                   onClick={() => setActiveTab("assigned")}
-                  className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  className={`py-3 sm:py-4 px-1 border-b-2 font-medium text-sm ${
                     activeTab === "assigned"
                       ? "border-indigo-500 text-indigo-600 dark:text-indigo-400"
                       : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 hover:border-gray-300 dark:hover:border-gray-600"
@@ -244,7 +244,7 @@ const RegularAssignmentCH = () => {
           </div>
 
           {/* Tab Content */}
-          <div className="p-6">
+          <div className="p-4 sm:p-6">
             {activeTab === "manual" && (
               <ManualAssignment fetchAssignments={fetchAssignments} filters={filters} />
             )}
@@ -264,6 +264,17 @@ const RegularAssignmentCH = () => {
           </div>
         </div>
       )}
+      
+      <style jsx="true">{`
+        .animate-fadeIn {
+          animation: fadeIn 0.4s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+      `}</style>
     </div>
   );
 };

@@ -146,31 +146,31 @@ const AutomaticAssignment = ({ fetchAssignments, filters }) => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h2 className="text-xl font-bold text-gray-800 dark:text-white">Automatic Course Assignment</h2>
+          <h2 className="text-lg sm:text-xl font-bold text-gray-800 dark:text-white">Automatic Course Assignment</h2>
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
             Generate optimal course assignments based on preferences and workload
           </p>
         </div>
         
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap gap-2 sm:gap-3">
           <button
             onClick={fetchAutomaticAssignments}
             disabled={loading}
-            className="flex items-center justify-center px-3 md:px-4 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors border border-gray-300 dark:border-gray-600 text-sm"
+            className="flex items-center justify-center px-2.5 sm:px-3 py-1.5 sm:py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors border border-gray-300 dark:border-gray-600 text-sm"
           >
-            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`w-4 h-4 mr-1.5 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </button>
           
           {assignedCourses.length > 0 && (
             <button
               onClick={handleExportCSV}
-              className="flex items-center justify-center px-3 md:px-4 py-2 bg-green-600 dark:bg-green-700 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 transition-colors text-sm"
+              className="flex items-center justify-center px-2.5 sm:px-3 py-1.5 sm:py-2 bg-green-600 dark:bg-green-700 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 transition-colors text-sm"
             >
-              <Download className="w-4 h-4 mr-2" />
+              <Download className="w-4 h-4 mr-1.5" />
               Export CSV
             </button>
           )}
@@ -178,16 +178,16 @@ const AutomaticAssignment = ({ fetchAssignments, filters }) => {
           <button
             onClick={handleAutoAssign}
             disabled={generating}
-            className="flex items-center justify-center px-4 md:px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:bg-indigo-400 dark:disabled:bg-indigo-700/50 transition-colors text-sm"
+            className="flex items-center justify-center px-3 sm:px-4 py-1.5 sm:py-2 bg-indigo-600 dark:bg-indigo-500 text-white rounded-lg hover:bg-indigo-700 dark:hover:bg-indigo-600 disabled:bg-indigo-400 dark:disabled:bg-indigo-700/50 transition-colors text-sm"
           >
             {generating ? (
               <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <Loader2 className="w-4 h-4 mr-1.5 animate-spin" />
                 <span>Processing...</span>
               </>
             ) : (
               <>
-                <Check className="w-4 h-4 mr-2" />
+                <Check className="w-4 h-4 mr-1.5" />
                 <span>Run Assignment</span>
               </>
             )}
@@ -196,8 +196,8 @@ const AutomaticAssignment = ({ fetchAssignments, filters }) => {
       </div>
 
       {generating && (
-        <div className="flex items-center bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 p-4 rounded-lg border border-indigo-200 dark:border-indigo-800/30 text-sm">
-          <Loader2 className="w-5 h-5 mr-3 animate-spin flex-shrink-0" />
+        <div className="flex items-center bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-400 p-3 rounded-lg border border-indigo-200 dark:border-indigo-800/30 text-sm">
+          <Loader2 className="w-5 h-5 mr-2.5 animate-spin flex-shrink-0" />
           <div>
             <p className="font-medium">Generating optimal assignments</p>
             <p className="text-xs text-indigo-600 dark:text-indigo-300">This may take a few moments depending on the complexity of preferences</p>
@@ -206,15 +206,15 @@ const AutomaticAssignment = ({ fetchAssignments, filters }) => {
       )}
 
       {success && (
-        <div className="flex items-center bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 p-4 rounded-lg border border-green-200 dark:border-green-800/30 text-sm">
-          <Check className="w-5 h-5 mr-3 flex-shrink-0" />
+        <div className="flex items-center bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400 p-3 rounded-lg border border-green-200 dark:border-green-800/30 text-sm">
+          <Check className="w-5 h-5 mr-2.5 flex-shrink-0" />
           <span>{success}</span>
         </div>
       )}
 
       {error && (
-        <div className="flex items-center bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 p-4 rounded-lg border border-red-200 dark:border-red-800/30 text-sm">
-          <AlertCircle className="w-5 h-5 mr-3 flex-shrink-0" />
+        <div className="flex items-center bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-400 p-3 rounded-lg border border-red-200 dark:border-red-800/30 text-sm">
+          <AlertCircle className="w-5 h-5 mr-2.5 flex-shrink-0" />
           <div>
             <p className="font-medium">Error</p>
             <p className="text-xs">{error}</p>
@@ -224,37 +224,37 @@ const AutomaticAssignment = ({ fetchAssignments, filters }) => {
 
       {/* Stats Cards */}
       {assignedCourses.length > 0 && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-4 border border-indigo-100 dark:border-indigo-800/30">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="bg-indigo-50 dark:bg-indigo-900/20 rounded-lg p-3 border border-indigo-100 dark:border-indigo-800/30">
             <div className="flex items-center text-indigo-700 dark:text-indigo-400">
-              <BookOpen className="w-5 h-5 mr-2 flex-shrink-0" />
+              <BookOpen className="w-4 h-4 mr-2 flex-shrink-0" />
               <span className="text-lg font-bold">{stats.totalCourses}</span>
             </div>
-            <p className="text-sm text-indigo-600 dark:text-indigo-300 mt-1">Total Courses</p>
+            <p className="text-xs sm:text-sm text-indigo-600 dark:text-indigo-300 mt-1">Total Courses</p>
           </div>
           
-          <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4 border border-green-100 dark:border-green-800/30">
+          <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3 border border-green-100 dark:border-green-800/30">
             <div className="flex items-center text-green-700 dark:text-green-400">
-              <Check className="w-5 h-5 mr-2 flex-shrink-0" />
+              <Check className="w-4 h-4 mr-2 flex-shrink-0" />
               <span className="text-lg font-bold">{stats.assignedCourses}</span>
             </div>
-            <p className="text-sm text-green-600 dark:text-green-300 mt-1">Assigned Courses</p>
+            <p className="text-xs sm:text-sm text-green-600 dark:text-green-300 mt-1">Assigned Courses</p>
           </div>
           
-          <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-4 border border-yellow-100 dark:border-yellow-800/30">
+          <div className="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg p-3 border border-yellow-100 dark:border-yellow-800/30">
             <div className="flex items-center text-yellow-700 dark:text-yellow-400">
-              <AlertCircle className="w-5 h-5 mr-2 flex-shrink-0" />
+              <AlertCircle className="w-4 h-4 mr-2 flex-shrink-0" />
               <span className="text-lg font-bold">{stats.unassignedCourses}</span>
             </div>
-            <p className="text-sm text-yellow-600 dark:text-yellow-300 mt-1">Unassigned</p>
+            <p className="text-xs sm:text-sm text-yellow-600 dark:text-yellow-300 mt-1">Unassigned</p>
           </div>
           
-          <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-4 border border-purple-100 dark:border-purple-800/30">
+          <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-3 border border-purple-100 dark:border-purple-800/30">
             <div className="flex items-center text-purple-700 dark:text-purple-400">
-              <User className="w-5 h-5 mr-2 flex-shrink-0" />
+              <User className="w-4 h-4 mr-2 flex-shrink-0" />
               <span className="text-lg font-bold">{stats.instructors}</span>
             </div>
-            <p className="text-sm text-purple-600 dark:text-purple-300 mt-1">Instructors</p>
+            <p className="text-xs sm:text-sm text-purple-600 dark:text-purple-300 mt-1">Instructors</p>
           </div>
         </div>
       )}
@@ -266,91 +266,91 @@ const AutomaticAssignment = ({ fetchAssignments, filters }) => {
           <div className="hidden sm:block overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
             <div className="inline-block min-w-full align-middle">
               <table className="min-w-full text-sm text-left text-gray-700 dark:text-gray-300 divide-y divide-gray-200 dark:divide-gray-700">
-                <thead className="text-xs uppercase bg-gray-50 dark:bg-slate-800">
+                <thead className="text-xs uppercase bg-gray-50 dark:bg-gray-700">
                   <tr>
-                    <th scope="col" className="px-4 py-3 font-medium">
+                    <th scope="col" className="px-2 py-2 font-medium">
                       <div className="flex items-center">
-                        <User className="w-4 h-4 mr-1 flex-shrink-0" />
-                        Instructor
+                        <User className="w-3.5 h-3.5 mr-1 flex-shrink-0" />
+                        <span className="truncate">Instructor</span>
                       </div>
                     </th>
-                    <th scope="col" className="px-4 py-3 font-medium">
+                    <th scope="col" className="px-2 py-2 font-medium">
                       <div className="flex items-center">
-                        <Mail className="w-4 h-4 mr-1 flex-shrink-0" />
-                        Email
+                        <Mail className="w-3.5 h-3.5 mr-1 flex-shrink-0" />
+                        <span className="truncate">Email</span>
                       </div>
                     </th>
-                    <th scope="col" className="px-4 py-3 font-medium">
+                    <th scope="col" className="px-2 py-2 font-medium">
                       <div className="flex items-center">
-                        <BookOpen className="w-4 h-4 mr-1 flex-shrink-0" />
-                        Course
+                        <BookOpen className="w-3.5 h-3.5 mr-1 flex-shrink-0" />
+                        <span className="truncate">Course</span>
                       </div>
                     </th>
-                    <th scope="col" className="px-4 py-3 font-medium">
+                    <th scope="col" className="px-2 py-2 font-medium">
                       <div className="flex items-center">
-                        <Hash className="w-4 h-4 mr-1 flex-shrink-0" />
-                        Code
+                        <Hash className="w-3.5 h-3.5 mr-1 flex-shrink-0" />
+                        <span className="truncate">Code</span>
                       </div>
                     </th>
-                    <th scope="col" className="px-4 py-3 font-medium">
+                    <th scope="col" className="px-2 py-2 font-medium">
                       <div className="flex items-center">
-                        <Layers className="w-4 h-4 mr-1 flex-shrink-0" />
-                        Section
+                        <Layers className="w-3.5 h-3.5 mr-1 flex-shrink-0" />
+                        <span className="truncate">Section</span>
                       </div>
                     </th>
-                    <th scope="col" className="px-4 py-3 font-medium hidden md:table-cell">
+                    <th scope="col" className="px-2 py-2 font-medium hidden md:table-cell">
                       <div className="flex items-center">
-                        <Divide className="w-4 h-4 mr-1 flex-shrink-0" />
-                        Lab Division
+                        <Divide className="w-3.5 h-3.5 mr-1 flex-shrink-0" />
+                        <span className="truncate">Lab Division</span>
                       </div>
                     </th>
-                    <th scope="col" className="px-4 py-3 font-medium">
+                    <th scope="col" className="px-2 py-2 font-medium">
                       <div className="flex items-center">
-                        <Clock className="w-4 h-4 mr-1 flex-shrink-0" />
-                        Workload
+                        <Clock className="w-3.5 h-3.5 mr-1 flex-shrink-0" />
+                        <span className="truncate">Workload</span>
                       </div>
                     </th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                   {assignedCourses.map((assignment, index) => (
                     <tr 
                       key={index} 
                       className={`${
-                        index % 2 === 0 ? 'bg-white dark:bg-slate-900' : 'bg-gray-50 dark:bg-slate-800/50'
+                        index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-800/50'
                       } ${
                         assignment.instructorName === 'Unassigned' ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''
-                      } border-b dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors`}
+                      } hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors`}
                     >
-                      <td className="px-4 py-3 font-medium">
+                      <td className="px-2 py-2 font-medium">
                         {assignment.instructorName === 'Unassigned' ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200">
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200">
                             Unassigned
                           </span>
                         ) : (
-                          <span className="truncate block max-w-[150px] lg:max-w-full">{assignment.instructorName}</span>
+                          <span className="truncate block max-w-[120px] xl:max-w-full">{assignment.instructorName}</span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-gray-600 dark:text-gray-400">
-                        <span className="truncate block max-w-[150px] lg:max-w-full">{assignment.instructorEmail}</span>
+                      <td className="px-2 py-2 text-gray-600 dark:text-gray-400">
+                        <span className="truncate block max-w-[120px] xl:max-w-full">{assignment.instructorEmail}</span>
                       </td>
-                      <td className="px-4 py-3">
-                        <span className="truncate block max-w-[150px] lg:max-w-full">{assignment.courseName}</span>
+                      <td className="px-2 py-2">
+                        <span className="truncate block max-w-[120px] xl:max-w-full">{assignment.courseName}</span>
                       </td>
-                      <td className="px-4 py-3 font-medium">
+                      <td className="px-2 py-2 font-medium">
                         {assignment.courseCode}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-2 py-2">
                         {assignment.section}
                       </td>
-                      <td className="px-4 py-3 hidden md:table-cell">
+                      <td className="px-2 py-2 hidden md:table-cell">
                         {assignment.labDivision !== 'No' ? (
-                          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-200">
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-200">
                             {assignment.labDivision}
                           </span>
                         ) : 'N/A'}
                       </td>
-                      <td className="px-4 py-3 font-medium whitespace-nowrap">
+                      <td className="px-2 py-2 font-medium whitespace-nowrap">
                         {assignment.workload} hrs
                       </td>
                     </tr>
@@ -361,22 +361,22 @@ const AutomaticAssignment = ({ fetchAssignments, filters }) => {
           </div>
           
           {/* Mobile Table View (Cards) */}
-          <div className="sm:hidden space-y-3">
+          <div className="sm:hidden space-y-2">
             {assignedCourses.map((assignment, index) => (
               <div 
                 key={index} 
                 className={`border rounded-lg overflow-hidden ${
                   assignment.instructorName === 'Unassigned' 
                     ? 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800/30' 
-                    : 'bg-white dark:bg-slate-800 border-gray-200 dark:border-gray-700'
+                    : 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700'
                 }`}
               >
                 <div 
-                  className="flex justify-between items-center px-3 py-2 bg-gray-50 dark:bg-slate-700 border-b dark:border-gray-600 cursor-pointer"
+                  className="flex justify-between items-center px-3 py-2 bg-gray-50 dark:bg-gray-700 border-b dark:border-gray-600 cursor-pointer"
                   onClick={() => toggleRowExpansion(index)}
                 >
                   <div className="flex items-center">
-                    <span className="font-medium text-sm truncate max-w-[200px] text-gray-800 dark:text-gray-200">
+                    <span className="font-medium text-xs truncate max-w-[200px] text-gray-800 dark:text-gray-200">
                       {assignment.courseName} ({assignment.courseCode})
                     </span>
                   </div>
@@ -387,7 +387,7 @@ const AutomaticAssignment = ({ fetchAssignments, filters }) => {
                   )}
                 </div>
                 
-                <div className={`px-3 py-2 text-xs space-y-1.5 ${expandedRows[index] ? 'block' : 'hidden'}`}>
+                <div className={`px-3 py-2 text-xs space-y-1 ${expandedRows[index] ? 'block' : 'hidden'}`}>
                   <div className="grid grid-cols-3">
                     <div className="col-span-1 text-gray-500 dark:text-gray-400 flex items-center">
                       <User className="w-3 h-3 mr-1" />
@@ -451,13 +451,13 @@ const AutomaticAssignment = ({ fetchAssignments, filters }) => {
           </div>
         </>
       ) : loading ? (
-        <div className="flex flex-col items-center justify-center py-12">
-          <Loader2 className="w-12 h-12 text-indigo-500 animate-spin mb-4" />
+        <div className="flex flex-col items-center justify-center py-8 sm:py-12">
+          <Loader2 className="w-10 h-10 text-indigo-500 dark:text-indigo-400 animate-spin mb-4" />
           <p className="text-gray-500 dark:text-gray-400">Loading assignments...</p>
         </div>
       ) : (
-        <div className="text-center py-10 bg-gray-50 dark:bg-slate-800 rounded-lg border border-gray-200 dark:border-gray-700">
-          <BookOpen className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-600" />
+        <div className="text-center py-8 sm:py-10 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
+          <BookOpen className="mx-auto h-10 w-10 text-gray-400 dark:text-gray-500" />
           <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">No assignments available</h3>
           <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
             Generate automatic assignments to see results here
