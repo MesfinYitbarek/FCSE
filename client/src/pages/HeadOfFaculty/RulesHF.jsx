@@ -196,7 +196,7 @@ const RulesHF = () => {
           </div>
           <button
             onClick={() => setOpenAddModal(true)}
-            className="flex items-center gap-2 bg-gradient-to-r from-purple-600 to-purple-500 text-white py-2 px-4 rounded-lg hover:from-purple-700 hover:to-purple-600 transition-all focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+            className="flex items-center gap-2 bg-gradient-to-r from-indigo-600 to-indigo-500 text-white py-2 px-4 rounded-lg hover:from-indigo-700 hover:to-indigo-600 transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
           >
             <Plus size={18} />
             <span>New Rule</span>

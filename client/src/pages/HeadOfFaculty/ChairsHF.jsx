@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useRef } from "react";
+import { useEffect, useState, useMemo } from "react";
 import api from "../../utils/api";
 import { useSelector } from "react-redux";
 import { motion } from "framer-motion";
@@ -14,7 +14,9 @@ import {
   ChevronUp,
   SortAsc,
   SortDesc,
-  Filter
+  Filter,
+  User,
+  ChevronRight
 } from "lucide-react";
 
 const ChairsHF = () => {
@@ -30,6 +32,7 @@ const ChairsHF = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterHead, setFilterHead] = useState("");
   const [sortOrder, setSortOrder] = useState("asc");
+  const [expandedRow, setExpandedRow] = useState(null);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -140,6 +143,10 @@ const ChairsHF = () => {
   const resetFilters = () => {
     setSearchTerm("");
     setFilterHead("");
+  };
+
+  const toggleRowExpand = (chairId) => {
+    setExpandedRow(expandedRow === chairId ? null : chairId);
   };
 
   // Memoized filtered and sorted chairs
@@ -254,13 +261,37 @@ const ChairsHF = () => {
 
       {/* Loading State */}
       {loading && chairs.length === 0 && (
-        <div className="space-y-4">
-          <div className="h-24 bg-gray-200 dark:bg-gray-700 animate-pulse rounded-lg"></div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[...Array(6)].map((_, index) => (
-              <div key={index} className="h-48 bg-gray-200 dark:bg-gray-700 animate-pulse rounded-lg"></div>
-            ))}
-          </div>
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-700">
+              <tr>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  Chair Name
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  Chair Head
+                </th>
+                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+              {[...Array(5)].map((_, index) => (
+                <tr key={index}>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-3/4"></div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-1/2"></div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded animate-pulse w-1/4"></div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
 
@@ -284,53 +315,139 @@ const ChairsHF = () => {
         </div>
       )}
 
-      {/* Chair Grid */}
+      {/* Chairs Table */}
       {!loading && filteredChairs.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredChairs.map((chair) => (
-            <motion.div
-              key={chair._id}
-              whileHover={{ y: -5 }}
-              transition={{ duration: 0.2 }}
-              className="bg-white dark:bg-gray-800 rounded-lg shadow-sm hover:shadow-md transition-all overflow-hidden"
-            >
-              <div className="p-6">
-                <div className="flex justify-between items-start mb-4">
-                  <h3 className="text-lg font-bold text-gray-900 dark:text-white">{chair.name}</h3>
-                  <div className="flex gap-1">
-                    <button
-                      onClick={() => openEditChairModal(chair)}
-                      className="p-1.5 text-gray-600 hover:text-indigo-600 dark:text-gray-400 dark:hover:text-indigo-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full focus:outline-none"
-                      aria-label="Edit chair"
+        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+              <thead className="bg-gray-50 dark:bg-gray-700">
+                <tr>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Chair Name
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Chair Head
+                  </th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                {filteredChairs.map((chair) => (
+                  <>
+                    <tr 
+                      key={chair._id} 
+                      className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
+                      onClick={() => toggleRowExpand(chair._id)}
                     >
-                      <Edit2 size={16} />
-                    </button>
-                    <button
-                      onClick={() => openDeleteChairModal(chair)}
-                      className="p-1.5 text-gray-600 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full focus:outline-none"
-                      aria-label="Delete chair"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </div>
-                
-                <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-                  <div className="flex items-center">
-                    <div className="w-10 h-10 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-center text-white font-medium text-lg mr-3">
-                      {chair.head?.fullName?.charAt(0) || '?'}
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Chair Head</p>
-                      <p className="font-medium text-gray-900 dark:text-white">
-                        {chair.head ? chair.head.fullName : "Not Assigned"}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          ))}
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          <div className="text-sm font-medium text-gray-900 dark:text-white">
+                            {chair.name}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center">
+                          {chair.head ? (
+                            <>
+                              <div className="flex-shrink-0 h-10 w-10">
+                                <div className="h-10 w-10 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-center text-white font-medium">
+                                  {chair.head.fullName.charAt(0)}
+                                </div>
+                              </div>
+                              <div className="ml-4">
+                                <div className="text-sm font-medium text-gray-900 dark:text-white">
+                                  {chair.head.fullName}
+                                </div>
+                                <div className="text-sm text-gray-500 dark:text-gray-400">
+                                  {chair.head.email}
+                                </div>
+                              </div>
+                            </>
+                          ) : (
+                            <div className="text-sm text-gray-500 dark:text-gray-400 italic">
+                              Not assigned
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div className="flex items-center justify-end space-x-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openEditChairModal(chair);
+                            }}
+                            className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300"
+                          >
+                            <Edit2 size={18} />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openDeleteChairModal(chair);
+                            }}
+                            className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              toggleRowExpand(chair._id);
+                            }}
+                            className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 ml-2"
+                          >
+                            {expandedRow === chair._id ? (
+                              <ChevronUp size={18} />
+                            ) : (
+                              <ChevronDown size={18} />
+                            )}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                    {expandedRow === chair._id && (
+                      <tr className="bg-gray-50 dark:bg-gray-700">
+                        <td colSpan="3" className="px-6 py-4">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                              <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
+                                Chair Details
+                              </h4>
+                              <div className="space-y-2">
+                                <p className="text-sm text-gray-600 dark:text-gray-300">
+                                  <span className="font-medium">Created:</span> {new Date(chair.createdAt).toLocaleDateString()}
+                                </p>
+                                
+                              </div>
+                            </div>
+                            {chair.head && (
+                              <div>
+                                <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
+                                  Chair Head Information
+                                </h4>
+                                <div className="space-y-2">
+                                  <p className="text-sm text-gray-600 dark:text-gray-300">
+                                    <span className="font-medium">Email:</span> {chair.head.email}
+                                  </p>
+                                  <p className="text-sm text-gray-600 dark:text-gray-300">
+                                    <span className="font-medium">Phone:</span> {chair.head.phone || 'Not provided'}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
@@ -541,17 +658,6 @@ const ChairsHF = () => {
           </div>
         </div>
       )}
-
-      <style jsx="true">{`
-        .animate-fadeIn {
-          animation: fadeIn 0.4s ease-in-out;
-        }
-        
-        @keyframes fadeIn {
-          from { opacity: 0; }
-          to { opacity: 1; }
-        }
-      `}</style>
     </div>
   );
 };
