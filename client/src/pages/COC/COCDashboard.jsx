@@ -10,14 +10,22 @@ import {
   Clock,
   ChevronRight,
   BookOpen,
-  Megaphone
+  Megaphone,
+  XCircle,
+  Layers
 } from "lucide-react";
 import api from "@/utils/api";
 
 const COCDashboard = () => {
   const { user } = useSelector((state) => state.auth);
   const [stats, setStats] = useState({
-    complaints: { total: 0, resolved: 0, pending: 0, rejected: 0 },
+    complaints: { 
+      total: 0, 
+      resolved: 0, 
+      pending: 0, 
+      rejected: 0,
+      groupedByYearSemester: {} 
+    },
     announcements: { total: 0, unread: 0 }
   });
   const [isLoading, setIsLoading] = useState(true);
@@ -30,19 +38,13 @@ const COCDashboard = () => {
         setIsLoading(true);
         setError(null);
         
-        // Fetch complaints data - all complaints for the COC
-        const complaintsResponse = await api.get('/complaints');
-        const complaints = complaintsResponse.data;
+        // Fetch complaints stats
+        const complaintsResponse = await api.get('/complaints/stats');
+        const complaintsData = complaintsResponse.data;
         
         // Fetch announcements data
         const announcementsResponse = await api.get('/announcements');
         const announcements = announcementsResponse.data;
-        
-        // Process complaints data
-        const totalComplaints = complaints.length;
-        const resolvedComplaints = complaints.filter(c => c.status === "Resolved").length;
-        const pendingComplaints = complaints.filter(c => c.status === "Pending").length;
-        const rejectedComplaints = complaints.filter(c => c.status === "Rejected").length;
         
         // Process announcements data
         const totalAnnouncements = announcements.length;
@@ -50,10 +52,11 @@ const COCDashboard = () => {
         
         setStats({
           complaints: {
-            total: totalComplaints,
-            resolved: resolvedComplaints,
-            pending: pendingComplaints,
-            rejected: rejectedComplaints
+            total: complaintsData.totalComplaints || 0,
+            resolved: complaintsData.resolved || 0,
+            pending: complaintsData.pending || 0,
+            rejected: complaintsData.rejected || 0,
+            groupedByYearSemester: complaintsData.groupedByYearSemester || {}
           },
           announcements: {
             total: totalAnnouncements,
@@ -73,6 +76,35 @@ const COCDashboard = () => {
       fetchDashboardData();
     }
   }, [user]);
+
+  // Format semester data for display
+  const formatSemesterData = () => {
+    const semesters = stats.complaints.groupedByYearSemester;
+    if (!semesters || Object.keys(semesters).length === 0) {
+      return null;
+    }
+
+    return Object.entries(semesters).map(([key, data]) => {
+      const [year, semester] = key.split('-');
+      return (
+        <div key={key} className="mb-4 last:mb-0">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+              {year} - Semester {semester} ({data.total} complaints)
+            </span>
+          </div>
+          <div className="pl-2">
+            {Object.entries(data.programMap).map(([program, count]) => (
+              <div key={program} className="flex items-center justify-between py-1 text-sm">
+                <span className="text-gray-600 dark:text-gray-400">{program}</span>
+                <span className="font-medium text-gray-800 dark:text-gray-200">{count}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    });
+  };
 
   if (isLoading) {
     return (
@@ -134,9 +166,9 @@ const COCDashboard = () => {
       </div>
 
       {/* Stats overview */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Complaints stat card */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 border border-gray-100 dark:border-gray-700">
+        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-6 border border-gray-100 dark:border-gray-700 lg:col-span-2">
           <div className="flex items-start justify-between">
             <div>
               <p className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Complaints Status</p>
@@ -147,7 +179,7 @@ const COCDashboard = () => {
             </div>
           </div>
 
-          <div className="mt-6 grid grid-cols-2 gap-3">
+          <div className="mt-6 grid grid-cols-3 gap-3">
             <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3 flex items-center gap-3">
               <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-800 flex items-center justify-center">
                 <CheckCircle size={18} className="text-green-600 dark:text-green-400" />
@@ -167,7 +199,32 @@ const COCDashboard = () => {
                 <p className="text-lg font-bold text-orange-800 dark:text-orange-300">{stats.complaints.pending}</p>
               </div>
             </div>
+
+            <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-3 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-red-100 dark:bg-red-800 flex items-center justify-center">
+                <XCircle size={18} className="text-red-600 dark:text-red-400" />
+              </div>
+              <div>
+                <p className="text-xs text-red-700 dark:text-red-400 font-medium">Rejected</p>
+                <p className="text-lg font-bold text-red-800 dark:text-red-300">{stats.complaints.rejected}</p>
+              </div>
+            </div>
           </div>
+
+          {/* Semester-wise complaints */}
+          {Object.keys(stats.complaints.groupedByYearSemester).length > 0 && (
+            <div className="mt-6">
+              <div className="flex items-center gap-2 mb-3">
+                <Layers size={18} className="text-gray-500 dark:text-gray-400" />
+                <h4 className="text-sm font-semibold text-gray-600 dark:text-gray-300">
+                  Complaints by Semester and Program
+                </h4>
+              </div>
+              <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 max-h-64 overflow-y-auto">
+                {formatSemesterData()}
+              </div>
+            </div>
+          )}
 
           <Link
             to="/complaintsCOC"

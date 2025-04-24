@@ -98,10 +98,25 @@ const PreferencesInst = () => {
       setCourses([]);
       setIsEligible(false);
       setSubmissionAllowed(false);
-      setErrorMessage("Failed to fetch preference form. Please try again.");
+      
+      // Improved error message
+      if (error.response) {
+        if (error.response.status === 404) {
+          setErrorMessage("No active preference form found for your chair in the selected semester. Please check with your chair head if you believe this is incorrect.");
+        } else if (error.response.status >= 500) {
+          setErrorMessage("We're experiencing server issues. Please try again later or contact support if the problem persists.");
+        } else {
+          setErrorMessage("We couldn't retrieve the preference form due to a system error. Please try again.");
+        }
+      } else if (error.request) {
+        setErrorMessage("Unable to connect to the server. Please check your internet connection and try again.");
+      } else {
+        setErrorMessage("An unexpected error occurred while loading the preference form. Please try again.");
+      }
     }
     setLoading(prev => ({ ...prev, form: false }));
   };
+    
 
   const fetchPreferences = async () => {
     try {

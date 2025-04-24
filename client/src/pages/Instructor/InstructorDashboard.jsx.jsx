@@ -10,14 +10,21 @@ import {
   ChevronRight,
   ClipboardList,
   Megaphone,
-  TrendingUp
+  TrendingUp,
+  XCircle
 } from "lucide-react";
 import api from "@/utils/api";
 
 const InstructorDashboard = () => {
   const { user } = useSelector((state) => state.auth);
   const [stats, setStats] = useState({
-    complaints: { total: 0, resolved: 0, pending: 0, rejected: 0 },
+    complaints: { 
+      total: 0, 
+      resolved: 0, 
+      pending: 0, 
+      rejected: 0,
+      groupedBySemester: {} 
+    },
     announcements: { total: 0, unread: 0 }
   });
   const [isLoading, setIsLoading] = useState(true);
@@ -30,23 +37,38 @@ const InstructorDashboard = () => {
       setError(null);
       
       try {
-        // Fetch complaints data - handle errors gracefully
-        let complaintsData = { total: 0, resolved: 0, pending: 0, rejected: 0 };
+        // Initialize default complaints data
+        let complaintsData = { 
+          total: 0, 
+          resolved: 0, 
+          pending: 0, 
+          rejected: 0,
+          groupedBySemester: {} 
+        };
         
         try {
-          const complaintsResponse = await api.get(`/complaints/${user._id}`);
-          const complaints = complaintsResponse.data;
+          const response = await api.get(`/complaints/stats/instructor/${user._id}`);
+          const data = response.data;
           
-          // Process complaints data
-          complaintsData = {
-            total: complaints.length,
-            resolved: complaints.filter(c => c.status === "Resolved").length,
-            pending: complaints.filter(c => c.status === "Pending").length,
-            rejected: complaints.filter(c => c.status === "Rejected").length
-          };
+          if (data.message === "No complaints found for this instructor") {
+            complaintsData = {
+              total: 0,
+              resolved: 0,
+              pending: 0,
+              rejected: 0,
+              groupedBySemester: {}
+            };
+          } else {
+            complaintsData = {
+              total: data.totalComplaints || 0,
+              resolved: data.resolved || 0,
+              pending: data.pending || 0,
+              rejected: data.rejected || 0,
+              groupedBySemester: data.groupedBySemester || {}
+            };
+          }
         } catch (complaintError) {
-          // Just log the error but continue with zeros for complaints
-          console.error("Error fetching complaints data:", complaintError);
+          console.error("Error fetching complaints stats:", complaintError);
           // Keep the default zeros in complaintsData
         }
         
@@ -79,9 +101,26 @@ const InstructorDashboard = () => {
     }
   }, [user]);
 
-  // Calculate completion percentage
-  const calculateCompletion = (completed, total) => {
-    return total > 0 ? Math.round((completed / total) * 100) : 0;
+  // Format semester data for display
+  const formatSemesterData = () => {
+    const semesters = stats.complaints.groupedBySemester;
+    if (!semesters || Object.keys(semesters).length === 0) {
+      return null;
+    }
+
+    return Object.entries(semesters).map(([key, count]) => {
+      const [year, semester] = key.split('-');
+      return (
+        <div key={key} className="flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-700 last:border-0">
+          <span className="text-sm font-medium text-gray-600 dark:text-gray-300">
+            {year} - Semester {semester}
+          </span>
+          <span className="text-sm font-bold text-gray-800 dark:text-gray-200">
+            {count} complaint{count !== 1 ? 's' : ''}
+          </span>
+        </div>
+      );
+    });
   };
 
   if (isLoading) {
@@ -157,7 +196,7 @@ const InstructorDashboard = () => {
             </div>
           </div>
 
-          <div className="mt-6 grid grid-cols-2 gap-3">
+          <div className="mt-6 grid grid-cols-3 gap-3">
             <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3 flex items-center gap-3">
               <div className="w-8 h-8 rounded-full bg-green-100 dark:bg-green-800 flex items-center justify-center">
                 <CheckCircle size={18} className="text-green-600 dark:text-green-400" />
@@ -177,7 +216,29 @@ const InstructorDashboard = () => {
                 <p className="text-lg font-bold text-orange-800 dark:text-orange-300">{stats.complaints.pending}</p>
               </div>
             </div>
+
+            <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-3 flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-red-100 dark:bg-red-800 flex items-center justify-center">
+                <XCircle size={18} className="text-red-600 dark:text-red-400" />
+              </div>
+              <div>
+                <p className="text-xs text-red-700 dark:text-red-400 font-medium">Rejected</p>
+                <p className="text-lg font-bold text-red-800 dark:text-red-300">{stats.complaints.rejected}</p>
+              </div>
+            </div>
           </div>
+
+          {/* Semester-wise complaints */}
+          {Object.keys(stats.complaints.groupedBySemester).length > 0 && (
+            <div className="mt-6">
+              <h4 className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-3">
+                Complaints by Semester
+              </h4>
+              <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
+                {formatSemesterData()}
+              </div>
+            </div>
+          )}
 
           <Link
             to="/complaintsInst"

@@ -6,7 +6,9 @@ import {
   resolveComplaint,
   deleteComplaint,
   searchComplaints,
-  getFilterOptions
+  getFilterOptions,
+  getComplaintStats,
+  getInstructorComplaintStats
 } from "../controllers/complaintController.js";
 import { authenticate, authorize } from "../middleware/authMiddleware.js";
 
@@ -26,5 +28,6 @@ router.get("/instructor/:instructorId", authenticate, getInstructorComplaints);
 // Complaint management routes
 router.put("/:id/resolve", authenticate, authorize(["ChairHead", "HeadOfFaculty", "COC"]), resolveComplaint);
 router.delete("/:id", authenticate, authorize(["COC"]), deleteComplaint);
-
+router.get("/stats", getComplaintStats);
+router.get("/stats/instructor/:instructorId", getInstructorComplaintStats);
 export default router;

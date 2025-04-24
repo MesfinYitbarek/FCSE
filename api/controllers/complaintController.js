@@ -255,3 +255,138 @@ export const getInstructorComplaints = async (req, res) => {
     res.status(500).json({ message: "Internal Server Error", error: error.message || error });
   }
 };
+
+export const getInstructorComplaintStats = async (req, res) => {
+  try {
+    const { instructorId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(instructorId)) {
+      return res.status(400).json({ message: "Invalid instructor ID format" });
+    }
+
+    const stats = await Complaint.aggregate([
+      {
+        $match: { instructorId: new mongoose.Types.ObjectId(instructorId) }
+      },
+      {
+        $lookup: {
+          from: "assignments",
+          localField: "reportId",
+          foreignField: "_id",
+          as: "report"
+        }
+      },
+      { $unwind: "$report" },
+      {
+        $group: {
+          _id: null,
+          totalComplaints: { $sum: 1 },
+          pending: { $sum: { $cond: [{ $eq: ["$status", "Pending"] }, 1, 0] } },
+          resolved: { $sum: { $cond: [{ $eq: ["$status", "Resolved"] }, 1, 0] } },
+          rejected: { $sum: { $cond: [{ $eq: ["$status", "Rejected"] }, 1, 0] } },
+          groupedBySemester: {
+            $push: {
+              year: "$report.year",
+              semester: "$report.semester"
+            }
+          }
+        }
+      }
+    ]);
+
+    if (stats.length === 0) {
+      return res.status(200).json({ message: "No complaints found for this instructor", data: {} });
+    }
+
+    const groupedBySemester = stats[0].groupedBySemester.reduce((acc, item) => {
+      const key = `${item.year}-${item.semester}`;
+      acc[key] = (acc[key] || 0) + 1;
+      return acc;
+    }, {});
+
+    res.status(200).json({
+      totalComplaints: stats[0].totalComplaints,
+      pending: stats[0].pending,
+      resolved: stats[0].resolved,
+      rejected: stats[0].rejected,
+      groupedBySemester
+    });
+  } catch (error) {
+    console.error("Error fetching instructor complaint stats:", error);
+    res.status(500).json({ message: "Error fetching instructor complaint stats", error });
+  }
+};
+// Complaint statistics
+export const getComplaintStats = async (req, res) => {
+  try {
+    const stats = await Complaint.aggregate([
+      {
+        $lookup: {
+          from: "assignments",
+          localField: "reportId",
+          foreignField: "_id",
+          as: "report"
+        }
+      },
+      {
+        $unwind: "$report"
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "instructorId",
+          foreignField: "_id",
+          as: "instructor"
+        }
+      },
+      {
+        $unwind: "$instructor"
+      },
+      {
+        $group: {
+          _id: null,
+          totalComplaints: { $sum: 1 },
+          pending: { $sum: { $cond: [{ $eq: ["$status", "Pending"] }, 1, 0] } },
+          resolved: { $sum: { $cond: [{ $eq: ["$status", "Resolved"] }, 1, 0] } },
+          rejected: { $sum: { $cond: [{ $eq: ["$status", "Rejected"] }, 1, 0] } },
+          byYear: {
+            $push: {
+              year: "$report.year",
+              semester: "$report.semester",
+              program: "$report.program",
+              complaintId: "$_id"
+            }
+          }
+        }
+      }
+    ]);
+
+    if (stats.length === 0) {
+      return res.status(200).json({ message: "No complaints found", data: {} });
+    }
+
+    // Optionally, structure `byYear` for easier consumption
+    const groupedByYearSemester = stats[0].byYear.reduce((acc, item) => {
+      const key = `${item.year}-${item.semester}`;
+      if (!acc[key]) acc[key] = { total: 0, programMap: {} };
+      acc[key].total += 1;
+      if (!acc[key].programMap[item.program]) {
+        acc[key].programMap[item.program] = 1;
+      } else {
+        acc[key].programMap[item.program]++;
+      }
+      return acc;
+    }, {});
+
+    res.status(200).json({
+      totalComplaints: stats[0].totalComplaints,
+      pending: stats[0].pending,
+      resolved: stats[0].resolved,
+      rejected: stats[0].rejected,
+      groupedByYearSemester
+    });
+  } catch (error) {
+    console.error("Error getting complaint statistics:", error);
+    res.status(500).json({ message: "Error getting complaint statistics", error });
+  }
+};
