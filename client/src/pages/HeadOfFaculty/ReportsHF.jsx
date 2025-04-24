@@ -3,17 +3,19 @@ import { useNavigate } from 'react-router-dom';
 import { CSVLink } from 'react-csv';
 import { toast } from 'react-hot-toast';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  FileText, 
-  BarChart2, 
-  Users, 
-  Download, 
-  Loader2, 
-  AlertTriangle, 
+import {
+  FileText,
+  BarChart2,
+  Users,
+  Download,
+  Loader2,
+  AlertTriangle,
   RefreshCw,
   Briefcase,
   Layers,
-  Search
+  Search,
+  Filter,
+  Info
 } from 'lucide-react';
 import ReportsFilter from '@/components/ReportsHOF/ReportsFilter';
 import ReportsList from '@/components/ReportsHOF/ReportsList';
@@ -24,7 +26,7 @@ const ReportsHF = () => {
   const { user } = useSelector((state) => state.auth);
   const [reports, setReports] = useState([]);
   const [filteredReports, setFilteredReports] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [filters, setFilters] = useState({
     year: '',
@@ -37,24 +39,35 @@ const ReportsHF = () => {
     totalAssignments: 0,
     programs: 0,
   });
-  
+  const [hasAppliedFilters, setHasAppliedFilters] = useState(false);
+
   const navigate = useNavigate();
 
-  // Fetch reports data
+  // Fetch reports data only when filters are applied
   useEffect(() => {
     const fetchReports = async () => {
+      // Don't fetch if no filters are applied
+      const hasFilters = filters.year || filters.semester || filters.program;
+      if (!hasFilters) {
+        setReports([]);
+        setFilteredReports([]);
+        updateStats([]);
+        return;
+      }
+
       try {
         setIsLoading(true);
         const queryParams = new URLSearchParams();
         if (filters.year) queryParams.append('year', filters.year);
         if (filters.semester) queryParams.append('semester', filters.semester);
         if (filters.program) queryParams.append('program', filters.program);
-        
+
         const response = await api.get(`/reports?${queryParams.toString()}`);
         setReports(response.data);
         setFilteredReports(response.data);
         updateStats(response.data);
         setError(null);
+        setHasAppliedFilters(true);
       } catch (err) {
         setError('Failed to fetch reports. Please try again later.');
         toast.error('Error fetching reports');
@@ -74,7 +87,7 @@ const ReportsHF = () => {
         (sum, report) => sum + (report.assignments?.length || 0), 0
       );
       const uniquePrograms = new Set(reportsData.map(report => report.program).filter(Boolean)).size;
-      
+
       setStats({
         totalReports: reportsData.length,
         totalAssignments,
@@ -91,6 +104,8 @@ const ReportsHF = () => {
 
   // Handle search functionality
   useEffect(() => {
+    if (!hasAppliedFilters) return;
+
     if (searchQuery) {
       const filtered = reports.filter(report => {
         return (
@@ -106,7 +121,7 @@ const ReportsHF = () => {
       setFilteredReports(reports);
       updateStats(reports);
     }
-  }, [searchQuery, reports]);
+  }, [searchQuery, reports, hasAppliedFilters]);
 
   // Handle filter changes
   const handleFilterChange = (newFilters) => {
@@ -114,11 +129,16 @@ const ReportsHF = () => {
     setSearchQuery(''); // Reset search when filters change
   };
 
+  // Check if any filters are applied
+  const hasActiveFilters = () => {
+    return filters.year || filters.semester || filters.program;
+  };
+
   // Handle view report detail
   const handleViewReport = (reportId) => {
-    navigate(user.role === "HeadOfFaculty" 
-      ? `/reports/${reportId}` 
-      : user.role === "Instructor" 
+    navigate(user.role === "HeadOfFaculty"
+      ? `/reports/${reportId}`
+      : user.role === "Instructor"
         ? `/reportInst/${reportId}`
         : `/reportsCH/${reportId}`
     );
@@ -132,6 +152,7 @@ const ReportsHF = () => {
       program: '',
     });
     setSearchQuery('');
+    setHasAppliedFilters(false);
   };
 
   // Prepare CSV data
@@ -165,89 +186,112 @@ const ReportsHF = () => {
             <FileText className="text-indigo-600 dark:text-indigo-400" size={24} />
             Academic Reports Dashboard
           </h1>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-            <motion.div
-              variants={cardVariants}
-              initial="hidden"
-              animate="visible"
-              className="bg-white dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm"
-            >
-              <div className="flex items-center">
-                <div className="flex-shrink-0 bg-indigo-100 dark:bg-indigo-900/50 rounded-md p-2.5 text-indigo-600 dark:text-indigo-400">
-                  <FileText size={20} />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Reports</p>
-                  <p className="text-2xl font-semibold text-gray-900 dark:text-white">{stats.totalReports}</p>
-                </div>
-              </div>
-            </motion.div>
-            
-            <motion.div
-              variants={cardVariants}
-              initial="hidden"
-              animate="visible"
-              transition={{ delay: 0.1 }}
-              className="bg-white dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm"
-            >
-              <div className="flex items-center">
-                <div className="flex-shrink-0 bg-green-100 dark:bg-green-900/50 rounded-md p-2.5 text-green-600 dark:text-green-400">
-                  <Briefcase size={20} />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Assignments</p>
-                  <p className="text-2xl font-semibold text-gray-900 dark:text-white">{stats.totalAssignments}</p>
-                </div>
-              </div>
-            </motion.div>
-            
-            <motion.div
-              variants={cardVariants}
-              initial="hidden"
-              animate="visible"
-              transition={{ delay: 0.2 }}
-              className="bg-white dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm"
-            >
-              <div className="flex items-center">
-                <div className="flex-shrink-0 bg-purple-100 dark:bg-purple-900/50 rounded-md p-2.5 text-purple-600 dark:text-purple-400">
-                  <Layers size={20} />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Programs</p>
-                  <p className="text-2xl font-semibold text-gray-900 dark:text-white">{stats.programs}</p>
-                </div>
-              </div>
-            </motion.div>
-          </div>
-          
-          <div className="mb-6">
-            <div className="flex flex-col md:flex-row gap-4">
-              <div className="relative flex-grow">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Search className="h-5 w-5 text-gray-400" />
-                </div>
-                <input
-                  type="text"
-                  placeholder="Search by program, semester, year or creator..."
-                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-              <button
-                onClick={handleResetFilters}
-                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-white rounded-lg transition-colors text-sm"
+
+          {hasAppliedFilters && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+              <motion.div
+                variants={cardVariants}
+                initial="hidden"
+                animate="visible"
+                className="bg-white dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm"
               >
-                Reset Filters
-              </button>
+                <div className="flex items-center">
+                  <div className="flex-shrink-0 bg-indigo-100 dark:bg-indigo-900/50 rounded-md p-2.5 text-indigo-600 dark:text-indigo-400">
+                    <FileText size={20} />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Reports</p>
+                    <p className="text-2xl font-semibold text-gray-900 dark:text-white">{stats.totalReports}</p>
+                  </div>
+                </div>
+              </motion.div>
+
+              <motion.div
+                variants={cardVariants}
+                initial="hidden"
+                animate="visible"
+                transition={{ delay: 0.1 }}
+                className="bg-white dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm"
+              >
+                <div className="flex items-center">
+                  <div className="flex-shrink-0 bg-green-100 dark:bg-green-900/50 rounded-md p-2.5 text-green-600 dark:text-green-400">
+                    <Briefcase size={20} />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Assignments</p>
+                    <p className="text-2xl font-semibold text-gray-900 dark:text-white">{stats.totalAssignments}</p>
+                  </div>
+                </div>
+              </motion.div>
+
+              <motion.div
+                variants={cardVariants}
+                initial="hidden"
+                animate="visible"
+                transition={{ delay: 0.2 }}
+                className="bg-white dark:bg-gray-700 p-4 rounded-lg border border-gray-200 dark:border-gray-600 shadow-sm"
+              >
+                <div className="flex items-center">
+                  <div className="flex-shrink-0 bg-purple-100 dark:bg-purple-900/50 rounded-md p-2.5 text-purple-600 dark:text-purple-400">
+                    <Layers size={20} />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Programs</p>
+                    <p className="text-2xl font-semibold text-gray-900 dark:text-white">{stats.programs}</p>
+                  </div>
+                </div>
+              </motion.div>
             </div>
+          )}
+
+          {hasAppliedFilters && (
+            <div className="mb-6">
+              <div className="flex flex-col md:flex-row gap-4">
+                <div className="relative flex-grow">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Search className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    type="text"
+                    placeholder="Search by program, semester, year or creator..."
+                    className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+                <button
+                  onClick={handleResetFilters}
+                  className="px-4 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-white rounded-lg transition-colors text-sm"
+                >
+                  Reset Filters
+                </button>
+              </div>
+            </div>
+          )}
+
+          {!hasAppliedFilters && (
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800/50 rounded-lg p-4 mb-6">
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  <Info className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-blue-800 dark:text-blue-300">Instructions</h3>
+                  <div className="mt-1 text-sm text-blue-700 dark:text-blue-400">
+                    <p>Please use the filters below to view reports. At least one filter must be applied.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="relative">
+
+            <ReportsFilter
+              filters={filters}
+              onFilterChange={handleFilterChange}
+            />
           </div>
-          
-          <ReportsFilter 
-            filters={filters} 
-            onFilterChange={handleFilterChange} 
-          />
         </div>
 
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm p-6 border border-gray-200 dark:border-gray-700">
@@ -256,11 +300,11 @@ const ReportsHF = () => {
               <BarChart2 className="text-indigo-600 dark:text-indigo-400" size={20} />
               Reports {filteredReports.length > 0 && `(${filteredReports.length})`}
             </h2>
-            
+
             <div className="flex gap-3">
               {filteredReports.length > 0 && (
-                <CSVLink 
-                  data={getCsvData()} 
+                <CSVLink
+                  data={getCsvData()}
                   filename={`academic-reports-${new Date().toISOString().split('T')[0]}.csv`}
                   className="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white text-sm font-medium rounded-lg transition-colors shadow-sm"
                 >
@@ -281,12 +325,38 @@ const ReportsHF = () => {
               <AlertTriangle className="h-10 w-10 text-red-500 dark:text-red-400 mx-auto mb-2" />
               <p className="text-red-800 dark:text-red-300 font-medium mb-1">Error</p>
               <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
-              <button 
+              <button
                 onClick={() => window.location.reload()}
                 className="mt-4 px-4 py-2 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 text-white rounded-md transition-colors text-sm inline-flex items-center gap-2"
               >
                 <RefreshCw size={14} />
                 Try Again
+              </button>
+            </div>
+          ) : !hasAppliedFilters ? (
+            <div className="flex flex-col justify-center items-center h-64 text-center">
+              <div className="bg-gray-100 dark:bg-gray-700 rounded-full p-3 mb-4">
+                <Filter size={24} className="text-gray-500 dark:text-gray-400" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-800 dark:text-white mb-2">No Filters Applied</h3>
+              <p className="text-gray-500 dark:text-gray-400 max-w-md mb-4">
+                Please apply at least one filter above to view reports.
+              </p>
+            </div>
+          ) : filteredReports.length === 0 ? (
+            <div className="flex flex-col justify-center items-center h-64 text-center">
+              <div className="bg-gray-100 dark:bg-gray-700 rounded-full p-3 mb-4">
+                <FileText size={24} className="text-gray-500 dark:text-gray-400" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-800 dark:text-white mb-2">No Reports Found</h3>
+              <p className="text-gray-500 dark:text-gray-400 max-w-md mb-4">
+                No reports match your current filters. Try adjusting your filter criteria.
+              </p>
+              <button
+                onClick={handleResetFilters}
+                className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm"
+              >
+                Reset Filters
               </button>
             </div>
           ) : (
