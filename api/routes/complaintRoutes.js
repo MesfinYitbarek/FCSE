@@ -1,14 +1,30 @@
 import express from "express";
-import { submitComplaint, getComplaints,getInstructorComplaints, resolveComplaint } from "../controllers/complaintController.js";
+import { 
+  submitComplaint, 
+  getComplaints, 
+  getInstructorComplaints, 
+  resolveComplaint,
+  deleteComplaint,
+  searchComplaints,
+  getFilterOptions
+} from "../controllers/complaintController.js";
 import { authenticate, authorize } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// Complaint Routes
+// Basic complaint routes
 router.post("/", authenticate, submitComplaint);
 router.get("/", authenticate, authorize(["ChairHead", "HeadOfFaculty", "COC"]), getComplaints);
-router.put("/:id", authenticate, authorize(["ChairHead", "HeadOfFaculty", "COC"]), resolveComplaint);
-// Route to fetch instructor complaints
-router.get("/:instructorId", authorize(["Instructor",]),getInstructorComplaints);
+
+// Search and filter routes
+router.get("/search", authenticate, searchComplaints);
+router.get("/filter-options", authenticate, getFilterOptions);
+
+// Instructor-specific complaints route
+router.get("/instructor/:instructorId", authenticate, getInstructorComplaints);
+
+// Complaint management routes
+router.put("/:id/resolve", authenticate, authorize(["ChairHead", "HeadOfFaculty", "COC"]), resolveComplaint);
+router.delete("/:id", authenticate, authorize(["COC"]), deleteComplaint);
 
 export default router;

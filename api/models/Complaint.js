@@ -1,8 +1,8 @@
 import mongoose from "mongoose";
 
 const complaintSchema = new mongoose.Schema({
-  instructorId: { type: mongoose.Schema.Types.ObjectId, ref: "Instructor" },
-  assignmentId: { type: mongoose.Schema.Types.ObjectId, ref: "Assignment" },
+  instructorId: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+  reportId: { type: mongoose.Schema.Types.ObjectId, ref: "Assignment" },
   reason: String,
   status: { type: String, enum: ["Pending", "Resolved", "Rejected"], default: "Pending" },
   resolveNote: String,

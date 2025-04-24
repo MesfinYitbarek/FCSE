@@ -1,741 +1,781 @@
-import { useEffect, useState, useMemo } from "react";
-import api from "../../utils/api";
+import { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
 import { 
-  FiAlertCircle, FiCheckCircle, FiXCircle, FiFilter, 
-  FiSearch, FiCalendar, FiMessageSquare, FiUser, 
-  FiRefreshCw, FiPlusCircle, FiEye, FiBarChart2,
-  FiClock, FiCheckSquare, FiXSquare, FiAlertTriangle
-} from "react-icons/fi";
-import { Tooltip } from "react-tooltip";
+  AlertTriangle, 
+  Check, 
+  Clock, 
+  Filter, 
+  Search, 
+  X,
+  FileText,
+  ThumbsUp,
+  ThumbsDown,
+  Trash2,
+  RefreshCw
+} from "lucide-react";
+import { toast } from "react-hot-toast";
+import api from "@/utils/api";
 
 const ComplaintsCOC = () => {
   const { user } = useSelector((state) => state.auth);
   const [complaints, setComplaints] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [actionLoading, setActionLoading] = useState(false);
-  const [selectedComplaint, setSelectedComplaint] = useState(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [rejectionReason, setRejectionReason] = useState("");
-  const [resolutionNotes, setResolutionNotes] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [initialFetch, setInitialFetch] = useState(false);
   const [filters, setFilters] = useState({
-    status: "all",
-    period: "all",
-    program: "all",
-    sortBy: "createdAt",
-    sortOrder: "desc"
+    year: new Date().getFullYear().toString(),
+    semester: "",
+    program: "",
+    status: "",
+    chair: ""
   });
-  const [stats, setStats] = useState({
-    total: 0,
-    pending: 0,
-    resolved: 0,
-    rejected: 0
+  const [showFilters, setShowFilters] = useState(true);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [resolvingComplaint, setResolvingComplaint] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null);
+  const [resolveData, setResolveData] = useState({
+    status: "Resolved",
+    resolveNote: ""
   });
+  const [resolveErrors, setResolveErrors] = useState({});
+  const [submitLoading, setSubmitLoading] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+  const [chairs, setChairs] = useState([]);
 
-  useEffect(() => {
-    fetchComplaints();
-  }, []);
+  // Fixed options for semester and program, just like other pages
+  const semesterOptions = ["Regular 1", "Regular 2", "Extension 1", "Extension 2", "Summer"];
+  const programOptions = ["Regular", "Extension", "Summer"];
+  const statusOptions = ["Pending", "Resolved", "Rejected"];
 
-  // Calculate statistics whenever complaints change
-  useEffect(() => {
-    if (complaints && complaints.length) {
-      const pending = complaints.filter(c => c.status === "Pending").length;
-      const resolved = complaints.filter(c => c.status === "Resolved").length;
-      const rejected = complaints.filter(c => c.status === "Rejected").length;
-      
-      setStats({
-        total: complaints.length,
-        pending,
-        resolved,
-        rejected
-      });
-    }
-  }, [complaints]);
-
-  // Fetch all complaints
-  const fetchComplaints = async () => {
-    setLoading(true);
+  // Fetch chair data initially without loading complaints
+  const initialFetchData = async () => {
     try {
-      const { data } = await api.get("/complaints");
-      setComplaints(data);
+      setLoading(true);
+      // Fetch only chair data instead of all complaints
+      const response = await api.get("/chairs");
+      // Properly set chairs as an array of strings, not complex objects
+      setChairs(Array.isArray(response.data) ? response.data.map(chair => chair.name) : []);
     } catch (error) {
-      console.error("Error fetching complaints:", error);
+      console.error("Error in initial data fetch:", error);
+      toast.error("Failed to load initial data");
     } finally {
       setLoading(false);
     }
   };
 
-  // Handle filter changes
+  // Fetch complaints with filters
+  const fetchComplaints = async () => {
+    try {
+      setLoading(true);
+      
+      // Create query params from filters with values
+      const queryParams = new URLSearchParams();
+      if (filters.year) queryParams.append("year", filters.year);
+      if (filters.semester) queryParams.append("semester", filters.semester);
+      if (filters.program) queryParams.append("program", filters.program);
+      if (filters.status) queryParams.append("status", filters.status);
+      if (filters.chair) queryParams.append("chair", filters.chair);
+      
+      // Make a search request with the applied filters
+      const response = await api.get(`/complaints/search?${queryParams}`);
+      
+      setComplaints(response.data);
+      setInitialFetch(true);
+    } catch (error) {
+      console.error("Error fetching complaints:", error);
+      toast.error("Failed to load complaints");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    initialFetchData();
+  }, []);
+
+  const handleResolveInputChange = (e) => {
+    const { name, value } = e.target;
+    setResolveData({
+      ...resolveData,
+      [name]: value,
+    });
+    
+    if (resolveErrors[name]) {
+      setResolveErrors({
+        ...resolveErrors,
+        [name]: "",
+      });
+    }
+  };
+
+  const validateResolveForm = () => {
+    const errors = {};
+    if (!resolveData.resolveNote.trim()) {
+      errors.resolveNote = "Please provide a resolution note";
+    }
+    
+    setResolveErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleResolveSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!validateResolveForm()) return;
+    
+    try {
+      setSubmitLoading(true);
+      await api.put(`/complaints/${resolvingComplaint._id}/resolve`, {
+        resolvedBy: user._id,
+        status: resolveData.status,
+        resolveNote: resolveData.resolveNote
+      });
+      
+      toast.success(`Complaint ${resolveData.status.toLowerCase()} successfully`);
+      setResolvingComplaint(null);
+      fetchComplaints();
+    } catch (error) {
+      console.error("Error resolving complaint:", error);
+      toast.error("Failed to resolve complaint");
+    } finally {
+      setSubmitLoading(false);
+    }
+  };
+
+  const handleDeleteComplaint = async () => {
+    if (!confirmDelete) return;
+    
+    try {
+      setDeleteLoading(true);
+      await api.delete(`/complaints/${confirmDelete._id}`);
+      toast.success("Complaint deleted successfully");
+      setConfirmDelete(null);
+      fetchComplaints();
+    } catch (error) {
+      console.error("Error deleting complaint:", error);
+      toast.error("Failed to delete complaint");
+    } finally {
+      setDeleteLoading(false);
+    }
+  };
+
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
-    setFilters(prev => ({ ...prev, [name]: value }));
+    setFilters({
+      ...filters,
+      [name]: value,
+    });
   };
 
-  // Toggle sort order
-  const toggleSort = (field) => {
-    setFilters(prev => ({
-      ...prev,
-      sortBy: field,
-      sortOrder: prev.sortBy === field && prev.sortOrder === "asc" ? "desc" : "asc"
-    }));
+  // Validate year input to ensure it's a valid number
+  const validateYearInput = (e) => {
+    const { value } = e.target;
+    if (value === "" || /^\d+$/.test(value)) {
+      handleFilterChange(e);
+    }
   };
 
-  // Reset filters
   const resetFilters = () => {
     setFilters({
-      status: "all",
-      period: "all",
-      program: "all",
-      sortBy: "createdAt",
-      sortOrder: "desc"
+      year: new Date().getFullYear().toString(),
+      semester: "",
+      program: "",
+      status: "",
+      chair: ""
     });
     setSearchQuery("");
   };
 
-  // Calculate date range for filter
-  const getDateRange = () => {
-    const now = new Date();
-    switch (filters.period) {
-      case "week":
-        const weekAgo = new Date();
-        weekAgo.setDate(now.getDate() - 7);
-        return weekAgo;
-      case "month":
-        const monthAgo = new Date();
-        monthAgo.setMonth(now.getMonth() - 1);
-        return monthAgo;
-      case "semester":
-        const semesterAgo = new Date();
-        semesterAgo.setMonth(now.getMonth() - 4);
-        return semesterAgo;
-      default:
-        return new Date(0); // Beginning of time
-    }
-  };
-
-  // Filtered and sorted complaints
-  const filteredComplaints = useMemo(() => {
-    const dateRange = getDateRange();
-    
-    return complaints
-      .filter(complaint => {
-        // Filter by search term (instructor name, course, reason)
-        if (searchQuery) {
-          const searchLower = searchQuery.toLowerCase();
-          const instructorName = complaint.instructorId?.userId?.fullName?.toLowerCase() || "";
-          const courseName = complaint.assignmentId?.courseId?.name?.toLowerCase() || "";
-          const reason = complaint.reason?.toLowerCase() || "";
-          
-          if (!instructorName.includes(searchLower) && 
-              !courseName.includes(searchLower) && 
-              !reason.includes(searchLower)) {
-            return false;
-          }
-        }
-        
-        // Filter by status
-        if (filters.status !== "all" && complaint.status !== filters.status) {
-          return false;
-        }
-        
-        // Filter by program
-        if (filters.program !== "all" && complaint.assignmentId?.program !== filters.program) {
-          return false;
-        }
-        
-        // Filter by time period
-        if (filters.period !== "all" && new Date(complaint.createdAt) < dateRange) {
-          return false;
-        }
-        
-        return true;
-      })
-      .sort((a, b) => {
-        // Sort based on selected field
-        switch (filters.sortBy) {
-          case "createdAt":
-            return filters.sortOrder === "asc" 
-              ? new Date(a.createdAt) - new Date(b.createdAt)
-              : new Date(b.createdAt) - new Date(a.createdAt);
-          case "instructor":
-            const nameA = (a.instructorId?.userId?.fullName || "").toLowerCase();
-            const nameB = (b.instructorId?.userId?.fullName || "").toLowerCase();
-            return filters.sortOrder === "asc" 
-              ? nameA.localeCompare(nameB)
-              : nameB.localeCompare(nameA);
-          case "course":
-            const courseA = (a.assignmentId?.courseId?.name || "").toLowerCase();
-            const courseB = (b.assignmentId?.courseId?.name || "").toLowerCase();
-            return filters.sortOrder === "asc" 
-              ? courseA.localeCompare(courseB)
-              : courseB.localeCompare(courseA);
-          default:
-            return 0;
-        }
-      });
-  }, [complaints, filters, searchQuery]);
-
-  // View complaint details
-  const viewComplaintDetails = (complaint) => {
-    setSelectedComplaint(complaint);
-    setRejectionReason(""); // Reset rejection reason
-    setResolutionNotes(""); // Reset resolution notes
-  };
-
-  // Close complaint modal
-  const closeComplaintModal = () => {
-    setSelectedComplaint(null);
-  };
-
-  // Handle resolving a complaint
-  const handleResolve = async (complaintId) => {
-    setActionLoading(true);
-    try {
-      await api.put(`/complaints/${complaintId}`, { 
-        status: "Resolved", 
-        resolvedBy: user._id,
-        resolutionNotes: resolutionNotes || "Complaint resolved by COC"
-      });
-      
-      await fetchComplaints();
-      closeComplaintModal();
-      alert("Complaint resolved successfully!");
-    } catch (error) {
-      console.error("Error resolving complaint:", error);
-      alert("Error resolving complaint. Please try again.");
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  // Handle rejecting a complaint
-  const handleReject = async (complaintId) => {
-    if (!rejectionReason.trim()) {
-      alert("Please provide a reason for rejection");
-      return;
-    }
-    
-    setActionLoading(true);
-    try {
-      await api.put(`/complaints/${complaintId}`, { 
-        status: "Rejected", 
-        resolvedBy: user._id,
-        rejectionReason
-      });
-      
-      await fetchComplaints();
-      closeComplaintModal();
-      alert("Complaint rejected.");
-    } catch (error) {
-      console.error("Error rejecting complaint:", error);
-      alert("Error rejecting complaint. Please try again.");
-    } finally {
-      setActionLoading(false);
-    }
-  };
-
-  // Get unique programs for filter options
-  const programOptions = useMemo(() => {
-    const programs = new Set(complaints
-      .map(c => c.assignmentId?.program)
-      .filter(Boolean));
-    return Array.from(programs);
-  }, [complaints]);
-
-  // Format date for display
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+  const startResolveProcess = (complaint) => {
+    setResolvingComplaint(complaint);
+    setResolveData({
+      status: "Resolved",
+      resolveNote: ""
     });
+    setResolveErrors({});
   };
 
-  // Get status badge style
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case "Pending":
-        return "bg-yellow-100 text-yellow-800 border border-yellow-300 dark:bg-yellow-900/30 dark:text-yellow-300 dark:border-yellow-800";
-      case "Resolved":
-        return "bg-green-100 text-green-800 border border-green-300 dark:bg-green-900/30 dark:text-green-300 dark:border-green-800";
-      case "Rejected":
-        return "bg-red-100 text-red-800 border border-red-300 dark:bg-red-900/30 dark:text-red-300 dark:border-red-800";
-      default:
-        return "bg-gray-100 text-gray-800 border border-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600";
+  // Apply search text filter to already fetched complaints
+  const filteredComplaints = complaints.filter(complaint => {
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase();
+      const courseMatches = complaint.reportId?.assignments?.some(a => 
+        a.courseId?.name?.toLowerCase().includes(query) || 
+        a.courseId?.code?.toLowerCase().includes(query)
+      );
+      const instructorMatches = complaint.instructorId?.fullName?.toLowerCase().includes(query);
+      const reasonMatches = complaint.reason?.toLowerCase().includes(query);
+      
+      return courseMatches || instructorMatches || reasonMatches;
     }
-  };
+    
+    return true;
+  });
 
-  // Get status icon
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case "Pending":
-        return <FiClock className="mr-1" />;
-      case "Resolved":
-        return <FiCheckCircle className="mr-1" />;
-      case "Rejected":
-        return <FiXCircle className="mr-1" />;
-      default:
-        return null;
-    }
-  };
+  // Get unique years from the data for the dropdown
+  const yearOptions = [...new Set(complaints
+    .filter(c => c.reportId?.year)
+    .map(c => c.reportId.year))].sort((a, b) => b - a);
 
   return (
-    <div className="bg-gray-50 dark:bg-gray-900 min-h-screen">
-      <div className="max-w-7xl mx-auto">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white mb-6">
-          Complaint Management System
-        </h1>
-        
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 border-l-4 border-indigo-500 dark:border-indigo-600">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-500 dark:text-gray-400 text-sm">Total Complaints</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.total}</p>
-              </div>
-              <FiMessageSquare className="text-indigo-500 dark:text-indigo-400 text-2xl" />
-            </div>
-          </div>
+    <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden border border-gray-200 dark:border-gray-700">
+      <div className="p-5 border-b border-gray-200 dark:border-gray-700">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <h2 className="text-xl font-semibold text-gray-800 dark:text-white flex items-center gap-2">
+            <AlertTriangle size={20} className="text-indigo-600" />
+            Complaint Management
+            <span className="ml-2 px-2 py-0.5 text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900/30 dark:text-indigo-400 rounded-full">
+              Administration
+            </span>
+          </h2>
           
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 border-l-4 border-yellow-500 dark:border-yellow-600">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-500 dark:text-gray-400 text-sm">Pending</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.pending}</p>
-              </div>
-              <FiClock className="text-yellow-500 dark:text-yellow-400 text-2xl" />
-            </div>
-          </div>
-          
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 border-l-4 border-green-500 dark:border-green-600">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-500 dark:text-gray-400 text-sm">Resolved</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.resolved}</p>
-              </div>
-              <FiCheckSquare className="text-green-500 dark:text-green-400 text-2xl" />
-            </div>
-          </div>
-          
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 border-l-4 border-red-500 dark:border-red-600">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-gray-500 dark:text-gray-400 text-sm">Rejected</p>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white">{stats.rejected}</p>
-              </div>
-              <FiXSquare className="text-red-500 dark:text-red-400 text-2xl" />
-            </div>
+          <div className="flex gap-2">
+            <button
+              onClick={() => {
+                resetFilters();
+                setInitialFetch(false);
+                setComplaints([]);
+              }}
+              disabled={loading}
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              aria-label="Refresh"
+            >
+              <RefreshCw size={18} />
+            </button>
+            
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={`p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors ${
+                Object.values(filters).some(f => f) ? "bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400" : ""
+              }`}
+              aria-label="Filters"
+            >
+              <Filter size={18} />
+            </button>
           </div>
         </div>
         
-        {/* Filter Section */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm p-4 sm:p-6 mb-6 border border-gray-200 dark:border-gray-700">
-          <div className="flex items-center mb-4">
-            <FiFilter className="text-gray-500 dark:text-gray-400 mr-2" />
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Filter Complaints</h2>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
-              <select
-                name="status"
-                value={filters.status}
-                onChange={handleFilterChange}
-                className="w-full p-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600 focus:border-indigo-500 dark:focus:border-indigo-600 text-gray-900 dark:text-white text-base transition-colors"
-              >
-                <option value="all">All Statuses</option>
-                <option value="Pending">Pending</option>
-                <option value="Resolved">Resolved</option>
-                <option value="Rejected">Rejected</option>
-              </select>
+        {/* Filters Section */}
+        {showFilters && (
+          <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-700/40 rounded-lg animate-in fade-in-20 duration-300">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Chair</label>
+                <select
+                  name="chair"
+                  value={filters.chair}
+                  onChange={handleFilterChange}
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600 focus:border-transparent"
+                >
+                  <option value="">All Chairs</option>
+                  {chairs.map((chair, index) => (
+                    <option key={index} value={chair}>{chair}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Academic Year</label>
+                <input
+                  type="text"
+                  name="year"
+                  value={filters.year}
+                  onChange={validateYearInput}
+                  placeholder="Enter year"
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600 focus:border-transparent"
+                  maxLength={4}
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Semester</label>
+                <select
+                  name="semester"
+                  value={filters.semester}
+                  onChange={handleFilterChange}
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600 focus:border-transparent"
+                >
+                  <option value="">All Semesters</option>
+                  {semesterOptions.map(semester => (
+                    <option key={semester} value={semester}>{semester}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Program</label>
+                <select
+                  name="program"
+                  value={filters.program}
+                  onChange={handleFilterChange}
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600 focus:border-transparent"
+                >
+                  <option value="">All Programs</option>
+                  {programOptions.map(program => (
+                    <option key={program} value={program}>{program}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
+                <select
+                  name="status"
+                  value={filters.status}
+                  onChange={handleFilterChange}
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600 focus:border-transparent"
+                >
+                  <option value="">All Statuses</option>
+                  {statusOptions.map(status => (
+                    <option key={status} value={status}>{status}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className="flex flex-col justify-end">
+                <div className="flex gap-2">
+                  <button
+                    onClick={resetFilters}
+                    className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    Reset
+                  </button>
+                  <button
+                    onClick={fetchComplaints}
+                    disabled={loading}
+                    className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-1 transition-colors"
+                  >
+                    <Search size={16} />
+                    Search
+                  </button>
+                </div>
+              </div>
             </div>
             
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Time Period</label>
-              <select
-                name="period"
-                value={filters.period}
-                onChange={handleFilterChange}
-                className="w-full p-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600 focus:border-indigo-500 dark:focus:border-indigo-600 text-gray-900 dark:text-white text-base transition-colors"
-              >
-                <option value="all">All Time</option>
-                <option value="week">Last Week</option>
-                <option value="month">Last Month</option>
-                <option value="semester">Current Semester</option>
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Program</label>
-              <select
-                name="program"
-                value={filters.program}
-                onChange={handleFilterChange}
-                className="w-full p-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600 focus:border-indigo-500 dark:focus:border-indigo-600 text-gray-900 dark:text-white text-base transition-colors"
-              >
-                <option value="all">All Programs</option>
-                {programOptions.map(program => (
-                  <option key={program} value={program}>{program}</option>
-                ))}
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Search</label>
-              <div className="relative">
+            {initialFetch && (
+              <div className="mt-3 relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <FiSearch className="text-gray-400 dark:text-gray-500" />
+                  <Search size={16} className="text-gray-400" />
                 </div>
                 <input
                   type="text"
+                  placeholder="Search by instructor, course or reason..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search instructor, course..."
-                  className="w-full pl-10 p-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600 focus:border-indigo-500 dark:focus:border-indigo-600 text-gray-900 dark:text-white text-base transition-colors"
+                  className="pl-10 w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-base text-gray-900 dark:text-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600 focus:border-transparent"
                 />
               </div>
-            </div>
-          </div>
-          
-          <div className="mt-4 flex justify-between items-center">
-            <p className="text-sm text-gray-600 dark:text-gray-400">
-              {filteredComplaints.length} of {complaints.length} complaints
-            </p>
-            <button
-              onClick={resetFilters}
-              className="flex items-center gap-1 text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300"
-            >
-              <FiRefreshCw className="text-sm" /> Reset Filters
-            </button>
-          </div>
-        </div>
-
-        {/* Complaints List */}
-        <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm overflow-hidden border border-gray-200 dark:border-gray-700">
-          <div className="p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
-            <div className="flex items-center">
-              <FiAlertCircle className="text-gray-500 dark:text-gray-400 mr-2" />
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Complaints</h2>
-            </div>
+            )}
             
-            <button 
-              onClick={fetchComplaints}
-              className="flex items-center gap-1 text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 p-1"
-              data-tooltip-id="refresh-tooltip"
-              data-tooltip-content="Refresh complaints"
-            >
-              <FiRefreshCw />
-            </button>
-            <Tooltip id="refresh-tooltip" />
+            {!initialFetch && (
+              <div className="mt-3 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
+                <p className="text-sm text-blue-700 dark:text-blue-400 flex items-center">
+                  <AlertTriangle size={16} className="mr-2 flex-shrink-0" />
+                  Apply filters and click Search to view complaints
+                </p>
+              </div>
+            )}
           </div>
-          
-          {loading ? (
-            <div className="p-8 text-center">
-              <div className="inline-block w-8 h-8 border-4 border-indigo-500 dark:border-indigo-400 border-t-transparent rounded-full animate-spin"></div>
-              <p className="mt-2 text-gray-600 dark:text-gray-400">Loading complaints...</p>
-            </div>
-          ) : filteredComplaints.length === 0 ? (
-            <div className="p-8 text-center">
-              <FiAlertTriangle className="mx-auto text-yellow-500 dark:text-yellow-400 text-4xl mb-2" />
-              <p className="text-gray-600 dark:text-gray-400">No complaints found matching your filters</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="bg-gray-50 dark:bg-gray-700">
-                    <th 
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
-                      onClick={() => toggleSort("instructor")}
-                    >
-                      <div className="flex items-center">
-                        <FiUser className="mr-1" /> Instructor
-                        {filters.sortBy === "instructor" && (
-                          <span className="ml-1">{filters.sortOrder === "asc" ? "↑" : "↓"}</span>
-                        )}
-                      </div>
-                    </th>
-                    <th 
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
-                      onClick={() => toggleSort("course")}
-                    >
-                      <div className="flex items-center">
-                        Course
-                        {filters.sortBy === "course" && (
-                          <span className="ml-1">{filters.sortOrder === "asc" ? "↑" : "↓"}</span>
-                        )}
-                      </div>
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Program
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Reason
-                    </th>
-                    <th 
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600"
-                      onClick={() => toggleSort("createdAt")}
-                    >
-                      <div className="flex items-center">
-                        <FiCalendar className="mr-1" /> Date
-                        {filters.sortBy === "createdAt" && (
-                          <span className="ml-1">{filters.sortOrder === "asc" ? "↑" : "↓"}</span>
-                        )}
-                      </div>
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                  {filteredComplaints.map((complaint) => (
-                    <tr key={complaint._id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="font-medium text-gray-900 dark:text-white">
-                          {complaint.instructorId?.userId?.fullName || "Unknown"}
-                        </div>
-                        <div className="text-xs text-gray-500 dark:text-gray-400">
-                          {complaint.instructorId?.userId?.email}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-gray-600 dark:text-gray-300">
-                        {complaint.assignmentId?.courseId?.name || "Unknown Course"}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900/50 text-indigo-800 dark:text-indigo-300">
-                          {complaint.assignmentId?.program || "Unknown"}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="text-sm text-gray-900 dark:text-gray-300 max-w-xs truncate">
-                          {complaint.reason}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-                        {formatDate(complaint.createdAt)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium flex items-center w-fit ${getStatusBadge(complaint.status)}`}>
-                          {getStatusIcon(complaint.status)}
-                          {complaint.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <button
-                          onClick={() => viewComplaintDetails(complaint)}
-                          className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300 mr-3"
-                          data-tooltip-id="view-tooltip"
-                          data-tooltip-content="View details"
-                        >
-                          <FiEye />
-                        </button>
-                        
-                        {complaint.status === "Pending" && (
-                          <>
-                            <button
-                              onClick={() => {
-                                viewComplaintDetails(complaint);
-                                setResolutionNotes("Complaint accepted and resolved.");
-                              }}
-                              className="text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-300 mr-3"
-                              data-tooltip-id="resolve-tooltip"
-                              data-tooltip-content="Resolve complaint"
-                            >
-                              <FiCheckCircle />
-                            </button>
-                            
-                            <button
-                              onClick={() => {
-                                viewComplaintDetails(complaint);
-                                setRejectionReason("Complaint does not meet criteria for approval.");
-                              }}
-                              className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300"
-                              data-tooltip-id="reject-tooltip"
-                              data-tooltip-content="Reject complaint"
-                            >
-                              <FiXCircle />
-                            </button>
-                          </>
-                        )}
-                        
-                        <Tooltip id="view-tooltip" />
-                        <Tooltip id="resolve-tooltip" />
-                        <Tooltip id="reject-tooltip" />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Complaint Details Modal */}
-      {selectedComplaint && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg w-full max-w-3xl max-h-[90vh] overflow-hidden">
-            <div className="p-4 bg-gray-50 dark:bg-gray-700 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
-              <h3 className="text-lg font-bold text-gray-800 dark:text-white">
-                Complaint Details
-              </h3>
-              <button
-                onClick={closeComplaintModal}
-                className="p-2 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full transition-colors"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="p-6 overflow-y-auto" style={{ maxHeight: 'calc(90vh - 60px)' }}>
-              {/* Complaint Information */}
-              <div className="mb-6">
-                <div className="flex items-center mb-4">
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium flex items-center ${getStatusBadge(selectedComplaint.status)}`}>
-                    {getStatusIcon(selectedComplaint.status)}
-                    {selectedComplaint.status}
-                  </span>
-                  <span className="text-sm text-gray-500 dark:text-gray-400 ml-3">
-                    Submitted on {formatDate(selectedComplaint.createdAt)}
-                  </span>
-                </div>
-                
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Instructor Information</h4>
-                    <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                      {selectedComplaint.instructorId?.userId?.fullName || "Unknown"}
-                    </p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {selectedComplaint.instructorId?.userId?.email}
-                    </p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Department: {selectedComplaint.instructorId?.chair || "Unknown"}
-                    </p>
-                  </div>
-                  
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Course Information</h4>
-                    <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                      {selectedComplaint.assignmentId?.courseId?.name || "Unknown Course"}
-                    </p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Code: {selectedComplaint.assignmentId?.courseId?.code || "N/A"}
-                    </p>
-                    <p className="text-sm text-gray-600 dark:text-gray-400">
-                      Program: {selectedComplaint.assignmentId?.program || "Unknown"}
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="mt-4">
-                  <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Complaint Reason</h4>
-                  <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
-                    <p className="text-gray-800 dark:text-gray-300">
-                      {selectedComplaint.reason}
-                    </p>
-                  </div>
-                </div>
-                
-                {selectedComplaint.status !== "Pending" && (
-                  <div className="mt-4">
-                    <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-1">Resolution Information</h4>
-                    <div className="p-4 bg-gray-50 dark:bg-gray-700 rounded-lg border border-gray-200 dark:border-gray-600">
-                      <p className="text-sm text-gray-700 dark:text-gray-300">
-                        <span className="font-medium">Handled by:</span> {selectedComplaint.resolvedBy?.fullName || "Unknown"}
-                      </p>
-                      <p className="text-sm text-gray-700 dark:text-gray-300">
-                        <span className="font-medium">Date:</span> {selectedComplaint.resolvedAt ? formatDate(selectedComplaint.resolvedAt) : "N/A"}
-                      </p>
-                      {selectedComplaint.rejectionReason && (
-                        <p className="text-sm text-gray-700 dark:text-gray-300 mt-2">
-                          <span className="font-medium">Rejection reason:</span> {selectedComplaint.rejectionReason}
-                        </p>
-                      )}
-                      {selectedComplaint.resolutionNotes && (
-                        <p className="text-sm text-gray-700 dark:text-gray-300 mt-2">
-                          <span className="font-medium">Resolution notes:</span> {selectedComplaint.resolutionNotes}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
+        )}
+        
+        {/* Resolve Form Modal */}
+        {resolvingComplaint && (
+          <div className="fixed inset-0 bg-black/50 z-40 flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-5 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                  Resolve Complaint
+                </h3>
+                <button
+                  onClick={() => setResolvingComplaint(null)}
+                  className="rounded-full p-1 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition-colors"
+                >
+                  <X size={18} />
+                </button>
               </div>
               
-              {/* Action Buttons for Pending Complaints */}
-              {selectedComplaint.status === "Pending" && (
-                <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
-                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Take Action</h4>
-                  
-                  <div className="flex flex-col gap-4">
-                    <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
-                      <h5 className="font-medium text-green-800 dark:text-green-300 mb-2 flex items-center">
-                        <FiCheckCircle className="mr-1" /> Resolve Complaint
-                      </h5>
-                      <textarea
-                        value={resolutionNotes}
-                        onChange={(e) => setResolutionNotes(e.target.value)}
-                        placeholder="Add resolution notes (optional)"
-                        className="w-full p-2 border border-green-300 dark:border-green-700 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-colors bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                        rows="2"
-                      ></textarea>
-                      <button
-                        onClick={() => handleResolve(selectedComplaint._id)}
-                        disabled={actionLoading}
-                        className="mt-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors flex items-center justify-center"
-                      >
-                        {actionLoading ? (
-                          <>
-                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
-                            Processing...
-                          </>
-                        ) : (
-                          <>Approve & Resolve</>
-                        )}
-                      </button>
+              <div className="p-5">
+                <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-700/40 rounded-lg">
+                  <div className="flex flex-col sm:flex-row sm:justify-between">
+                    <div>
+                      <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Instructor</h4>
+                      <p className="text-base font-medium text-gray-900 dark:text-gray-100">
+                        {resolvingComplaint.instructorId?.fullName || "Unknown"}
+                      </p>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        {resolvingComplaint.instructorId?.chair || "No chair"}
+                      </p>
                     </div>
                     
-                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-                      <h5 className="font-medium text-red-800 dark:text-red-300 mb-2 flex items-center">
-                        <FiXCircle className="mr-1" /> Reject Complaint
-                      </h5>
+                    <div className="mt-2 sm:mt-0">
+                      <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Submitted</h4>
+                      <p className="text-base font-medium text-gray-900 dark:text-gray-100">
+                        {new Date(resolvingComplaint.submittedAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="mt-4">
+                    <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Report Details</h4>
+                    <p className="text-base font-medium text-gray-900 dark:text-gray-100">
+                      {resolvingComplaint.reportId?.year} - {resolvingComplaint.reportId?.semester} - {resolvingComplaint.reportId?.program}
+                    </p>
+                  </div>
+                  
+                  <div className="mt-4">
+                    <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Complaint Reason</h4>
+                    <p className="text-base text-gray-900 dark:text-gray-100 mt-1">
+                      {resolvingComplaint.reason}
+                    </p>
+                  </div>
+                </div>
+                
+                <form onSubmit={handleResolveSubmit}>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Resolution Status</label>
+                      <div className="flex gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setResolveData({...resolveData, status: "Resolved"})}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors ${
+                            resolveData.status === "Resolved" 
+                              ? "border-green-500 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400" 
+                              : "border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300"
+                          }`}
+                        >
+                          <ThumbsUp size={16} />
+                          Resolve
+                        </button>
+                        
+                        <button
+                          type="button"
+                          onClick={() => setResolveData({...resolveData, status: "Rejected"})}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors ${
+                            resolveData.status === "Rejected" 
+                              ? "border-red-500 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400" 
+                              : "border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300"
+                          }`}
+                        >
+                          <ThumbsDown size={16} />
+                          Reject
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Resolution Note</label>
                       <textarea
-                        value={rejectionReason}
-                        onChange={(e) => setRejectionReason(e.target.value)}
-                        placeholder="Provide reason for rejection (required)"
-                        className="w-full p-2 border border-red-300 dark:border-red-700 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-colors bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                        rows="2"
-                        required
+                        name="resolveNote"
+                        value={resolveData.resolveNote}
+                        onChange={handleResolveInputChange}
+                        rows={4}
+                        className={`w-full rounded-lg border ${resolveErrors.resolveNote ? "border-red-500" : "border-gray-300 dark:border-gray-600"} bg-white dark:bg-gray-800 px-3 py-2 text-gray-900 dark:text-gray-100 text-base transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600 focus:border-transparent`}
+                        placeholder="Provide details about how this complaint was resolved or why it was rejected..."
                       ></textarea>
+                      {resolveErrors.resolveNote && (
+                        <p className="mt-1 text-sm text-red-500">{resolveErrors.resolveNote}</p>
+                      )}
+                    </div>
+                    
+                    <div className="flex justify-end gap-2 pt-2">
                       <button
-                        onClick={() => handleReject(selectedComplaint._id)}
-                        disabled={actionLoading || !rejectionReason.trim()}
-                        className={`mt-2 px-4 py-2 rounded-lg transition-colors flex items-center justify-center ${
-                          !rejectionReason.trim() 
-                            ? "bg-gray-400 dark:bg-gray-600 text-white cursor-not-allowed" 
-                            : "bg-red-600 hover:bg-red-700 text-white"
-                        }`}
+                        type="button"
+                        onClick={() => setResolvingComplaint(null)}
+                        className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                       >
-                        {actionLoading ? (
-                          <>
-                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={submitLoading}
+                        className={`px-4 py-2 ${
+                          resolveData.status === "Resolved" 
+                            ? "bg-green-600 hover:bg-green-700" 
+                            : "bg-red-600 hover:bg-red-700"
+                        } text-white rounded-lg disabled:opacity-70 disabled:cursor-not-allowed transition-colors`}
+                      >
+                        {submitLoading ? (
+                          <span className="flex items-center justify-center">
+                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
                             Processing...
-                          </>
-                        ) : (
-                          <>Reject Complaint</>
-                        )}
+                          </span>
+                        ) : resolveData.status === "Resolved" ? "Resolve Complaint" : "Reject Complaint"}
                       </button>
                     </div>
                   </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Delete Confirmation Modal */}
+        {confirmDelete && (
+          <div className="fixed inset-0 bg-black/50 z-40 flex items-center justify-center p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full">
+              <div className="p-5 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                  Confirm Deletion
+                </h3>
+                <button
+                  onClick={() => setConfirmDelete(null)}
+                  className="rounded-full p-1 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-500 dark:text-gray-400 transition-colors"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              
+              <div className="p-5">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex-shrink-0 w-10 h-10 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+                    <Trash2 size={20} className="text-red-600 dark:text-red-400" />
+                  </div>
+                  <div>
+                    <h4 className="text-base font-medium text-gray-900 dark:text-gray-100">
+                      Delete Complaint
+                    </h4>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      This action cannot be undone.
+                    </p>
+                  </div>
                 </div>
-              )}
+                
+                <div className="p-4 bg-red-50 dark:bg-red-900/10 rounded-lg mb-4">
+                  <p className="text-sm text-red-700 dark:text-red-400">
+                    Are you sure you want to delete this complaint? All associated data will be permanently removed.
+                  </p>
+                </div>
+                
+                <div className="flex justify-end gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDelete(null)}
+                    className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDeleteComplaint}
+                    disabled={deleteLoading}
+                    className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg disabled:opacity-70 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {deleteLoading ? (
+                      <span className="flex items-center justify-center">
+                        <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Deleting...
+                      </span>
+                    ) : "Delete Complaint"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+      
+      {/* Complaints List */}
+      <div className="overflow-x-auto">
+        {loading ? (
+          <div className="flex justify-center items-center p-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-600"></div>
+          </div>
+        ) : !initialFetch ? (
+          <div className="p-8 text-center">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 dark:bg-blue-900/30">
+              <Search size={20} className="text-blue-600 dark:text-blue-400" />
+            </div>
+            <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-200">No search performed</h3>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              Use the filters above and click Search to view complaints
+            </p>
+          </div>
+        ) : filteredComplaints.length > 0 ? (
+          <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+            <thead className="bg-gray-50 dark:bg-gray-700">
+              <tr>
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Instructor</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Report</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Reason</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Resolution</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+              {filteredComplaints.map((complaint) => {
+                // Format date
+                const submittedDate = new Date(complaint.submittedAt).toLocaleDateString();
+                
+                // Get status classes
+                let statusClasses = "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium";
+                if (complaint.status === "Pending") {
+                  statusClasses += " bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-500";
+                } else if (complaint.status === "Resolved") {
+                  statusClasses += " bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-500";
+                } else if (complaint.status === "Rejected") {
+                  statusClasses += " bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-500";
+                }
+                
+                return (
+                  <tr key={complaint._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                    <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                      {submittedDate}
+                    </td>
+                    <td className="px-3 py-2 text-sm text-gray-900 dark:text-gray-200">
+                      <div className="font-medium">
+                        {complaint.instructorId?.fullName || "Unknown"}
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        {complaint.instructorId?.chair || "No chair"} Chair
+                      </div>
+                    </td>
+                    <td className="px-3 py-2 text-sm text-gray-900 dark:text-gray-200">
+                      <div className="font-medium">
+                        {complaint.reportId?.year} - {complaint.reportId?.semester}
+                      </div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">
+                        {complaint.reportId?.program}
+                      </div>
+                    </td>
+                    <td className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">
+                      <div className="max-w-xs lg:max-w-md truncate" title={complaint.reason}>
+                        {complaint.reason}
+                      </div>
+                    </td>
+                    <td className="px-3 py-2 whitespace-nowrap">
+                      <span className={statusClasses}>
+                        {complaint.status === "Pending" && <Clock size={12} className="mr-1" />}
+                        {complaint.status === "Resolved" && <Check size={12} className="mr-1" />}
+                        {complaint.status === "Rejected" && <X size={12} className="mr-1" />}
+                        {complaint.status}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">
+                      <div>
+                        {complaint.status !== "Pending" ? (
+                          <div>
+                            <div className="max-w-xs truncate" title={complaint.resolveNote || "No notes provided"}>
+                              {complaint.resolveNote || "No notes provided"}
+                            </div>
+                            {complaint.resolvedBy && (
+                              <div className="text-xs text-gray-400 dark:text-gray-600 mt-1 truncate">
+                                By: {complaint.resolvedBy.fullName || "Unknown"}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 dark:text-gray-600 italic">Awaiting resolution</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-3 py-2 whitespace-nowrap text-sm font-medium">
+                      <div className="flex items-center space-x-2">
+                        {complaint.status === "Pending" && (
+                          <button
+                            onClick={() => startResolveProcess(complaint)}
+                            className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 font-medium flex items-center gap-1 transition-colors"
+                          >
+                            <Check size={14} /> 
+                            <span>Resolve</span>
+                          </button>
+                        )}
+                        <button
+                          onClick={() => setConfirmDelete(complaint)}
+                          className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 font-medium flex items-center gap-1 transition-colors"
+                        >
+                          <Trash2 size={14} />
+                          <span>Delete</span>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        ) : (
+          <div className="p-8 text-center">
+            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-700">
+              <FileText size={20} className="text-gray-500 dark:text-gray-400" />
+            </div>
+            <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-200">No complaints found</h3>
+            <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+              {Object.values(filters).some(f => f) || searchQuery 
+                ? "Try adjusting your filters or search query" 
+                : "There are no complaints to review at this time"}
+            </p>
+          </div>
+        )}
+      </div>
+      
+      {/* Statistics Cards */}
+      {initialFetch && (
+        <div className="p-5 border-t border-gray-200 dark:border-gray-700">
+          <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-4">Complaint Statistics</h3>
+          
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-4 shadow-sm transition-shadow hover:shadow-md">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Complaints</p>
+                  <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mt-1">
+                    {complaints.length}
+                  </p>
+                </div>
+                <div className="h-12 w-12 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center">
+                  <FileText size={24} className="text-purple-600 dark:text-purple-400" />
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-4 shadow-sm transition-shadow hover:shadow-md">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Pending</p>
+                  <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mt-1">
+                    {complaints.filter(c => c.status === "Pending").length}
+                  </p>
+                </div>
+                <div className="h-12 w-12 bg-yellow-100 dark:bg-yellow-900/30 rounded-full flex items-center justify-center">
+                  <Clock size={24} className="text-yellow-600 dark:text-yellow-400" />
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-4 shadow-sm transition-shadow hover:shadow-md">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Resolved</p>
+                  <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mt-1">
+                    {complaints.filter(c => c.status === "Resolved").length}
+                  </p>
+                </div>
+                <div className="h-12 w-12 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
+                  <Check size={24} className="text-green-600 dark:text-green-400" />
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg p-4 shadow-sm transition-shadow hover:shadow-md">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Rejected</p>
+                  <p className="text-2xl font-semibold text-gray-900 dark:text-gray-100 mt-1">
+                    {complaints.filter(c => c.status === "Rejected").length}
+                  </p>
+                </div>
+                <div className="h-12 w-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+                  <X size={24} className="text-red-600 dark:text-red-400" />
+                </div>
+              </div>
             </div>
           </div>
         </div>
