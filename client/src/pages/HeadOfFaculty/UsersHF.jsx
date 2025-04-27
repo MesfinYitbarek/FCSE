@@ -123,7 +123,10 @@ const UsersManagement = () => {
   // Calculate total pages when filtered users or items per page changes
   useEffect(() => {
     setTotalPages(Math.ceil(filteredUsers.length / itemsPerPage));
-    setPage(1); // Reset to first page when filters change
+    // Don't reset to first page when filters change to avoid jumps
+    if (page > Math.ceil(filteredUsers.length / itemsPerPage)) {
+      setPage(1);
+    }
   }, [filteredUsers, itemsPerPage]);
 
   const fetchUsers = async () => {
@@ -248,7 +251,32 @@ const UsersManagement = () => {
       const { confirmPassword, ...userData } = newUser;
       
       const response = await api.post("/users/signup", userData);
-      setUsers(prev => [...prev, response.data.user]);
+      
+      // Defensive check - ensure we have a valid user object with required fields
+      const newUserData = response.data.user || response.data;
+      
+      // Make sure the user object has all required fields before adding to state
+      const safeUser = {
+        _id: newUserData._id || Date.now().toString(), // Fallback ID if none exists
+        fullName: newUserData.fullName || userData.fullName || "",
+        username: newUserData.username || userData.username || "",
+        email: newUserData.email || userData.email || "",
+        role: newUserData.role || userData.role || "Instructor",
+        // Include all other fields you're displaying in the UI with fallbacks
+        phone: newUserData.phone || userData.phone || "",
+        chair: newUserData.chair || userData.chair || "",
+        rank: newUserData.rank || userData.rank || "",
+        position: newUserData.position || userData.position || "",
+        location: newUserData.location || userData.location || "",
+        createdAt: newUserData.createdAt || new Date().toISOString()
+      };
+      
+      // Add the new user to the beginning of the array
+      setUsers(prev => [safeUser, ...prev]);
+      
+      // Reset to first page to ensure the new user is visible
+      setPage(1);
+      
       toast.success("User added successfully");
       resetForm();
       setIsAddUserOpen(false);
@@ -295,13 +323,33 @@ const UsersManagement = () => {
   const handleDeleteUser = async () => {
     setLoading(true);
     try {
-      await api.delete(`/users/${selectedUser._id}`);
-      setUsers(prev => prev.filter(u => u._id !== selectedUser._id));
+      // Store the ID before the API call
+      const userIdToDelete = selectedUser._id;
+      
+      // Call the API to delete the user from the backend
+      await api.delete(`/users/${userIdToDelete}`);
+      
+      // Update the local state by filtering out the deleted user
+      setUsers(prev => {
+        // Convert IDs to strings for reliable comparison
+        return prev.filter(u => String(u._id) !== String(userIdToDelete));
+      });
+      
+      // Close the delete modal and show success message
       toast.success("User deleted successfully");
       setIsDeleteUserOpen(false);
     } catch (err) {
       console.error("Error deleting user:", err);
-      toast.error("Failed to delete user");
+      
+      // Check if it's a 404 error (user already deleted or doesn't exist)
+      if (err.response?.status === 404) {
+        // User doesn't exist on server, but we should still remove from UI
+        setUsers(prev => prev.filter(u => String(u._id) !== String(selectedUser._id)));
+        toast.success("User removed from list");
+        setIsDeleteUserOpen(false);
+      } else {
+        toast.error("Failed to delete user");
+      }
     } finally {
       setLoading(false);
     }
