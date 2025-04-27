@@ -1,41 +1,35 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL, // Use environment variable
+  baseURL: import.meta.env.VITE_API_BASE_URL,
   headers: { "Content-Type": "application/json" },
 });
 
-// Add interceptor to attach token
+// Add token to request if available
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("token");
     if (token) {
       config.headers["Authorization"] = `Bearer ${token}`;
-    } else {
-      console.warn("No token found in localStorage");
     }
     return config;
   },
-  (error) => {
-    console.error("Request interceptor error:", error);
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// Add response interceptor to handle token expiration and other errors
+// Handle responses globally
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    console.error("Response error:", error.response);
-
     if (error.response?.status === 401) {
-      console.warn("Token expired or invalid");
-      alert("Session expired. Please log in again.");
+      console.warn("Session expired. Logging out...");
+      
+      // ⚡ Remove token and user
       localStorage.removeItem("token");
       localStorage.removeItem("user");
+
+      // ⚡ Important: reload the page ONCE to reset app state
       window.location.href = "/";
-    } else if (error.response?.status === 500) {
-      alert("Something went wrong on the server. Please try again later.");
     }
 
     return Promise.reject(error);

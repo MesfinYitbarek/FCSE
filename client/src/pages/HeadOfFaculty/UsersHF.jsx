@@ -247,7 +247,7 @@ const UsersManagement = () => {
     try {
       const { confirmPassword, ...userData } = newUser;
       
-      const response = await api.post("/users", userData);
+      const response = await api.post("/users/signup", userData);
       setUsers(prev => [...prev, response.data.user]);
       toast.success("User added successfully");
       resetForm();

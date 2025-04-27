@@ -180,3 +180,60 @@ export const changePassword = async (req, res) => {
     res.status(500).json({ message: 'Server error' });
   }
 };
+
+export const getUserStatistics = async (req, res) => {
+  try {
+    // Total number of users
+    const totalUsers = await User.countDocuments();
+
+    // Number of users per role
+    const usersByRole = await User.aggregate([
+      { 
+        $group: { 
+          _id: "$role", 
+          count: { $sum: 1 } 
+        } 
+      }
+    ]);
+
+    // Number of users per chair
+    const usersByChair = await User.aggregate([
+      { 
+        $group: { 
+          _id: "$chair", 
+          count: { $sum: 1 } 
+        } 
+      }
+    ]);
+
+    // Number of users per rank
+    const usersByRank = await User.aggregate([
+      { 
+        $group: { 
+          _id: "$rank", 
+          count: { $sum: 1 } 
+        } 
+      }
+    ]);
+
+    // Number of users per location
+    const usersByLocation = await User.aggregate([
+      { 
+        $group: { 
+          _id: "$location", 
+          count: { $sum: 1 } 
+        } 
+      }
+    ]);
+
+    res.status(200).json({
+      totalUsers,
+      usersByRole,
+      usersByChair,
+      usersByRank,
+      usersByLocation
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching user statistics", error });
+  }
+};
