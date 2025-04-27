@@ -1,6 +1,6 @@
 import express from "express";
 import { check } from 'express-validator';
-import { signup, login, getUsers, updateUser, resetPassword, confirmReset, getUserByChair, getUserByRole, deleteUser, changePassword } from "../controllers/userController.js";
+import { signup, login, getUsers, updateUser, resetPassword, confirmReset, getUserByChair, getUserByRole, deleteUser, changePassword, getUserStatistics } from "../controllers/userController.js";
 import { authenticate } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
@@ -21,7 +21,7 @@ router.post(
     changePassword
   );
 router.get("/", getUsers);
-
+router.get("/statics", getUserStatistics);
 router.get("/users/:chair", getUserByChair); // Get users by chair
 router.get("/role/:role", getUserByRole);
 

@@ -43,3 +43,27 @@ export const deleteChair = async (req, res) => {
     res.status(500).json({ message: "Error deleting chair", error });
   }
 };
+
+export const getChairStatistics = async (req, res) => {
+  try {
+    // Total number of chairs
+    const totalChairs = await Chair.countDocuments();
+
+    // List chairs with number of courses in each chair
+    const chairsWithCourseCounts = await Chair.aggregate([
+      {
+        $project: {
+          name: 1,
+          head: 1
+        }
+      }
+    ]);
+
+    res.status(200).json({
+      totalChairs,
+      chairsWithCourseCounts
+    });
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching chair statistics", error });
+  }
+};
