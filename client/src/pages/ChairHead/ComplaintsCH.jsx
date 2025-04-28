@@ -37,8 +37,8 @@ const ComplaintsCH = () => {
   const [submitLoading, setSubmitLoading] = useState(false);
 
   // Fixed options for semester and program
-  const semesterOptions = ["Regular 1", "Regular 2", "Extension 1", "Extension 2", "Summer"];
-  const programOptions = ["Regular", "Extension", "Summer"];
+  const semesterOptions = ["Regular 1", "Regular 2"];
+  const programOptions = ["Regular"];
   const statusOptions = ["Pending", "Resolved", "Rejected"];
 
   // Fetch complaints for chair head with filters

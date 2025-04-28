@@ -248,7 +248,7 @@ const ManualAssignment = ({ fetchAssignments, filters }) => {
                               )
                             }
                           />
-                          <span className="font-medium text-sm text-gray-800 dark:text-gray-200">{course.code}</span>
+                          <span className="font-medium text-sm text-gray-800 dark:text-gray-200">{course.code}-{course.name}</span>
                         </label>
                         <div className={`px-2 py-1 rounded text-xs ${
                           getPreferenceRank(pref.instructorId, course) !== Infinity

@@ -1037,7 +1037,7 @@ const CoursesCH = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label htmlFor="likeness" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Likeness (comma-separated)
+                        Likeness 
                       </label>
                       <input
                         type="text"
@@ -1046,7 +1046,7 @@ const CoursesCH = () => {
                         value={form.likeness}
                         onChange={handleChange}
                         className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600 focus:border-indigo-500 dark:focus:border-indigo-600 outline-none transition dark:bg-gray-700 dark:text-white text-base"
-                        placeholder="e.g. Morning, Afternoon, Evening"
+                        placeholder=""
                       />
                     </div>
 
@@ -1061,7 +1061,7 @@ const CoursesCH = () => {
                         value={form.location}
                         onChange={handleChange}
                         className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600 focus:border-indigo-500 dark:focus:border-indigo-600 outline-none transition dark:bg-gray-700 dark:text-white text-base"
-                        placeholder="Building and room number"
+                        placeholder="campus"
                       />
                     </div>
                   </div>

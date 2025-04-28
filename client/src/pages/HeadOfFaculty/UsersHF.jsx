@@ -323,32 +323,29 @@ const UsersManagement = () => {
   const handleDeleteUser = async () => {
     setLoading(true);
     try {
-      // Store the ID before the API call
-      const userIdToDelete = selectedUser._id;
+      // First fetch the latest users from the server
+      const usersResponse = await api.get("/users");
+      setUsers(usersResponse.data);
       
-      // Call the API to delete the user from the backend
-      await api.delete(`/users/${userIdToDelete}`);
+      // Then delete the selected user
+      await api.delete(`/users/${selectedUser._id}`);
       
-      // Update the local state by filtering out the deleted user
-      setUsers(prev => {
-        // Convert IDs to strings for reliable comparison
-        return prev.filter(u => String(u._id) !== String(userIdToDelete));
-      });
+      // Fetch the users again to get the updated list after deletion
+      const updatedUsersResponse = await api.get("/users");
+      setUsers(updatedUsersResponse.data);
       
-      // Close the delete modal and show success message
       toast.success("User deleted successfully");
       setIsDeleteUserOpen(false);
     } catch (err) {
       console.error("Error deleting user:", err);
+      toast.error("Failed to delete user");
       
-      // Check if it's a 404 error (user already deleted or doesn't exist)
-      if (err.response?.status === 404) {
-        // User doesn't exist on server, but we should still remove from UI
-        setUsers(prev => prev.filter(u => String(u._id) !== String(selectedUser._id)));
-        toast.success("User removed from list");
-        setIsDeleteUserOpen(false);
-      } else {
-        toast.error("Failed to delete user");
+      // Refresh the users list even if deletion fails
+      try {
+        const response = await api.get("/users");
+        setUsers(response.data);
+      } catch (fetchErr) {
+        console.error("Error fetching users after delete failure:", fetchErr);
       }
     } finally {
       setLoading(false);

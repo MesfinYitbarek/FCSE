@@ -160,8 +160,6 @@ const PreferenceCH = () => {
               >
                 <option value="Regular 1">Regular 1</option>
                 <option value="Regular 2">Regular 2</option>
-                <option value="Summer">Summer</option>
-                <option value="Extension">Extension</option>
               </select>
             </div>
           </div>
