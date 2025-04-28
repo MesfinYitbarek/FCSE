@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Dialog } from "@headlessui/react";
 import {
   Loader,
   AlertCircle,
@@ -15,16 +14,14 @@ import {
   Filter,
   X,
   Edit,
-  MoreVertical,
   Check,
   Search,
   SlidersHorizontal,
   Info,
-  Star,
-  Award,
   PieChart,
-  ListFilter,
-  Eye
+  Eye,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import api from "../../utils/api";
 
@@ -46,9 +43,8 @@ const CommonCoursesCOC = () => {
   const [viewAssignmentReason, setViewAssignmentReason] = useState(null);
   
   // State for year and semester selection
-  const [years, setYears] = useState([]);
   const [semesters, setSemesters] = useState([
-    "Regular 1", "Regular 2", "Summer"
+    "Regular 1", "Regular 2"
   ]);
   const [selectedYear, setSelectedYear] = useState("");
   const [selectedSemester, setSelectedSemester] = useState("");
@@ -65,20 +61,14 @@ const CommonCoursesCOC = () => {
     search: ""
   });
   
-  // Column visibility
-  const [columnSettings, setColumnSettings] = useState({
-    score: true,
-    experience: false,
-    preference: false,
-    showDetails: false
-  });
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
 
   useEffect(() => {
-    // Generate years (current year and 5 previous years)
+    // Set default year to current year
     const currentYear = new Date().getFullYear();
-    const yearList = Array.from({ length: 6 }, (_, i) => currentYear - i);
-    setYears(yearList);
-    setSelectedYear(currentYear);
+    setSelectedYear(currentYear.toString());
 
     // Set default semester based on current month
     const currentMonth = new Date().getMonth() + 1;
@@ -93,8 +83,8 @@ const CommonCoursesCOC = () => {
     setSelectedSemester(defaultSemester);
     
     // Sample data for departments and chairs (replace with real data)
-    setDepartments(["Computer Science", "Electrical", "Mechanical", "Civil", "Software"]);
-    setChairs(["Common", "CSE", "EEE", "Civil", "Software"]);
+    setDepartments(["Computer Science", "Information Technology", "Software Engineering"]);
+    setChairs(["Database", "Programming", "Networking","Software"]);
   }, []);
 
   useEffect(() => {
@@ -110,6 +100,11 @@ const CommonCoursesCOC = () => {
       filterAssignments();
     }
   }, [assignments, selectedYear, selectedSemester, filters]);
+  
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters]);
 
   // Filter assignments based on selected year, semester, and additional filters
   const filterAssignments = () => {
@@ -190,12 +185,32 @@ const CommonCoursesCOC = () => {
     setError(null);
   };
 
-  // Toggle column visibility
-  const toggleColumn = (column) => {
-    setColumnSettings(prev => ({
-      ...prev,
-      [column]: !prev[column]
-    }));
+  // Pagination functions
+  const totalPages = Math.ceil(
+    filteredAssignments.reduce((acc, item) => acc + item.assignments.length, 0) / itemsPerPage
+  );
+  
+  const paginatedAssignments = () => {
+    const flattenedAssignments = [];
+    
+    filteredAssignments.forEach(assignment => {
+      assignment.assignments.forEach(subAssignment => {
+        flattenedAssignments.push({
+          parentId: assignment._id,
+          parentData: assignment,
+          ...subAssignment
+        });
+      });
+    });
+    
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    return flattenedAssignments.slice(startIndex, startIndex + itemsPerPage);
+  };
+  
+  const goToPage = (page) => {
+    if (page > 0 && page <= totalPages) {
+      setCurrentPage(page);
+    }
   };
 
   // Fetch available common courses
@@ -401,6 +416,17 @@ const CommonCoursesCOC = () => {
     setLoading(false);
   };
 
+  // Select all instructors
+  const selectAllInstructors = () => {
+    if (selectedInstructors.length === instructors.length) {
+      // If all are selected, deselect all
+      setSelectedInstructors([]);
+    } else {
+      // Otherwise, select all
+      setSelectedInstructors(instructors.map(instructor => instructor._id));
+    }
+  };
+
   // Handle toggling selection of an instructor for multiple selection without Ctrl key
   const toggleInstructorSelection = (instructorId) => {
     setSelectedInstructors(prev => {
@@ -410,6 +436,23 @@ const CommonCoursesCOC = () => {
         return [...prev, instructorId];
       }
     });
+  };
+
+  // Select all courses
+  const selectAllCourses = () => {
+    if (selectedCourses.length === courses.length) {
+      // If all are selected, deselect all
+      setSelectedCourses([]);
+    } else {
+      // Otherwise, select all with default values for section and labDivision
+      setSelectedCourses(
+        courses.map(course => ({ 
+          courseId: course._id, 
+          section: "", 
+          labDivision: "No" 
+        }))
+      );
+    }
   };
 
   // Handle selecting courses and storing additional fields (section & lab division)
@@ -675,18 +718,13 @@ const CommonCoursesCOC = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Academic Year</label>
-                  <select
+                  <input
+                    type="number"
                     value={selectedYear}
                     onChange={(e) => setSelectedYear(e.target.value)}
+                    placeholder="Enter year (e.g. 2023)"
                     className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent text-gray-800 dark:text-gray-200 text-base"
-                  >
-                    <option value="">Select Year</option>
-                    {years.map((year) => (
-                      <option key={year} value={year}>
-                        {year}
-                      </option>
-                    ))}
-                  </select>
+                  />
                 </div>
 
                 <div className="space-y-2">
@@ -1022,10 +1060,20 @@ const CommonCoursesCOC = () => {
 
                         {/* Custom Instructor Selection (No Ctrl key needed) */}
                         <div className="space-y-2 mb-4">
-                          <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
-                            <Users className="mr-2 text-indigo-600 dark:text-indigo-400" size={18} />
-                            Select Instructors ({selectedInstructors.length} selected)
-                          </label>
+                          <div className="flex items-center justify-between">
+                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
+                              <Users className="mr-2 text-indigo-600 dark:text-indigo-400" size={18} />
+                              Select Instructors ({selectedInstructors.length} selected)
+                            </label>
+                            
+                            {/* Select All Instructors Button */}
+                            <button
+                              onClick={selectAllInstructors}
+                              className="text-xs px-2 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-md hover:bg-indigo-100 dark:hover:bg-indigo-800/40"
+                            >
+                              {selectedInstructors.length === instructors.length ? "Deselect All" : "Select All"}
+                            </button>
+                          </div>
                           
                           <div className="relative">
                             <button
@@ -1073,10 +1121,20 @@ const CommonCoursesCOC = () => {
 
                         {/* Course Selection with Section and Lab Division Inputs */}
                         <div className="mt-4 space-y-3">
-                          <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
-                            <BookOpen className="mr-2 text-indigo-600 dark:text-indigo-400" size={18} />
-                            Select Courses and Set Section & Lab Division
-                          </label>
+                          <div className="flex items-center justify-between">
+                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
+                              <BookOpen className="mr-2 text-indigo-600 dark:text-indigo-400" size={18} />
+                              Select Courses and Set Section & Lab Division
+                            </label>
+                            
+                            {/* Select All Courses Button */}
+                            <button
+                              onClick={selectAllCourses}
+                              className="text-xs px-2 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-md hover:bg-indigo-100 dark:hover:bg-indigo-800/40"
+                            >
+                              {selectedCourses.length === courses.length ? "Deselect All" : "Select All"}
+                            </button>
+                          </div>
                           
                           {/* Course Filter Controls */}
                           <div className="mb-3 bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
@@ -1290,7 +1348,7 @@ const CommonCoursesCOC = () => {
               )}
             </AnimatePresence>
 
-            {/* Filter and Column Settings */}
+            {/* Filter Controls */}
             <motion.div
               {...fadeIn}
               className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 mb-4 md:mb-5"
@@ -1311,63 +1369,19 @@ const CommonCoursesCOC = () => {
                     </button>
                   </div>
                   
-                  {/* Column Settings Dropdown */}
-                  <div className="relative">
-                    <button
-                      onClick={() => setColumnSettings(prev => ({ ...prev, showDetails: !prev.showDetails }))}
-                      className="inline-flex items-center px-2 py-1 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors text-sm"
+                  {/* Items per page selector */}
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm text-gray-600 dark:text-gray-400">Items per page:</label>
+                    <select
+                      value={itemsPerPage}
+                      onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                      className="px-2 py-1 text-sm bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent text-gray-800 dark:text-gray-200"
                     >
-                      <ListFilter size={16} className="mr-1.5" />
-                      Show Details
-                      <ChevronDown size={14} className={`ml-1.5 transition-transform ${columnSettings.showDetails ? 'rotate-180' : ''}`} />
-                    </button>
-                    
-                    {columnSettings.showDetails && (
-                      <div className="absolute right-0 mt-1 w-48 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg z-10">
-                        <div className="p-2">
-                          <div className="space-y-1.5">
-                            <div 
-                              className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-600 rounded cursor-pointer"
-                              onClick={() => toggleColumn('score')}
-                            >
-                              <div className={`w-4 h-4 rounded ${columnSettings.score ? 'bg-indigo-600 dark:bg-indigo-500' : 'border border-gray-300 dark:border-gray-500'} flex items-center justify-center`}>
-                                {columnSettings.score && <Check size={12} className="text-white" />}
-                              </div>
-                              <span className="text-sm text-gray-700 dark:text-gray-300 flex items-center">
-                                <PieChart size={14} className="mr-1.5 text-indigo-600 dark:text-indigo-400" />
-                                Score
-                              </span>
-                            </div>
-                            
-                            <div 
-                              className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-600 rounded cursor-pointer"
-                              onClick={() => toggleColumn('preference')}
-                            >
-                              <div className={`w-4 h-4 rounded ${columnSettings.preference ? 'bg-indigo-600 dark:bg-indigo-500' : 'border border-gray-300 dark:border-gray-500'} flex items-center justify-center`}>
-                                {columnSettings.preference && <Check size={12} className="text-white" />}
-                              </div>
-                              <span className="text-sm text-gray-700 dark:text-gray-300 flex items-center">
-                                <Star size={14} className="mr-1.5 text-indigo-600 dark:text-indigo-400" />
-                                Preference
-                              </span>
-                            </div>
-                            
-                            <div 
-                              className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-600 rounded cursor-pointer"
-                              onClick={() => toggleColumn('experience')}
-                            >
-                              <div className={`w-4 h-4 rounded ${columnSettings.experience ? 'bg-indigo-600 dark:bg-indigo-500' : 'border border-gray-300 dark:border-gray-500'} flex items-center justify-center`}>
-                                {columnSettings.experience && <Check size={12} className="text-white" />}
-                              </div>
-                              <span className="text-sm text-gray-700 dark:text-gray-300 flex items-center">
-                                <Award size={14} className="mr-1.5 text-indigo-600 dark:text-indigo-400" />
-                                Experience
-                              </span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
+                      <option value={5}>5</option>
+                      <option value={10}>10</option>
+                      <option value={20}>20</option>
+                      <option value={50}>50</option>
+                    </select>
                   </div>
                 </div>
                 
@@ -1476,7 +1490,7 @@ const CommonCoursesCOC = () => {
               </div>
             </motion.div>
 
-            {/* Assignments Table - Now with improved responsiveness and reduced spacing */}
+            {/* Assignments Table - Now with pagination */}
             <motion.div
               {...fadeIn}
               className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700"
@@ -1539,130 +1553,183 @@ const CommonCoursesCOC = () => {
                               <th scope="col" className="sticky top-0 px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider bg-gray-50 dark:bg-gray-700 hidden md:table-cell">
                                 LEH
                               </th>
-                              
-                              {/* Score Column - Always visible for COC assignments */}
-                              {columnSettings.score && (
-                                <th scope="col" className="sticky top-0 px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider bg-gray-50 dark:bg-gray-700 hidden md:table-cell">
-                                  <div className="flex items-center">
-                                    <PieChart size={12} className="mr-1 text-indigo-600 dark:text-indigo-400" />
-                                    Score
-                                  </div>
-                                </th>
-                              )}
-                              
-                              {/* Preference Column - Only shown if enabled and not COC assignment */}
-                              {columnSettings.preference && (
-                                <th scope="col" className="sticky top-0 px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider bg-gray-50 dark:bg-gray-700 hidden lg:table-cell">
-                                  <div className="flex items-center">
-                                    <Star size={12} className="mr-1 text-indigo-600 dark:text-indigo-400" />
-                                    Pref.
-                                  </div>
-                                </th>
-                              )}
-                              
-                              {/* Experience Column - Only shown if enabled and not COC assignment */}
-                              {columnSettings.experience && (
-                                <th scope="col" className="sticky top-0 px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider bg-gray-50 dark:bg-gray-700 hidden lg:table-cell">
-                                  <div className="flex items-center">
-                                    <Award size={12} className="mr-1 text-indigo-600 dark:text-indigo-400" />
-                                    Exp.
-                                  </div>
-                                </th>
-                              )}
-                              
+                              <th scope="col" className="sticky top-0 px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider bg-gray-50 dark:bg-gray-700 hidden md:table-cell">
+                                <div className="flex items-center">
+                                  <PieChart size={12} className="mr-1 text-indigo-600 dark:text-indigo-400" />
+                                  Score
+                                </div>
+                              </th>
                               <th scope="col" className="sticky top-0 px-3 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider bg-gray-50 dark:bg-gray-700">
                                 Actions
                               </th>
                             </tr>
                           </thead>
                           <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700">
-                            {filteredAssignments.flatMap((assignment) =>
-                              assignment.assignments.map((subAssignment) => {
-                                // Check if it's a COC assignment (to hide preference/experience)
-                                const isCOCAssignment = assignment.assignedBy === "COC";
-                                
-                                return (
-                                  <motion.tr
-                                    key={subAssignment._id}
-                                    initial={{ opacity: 0 }}
-                                    animate={{ opacity: 1 }}
-                                    whileHover={{ backgroundColor: "rgba(249, 250, 251, 0.5)" }}
-                                    className="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700"
-                                  >
-                                    <td className="px-3 py-2 text-sm font-medium text-gray-900 dark:text-white truncate max-w-[150px]">
-                                      {subAssignment.instructorId?.fullName || "Unassigned"}
-                                    </td>
-                                    <td className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 truncate max-w-[200px]">
-                                      {subAssignment.courseId?.name || "N/A"}
-                                    </td>
-                                    <td className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300">
-                                      {subAssignment.courseId?.code || "N/A"}
-                                    </td>
-                                    <td className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hidden sm:table-cell">
-                                      {subAssignment.section || "N/A"}
-                                    </td>
-                                    <td className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hidden sm:table-cell">
-                                      {subAssignment.labDivision}
-                                    </td>
-                                    <td className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hidden md:table-cell">
-                                      {subAssignment.workload?.toFixed(2) || "N/A"}
-                                    </td>
-                                    
-                                    {/* Score Column - Always visible for COC assignments */}
-                                    {columnSettings.score && (
-                                      <td className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hidden md:table-cell">
-                                        {formatScore(subAssignment.score)}
-                                      </td>
-                                    )}
-                                    
-                                    {/* Preference Column - Only shown if enabled and not COC assignment */}
-                                    {columnSettings.preference && !isCOCAssignment && (
-                                      <td className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hidden lg:table-cell">
-                                        {subAssignment.preferenceRank || "N/A"}
-                                      </td>
-                                    )}
-                                    
-                                    {/* Experience Column - Only shown if enabled and not COC assignment */}
-                                    {columnSettings.experience && !isCOCAssignment && (
-                                      <td className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hidden lg:table-cell">
-                                        {subAssignment.experienceYears !== undefined ? 
-                                          `${subAssignment.experienceYears} yr${subAssignment.experienceYears !== 1 ? 's' : ''}` : 
-                                          "N/A"}
-                                      </td>
-                                    )}
-                                    
-                                    <td className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400 text-right">
-                                      <div className="flex space-x-1 justify-end">
-                                        {/* View Assignment Reason Button */}
-                                        <button
-                                          onClick={() => viewAssignmentDetail(subAssignment, assignment)}
-                                          className="p-1 rounded-md text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30"
-                                          title="View Details"
-                                        >
-                                          <Eye size={14} />
-                                        </button>
-                                        <button
-                                          onClick={() => handleEditAssignment(subAssignment, assignment._id)}
-                                          className="p-1 rounded-md text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30"
-                                          title="Edit"
-                                        >
-                                          <Edit size={14} />
-                                        </button>
-                                        <button
-                                          onClick={() => confirmDeleteAssignment(subAssignment._id, assignment._id)}
-                                          className="p-1 rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30"
-                                          title="Delete"
-                                        >
-                                          <Trash2 size={14} />
-                                        </button>
-                                      </div>
-                                    </td>
-                                  </motion.tr>
-                                );
-                              })
-                            )}
+                            {paginatedAssignments().map((subAssignment) => {
+                              // Check if it's a COC assignment (to hide preference/experience)
+                              const isCOCAssignment = subAssignment.parentData?.assignedBy === "COC";
+                              
+                              return (
+                                <motion.tr
+                                  key={subAssignment._id}
+                                  initial={{ opacity: 0 }}
+                                  animate={{ opacity: 1 }}
+                                  whileHover={{ backgroundColor: "rgba(249, 250, 251, 0.5)" }}
+                                  className="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700"
+                                >
+                                  <td className="px-3 py-2 text-sm font-medium text-gray-900 dark:text-white truncate max-w-[150px]">
+                                    {subAssignment.instructorId?.fullName || "Unassigned"}
+                                  </td>
+                                  <td className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 truncate max-w-[200px]">
+                                    {subAssignment.courseId?.name || "N/A"}
+                                  </td>
+                                  <td className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300">
+                                    {subAssignment.courseId?.code || "N/A"}
+                                  </td>
+                                  <td className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hidden sm:table-cell">
+                                    {subAssignment.section || "N/A"}
+                                  </td>
+                                  <td className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hidden sm:table-cell">
+                                    {subAssignment.labDivision}
+                                  </td>
+                                  <td className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hidden md:table-cell">
+                                    {subAssignment.workload?.toFixed(2) || "N/A"}
+                                  </td>
+                                  <td className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hidden md:table-cell">
+                                    {formatScore(subAssignment.score)}
+                                  </td>
+                                  <td className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400 text-right">
+                                    <div className="flex space-x-1 justify-end">
+                                      {/* View Assignment Reason Button */}
+                                      <button
+                                        onClick={() => viewAssignmentDetail(subAssignment, subAssignment.parentData)}
+                                        className="p-1 rounded-md text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30"
+                                        title="View Details"
+                                      >
+                                        <Eye size={14} />
+                                      </button>
+                                      <button
+                                        onClick={() => handleEditAssignment(subAssignment, subAssignment.parentId)}
+                                        className="p-1 rounded-md text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30"
+                                        title="Edit"
+                                      >
+                                        <Edit size={14} />
+                                      </button>
+                                      <button
+                                        onClick={() => confirmDeleteAssignment(subAssignment._id, subAssignment.parentId)}
+                                        className="p-1 rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30"
+                                        title="Delete"
+                                      >
+                                        <Trash2 size={14} />
+                                      </button>
+                                    </div>
+                                  </td>
+                                </motion.tr>
+                              );
+                            })}
                           </tbody>
                         </table>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {/* Pagination Controls */}
+                {!loading && filteredAssignments.length > 0 && totalPages > 1 && (
+                  <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-700 px-2 py-3 mt-4">
+                    <div className="flex-1 flex justify-between sm:hidden">
+                      <button
+                        onClick={() => goToPage(currentPage - 1)}
+                        disabled={currentPage === 1}
+                        className="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Previous
+                      </button>
+                      <button
+                        onClick={() => goToPage(currentPage + 1)}
+                        disabled={currentPage === totalPages}
+                        className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 text-sm font-medium rounded-md text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        Next
+                      </button>
+                    </div>
+                    <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                      <div>
+                        <p className="text-sm text-gray-700 dark:text-gray-300">
+                          Showing <span className="font-medium">{((currentPage - 1) * itemsPerPage) + 1}</span> to{" "}
+                          <span className="font-medium">
+                            {Math.min(currentPage * itemsPerPage, filteredAssignments.reduce((acc, item) => acc + item.assignments.length, 0))}
+                          </span>{" "}
+                          of{" "}
+                          <span className="font-medium">
+                            {filteredAssignments.reduce((acc, item) => acc + item.assignments.length, 0)}
+                          </span>{" "}
+                          results
+                        </p>
+                      </div>
+                      <div>
+                        <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                          <button
+                            onClick={() => goToPage(currentPage - 1)}
+                            disabled={currentPage === 1}
+                            className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <span className="sr-only">Previous</span>
+                            <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+                          </button>
+                          
+                          {/* Page number buttons - show limited range for better mobile UX */}
+                          {Array.from({ length: totalPages }).map((_, i) => {
+                            const pageNum = i + 1;
+                            
+                            // Only show current page, first, last, and pages close to current
+                            if (
+                              pageNum === 1 ||
+                              pageNum === totalPages ||
+                              (pageNum >= currentPage - 1 && pageNum <= currentPage + 1)
+                            ) {
+                              return (
+                                <button
+                                  key={pageNum}
+                                  onClick={() => goToPage(pageNum)}
+                                  className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
+                                    currentPage === pageNum
+                                      ? "z-10 bg-indigo-50 dark:bg-indigo-900/30 border-indigo-500 dark:border-indigo-400 text-indigo-600 dark:text-indigo-400"
+                                      : "bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600"
+                                  }`}
+                                >
+                                  {pageNum}
+                                </button>
+                              );
+                            } 
+                            
+                            // Show ellipsis if there's a gap
+                            if (
+                              (pageNum === 2 && currentPage > 3) ||
+                              (pageNum === totalPages - 1 && currentPage < totalPages - 2)
+                            ) {
+                              return (
+                                <span
+                                  key={pageNum}
+                                  className="relative inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm font-medium text-gray-700 dark:text-gray-200"
+                                >
+                                  ...
+                                </span>
+                              );
+                            }
+                            
+                            return null;
+                          })}
+                          
+                          <button
+                            onClick={() => goToPage(currentPage + 1)}
+                            disabled={currentPage === totalPages}
+                            className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <span className="sr-only">Next</span>
+                            <ChevronRight className="h-5 w-5" aria-hidden="true" />
+                          </button>
+                        </nav>
                       </div>
                     </div>
                   </div>

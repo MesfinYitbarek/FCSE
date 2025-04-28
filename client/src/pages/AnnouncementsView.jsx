@@ -1,11 +1,9 @@
 import { useEffect, useState } from "react";
-import { useSelector } from "react-redux";
 import { motion, AnimatePresence } from "framer-motion";
 import { Megaphone, Loader2, Check, Eye } from "lucide-react";
 import api from "../utils/api";
 
 const AnnouncementsView = () => {
-  const { user } = useSelector((state) => state.auth);
   const [announcements, setAnnouncements] = useState([]);
   const [loading, setLoading] = useState(false);
   const [markingRead, setMarkingRead] = useState(false);
@@ -46,23 +44,6 @@ const AnnouncementsView = () => {
     }
     setMarkingRead(false);
   };
-
-  // Format the target audience display
-  const formatTargetAudience = (announcement) => {
-    const roles = announcement.targetAudience?.roles || [];
-    const chairs = announcement.targetAudience?.chairs || [];
-
-    let audience = [];
-    if (roles && roles.length > 0) {
-      audience.push(`Roles: ${roles.join(', ')}`);
-    }
-    if (chairs && chairs.length > 0) {
-      audience.push(`Chairs: ${chairs.join(', ')}`);
-    }
-
-    return audience.join(' | ') || 'None specified';
-  };
-
   const container = {
     hidden: { opacity: 0 },
     show: {
@@ -108,8 +89,8 @@ const AnnouncementsView = () => {
                 variants={item}
                 layout
                 className={`bg-white dark:bg-gray-800 rounded-xl shadow-sm border 
-                  ${announcement.isRead 
-                    ? 'border-gray-100 dark:border-gray-700' 
+                  ${announcement.isRead
+                    ? 'border-gray-100 dark:border-gray-700'
                     : 'border-indigo-200 dark:border-indigo-700'} 
                   overflow-hidden hover:shadow-md transition-shadow duration-200`}
               >

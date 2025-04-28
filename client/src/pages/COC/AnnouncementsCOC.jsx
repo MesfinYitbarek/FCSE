@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { Dialog } from "@headlessui/react";
 import { motion } from "framer-motion";
-import { Plus, Search, Edit2, Trash2, AlertCircle, Eye, BarChart, X, ChevronRight } from "lucide-react";
+import { Plus, Search, Edit2, Trash2, AlertCircle ,X} from "lucide-react";
 import api from "../../utils/api";
 
 const AnnouncementsCOC = () => {
