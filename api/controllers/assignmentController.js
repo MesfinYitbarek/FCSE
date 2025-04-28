@@ -228,533 +228,6 @@ export const commonManualAssignment = async (req, res) => {
   }
 };
 
-// Automatic Assignment for Common Courses
-export const autoAssignCommonCourses = async (req, res) => {
-  try {
-    const {
-      year,
-      semester,
-      assignedBy,
-      instructors: instructorIds,
-      courses: frontendCourses,
-    } = req.body;
-
-    if (
-      !year ||
-      !semester ||
-      !assignedBy ||
-      !instructorIds?.length ||
-      !frontendCourses?.length
-    ) {
-      return res.status(400).json({
-        message:
-          "Year, semester, assignedBy, instructors, and courses are required.",
-      });
-    }
-
-    const courseIds = frontendCourses.map((course) => course.courseId);
-    const courseObjectIds = courseIds
-      .filter((id) => mongoose.Types.ObjectId.isValid(id))
-      .map((id) => new mongoose.Types.ObjectId(id));
-
-    if (courseObjectIds.length === 0) {
-      return res.status(400).json({ message: "No valid course IDs provided." });
-    }
-
-    const instructors = await User.find({
-      _id: { $in: instructorIds },
-      role: "Instructor",
-    });
-    const courses = await Course.find({ _id: { $in: courseObjectIds } });
-
-    if (courses.length === 0)
-      return res.status(404).json({ message: "No valid courses found." });
-    if (instructors.length === 0)
-      return res.status(404).json({ message: "No valid instructors found." });
-
-    // Fetch all instructor workload records at once
-    const instructorRecords = await Instructor.find({
-      userId: { $in: instructors.map((i) => i._id) },
-    });
-
-    let assignments = [];
-
-    for (const frontendCourse of frontendCourses) {
-      const { courseId, section, labDivision } = frontendCourse;
-      const course = courses.find((c) => c._id.toString() === courseId);
-      if (!course) continue;
-
-      // Get workloads for all instructors and sort
-      const instructorWorkloads = await Promise.all(
-        instructors.map(async (instructor) => {
-          const record =
-            instructorRecords.find(
-              (r) => r.userId.toString() === instructor._id.toString()
-            ) || {};
-          const workloadEntry =
-            record.workload?.find(
-              (w) => w.year === year && w.semester === semester
-            ) || {};
-          return {
-            instructor,
-            workload: workloadEntry.value || 0,
-            locationPriority: instructor.location === course.location ? -1 : 1,
-          };
-        })
-      );
-      console.log(instructorWorkloads);
-      instructorWorkloads.sort(
-        (a, b) =>
-          a.workload + a.locationPriority - (b.workload + b.locationPriority)
-      );
-
-      // Pick the best instructor
-      const bestInstructorData = instructorWorkloads[0];
-      if (!bestInstructorData) continue;
-      const bestInstructor = bestInstructorData.instructor;
-
-      // Fetch or create the instructor's workload record
-      let instructorRecord = instructorRecords.find(
-        (r) => r.userId.toString() === bestInstructor._id.toString()
-      );
-
-      if (!instructorRecord) {
-        instructorRecord = new Instructor({
-          userId: bestInstructor._id,
-          assignedCourses: [],
-          workload: [],
-        });
-        instructorRecords.push(instructorRecord); // Add to array to avoid re-fetching
-      }
-
-      // Calculate workload
-      let workload =
-        course.lecture + (2 / 3) * course.lab + (2 / 3) * course.tutorial;
-      if (labDivision === "Yes") {
-        workload += (2 / 3) * course.lab + (2 / 3) * course.tutorial;
-      }
-
-      // Update workload for the instructor
-      const existingWorkload = instructorRecord.workload.find(
-        (w) =>
-          w.year === year && w.semester === semester && w.program === "Regular"
-      );
-
-      if (existingWorkload) {
-        existingWorkload.value += workload;
-      } else {
-        instructorRecord.workload.push({
-          year,
-          semester,
-          program: "Regular",
-          value: workload,
-        });
-      }
-
-      await instructorRecord.save();
-
-      // Save assignment details
-      assignments.push({
-        instructorId: bestInstructor._id,
-        courseId: course._id,
-        section,
-        labDivision,
-        workload,
-      });
-    }
-
-    if (assignments.length > 0) {
-      const newAssignment = new Assignment({
-        year,
-        semester,
-        program: "Regular",
-        assignedBy,
-        assignments,
-      });
-
-      await newAssignment.save();
-    }
-
-    res.status(201).json({
-      message:
-        "Automatic assignment for common courses completed successfully.",
-      assignments,
-    });
-  } catch (error) {
-    console.error("Error in auto assignment:", error);
-    res.status(500).json({ message: "Error in auto assignment", error });
-  }
-};
-
-// Automatic Assignment for Extension Courses
-export const autoAssignExtensionCourses = async (req, res) => {
-  try {
-    const {
-      year,
-      semester,
-      assignedBy,
-      instructors: instructorIds,
-      courses: frontendCourses,
-    } = req.body;
-
-    if (
-      !year ||
-      !semester ||
-      !assignedBy ||
-      !instructorIds?.length ||
-      !frontendCourses?.length
-    ) {
-      return res.status(400).json({
-        message:
-          "Year, semester, assignedBy, instructors, and courses are required.",
-      });
-    }
-
-    const courseIds = frontendCourses.map((course) => course.courseId);
-    const courseObjectIds = courseIds
-      .filter((id) => mongoose.Types.ObjectId.isValid(id))
-      .map((id) => new mongoose.Types.ObjectId(id));
-
-    if (courseObjectIds.length === 0) {
-      return res.status(400).json({ message: "No valid course IDs provided." });
-    }
-
-    const instructors = await User.find({
-      _id: { $in: instructorIds },
-      role: "Instructor",
-    });
-    const courses = await Course.find({ _id: { $in: courseObjectIds } });
-    if (!instructors.length)
-      return res.status(404).json({ message: "No valid instructors found." });
-    if (!courses.length)
-      return res.status(404).json({ message: "No valid courses found." });
-
-    let finalAssignments = [];
-
-    const equivalentSemester =
-      semester === "Extension 1"
-        ? "Regular 1"
-        : semester === "Extension 2"
-        ? "Regular 2"
-        : semester;
-
-    console.log("\n===== STARTING AUTO ASSIGNMENT =====\n");
-
-    for (const frontendCourse of frontendCourses) {
-      const { courseId, section, labDivision } = frontendCourse;
-      const course = courses.find((c) => c._id.toString() === courseId);
-      if (!course) continue;
-
-      let instructorBenefits = [];
-
-      for (let instructor of instructors) {
-        let instructorRecord =
-          (await Instructor.findOne({ userId: instructor._id })) ||
-          new Instructor({
-            userId: instructor._id,
-            assignedCourses: [],
-            workload: [],
-          });
-
-        let position = await Position.findOne({ name: instructor.position });
-        let exemption = position ? position.exemption : 0;
-        let expectedLoad = 12 - exemption;
-
-        let creditHour =
-          course.lecture + (2 / 3) * course.lab + (2 / 3) * course.tutorial;
-        if (course.numberOfStudents > 25) {
-          creditHour =
-            course.lecture +
-            2 * ((2 / 3) * course.lab) +
-            2 * ((2 / 3) * course.tutorial);
-        }
-        let workload = creditHour * (labDivision === "Yes" ? 2 : 1);
-
-        let existingRegularWorkload = instructorRecord.workload.find(
-          (w) => w.year === year && w.semester === equivalentSemester
-        );
-
-        let existingExtensionWorkload = instructorRecord.workload.find(
-          (w) =>
-            w.year === year &&
-            w.semester === semester &&
-            w.program === "Extension"
-        );
-
-        let totalExistingWorkload = existingRegularWorkload?.value || 0;
-        let totalWorkload = totalExistingWorkload + workload;
-        let overload = totalWorkload - expectedLoad;
-        let benefit =
-          (overload <= 3 ? 0 : (overload - 3) * 0.942) +
-          (existingExtensionWorkload?.value || 0);
-        console.log(
-          `Instructor: ${instructor.fullName} (ID: ${instructor._id})`
-        );
-        console.log(`  - Expected Load: ${expectedLoad}`);
-        console.log(`  - Current Workload: ${totalWorkload}`);
-        console.log(`  - Overload: ${overload}`);
-        console.log(`  - Benefit: ${benefit.toFixed(3)}\n`);
-        instructorBenefits.push({
-          instructorId: instructor._id,
-          instructorRecord,
-          courseId: course._id,
-          section,
-          labDivision,
-          workload,
-          benefit,
-          existingExtensionWorkload,
-        });
-      }
-
-      const minBenefit = Math.min(
-        ...instructorBenefits.map((ib) => ib.benefit)
-      );
-      const bestInstructors = instructorBenefits.filter(
-        (ib) => ib.benefit === minBenefit
-      );
-
-      let selectedInstructor =
-        bestInstructors.length > 1
-          ? bestInstructors[Math.floor(Math.random() * bestInstructors.length)]
-          : bestInstructors[0];
-
-      if (selectedInstructor.existingExtensionWorkload) {
-        selectedInstructor.existingExtensionWorkload.value +=
-          selectedInstructor.workload;
-      } else {
-        selectedInstructor.instructorRecord.workload.push({
-          year,
-          semester,
-          program: "Extension",
-          value: selectedInstructor.workload,
-        });
-      }
-
-      await selectedInstructor.instructorRecord.save();
-
-      finalAssignments.push({
-        instructorId: selectedInstructor.instructorId,
-        courseId: selectedInstructor.courseId,
-        section: selectedInstructor.section,
-        labDivision: selectedInstructor.labDivision,
-        workload: selectedInstructor.workload,
-      });
-    }
-
-    const existingAssignment = await Assignment.findOne({
-      year,
-      semester,
-      program: "Extension",
-    });
-
-    if (existingAssignment) {
-      existingAssignment.assignments.push(...finalAssignments);
-      await existingAssignment.save();
-    } else {
-      await Assignment.create({
-        year,
-        semester,
-        program: "Extension",
-        assignedBy,
-        assignments: finalAssignments,
-      });
-    }
-
-    console.log("\n===== ASSIGNMENT COMPLETED SUCCESSFULLY =====\n");
-
-    res.status(201).json({
-      message: "Automatic assignment completed successfully!",
-      assignments: finalAssignments,
-    });
-  } catch (error) {
-    console.error("Error in auto assignment:", error);
-    res.status(500).json({ message: "Error in auto assignment", error });
-  }
-};
-
-// Automatic Assignment for Summer Courses
-export const autoAssignSummerCourses = async (req, res) => {
-  try {
-    const {
-      year,
-      assignedBy,
-      instructors: instructorIds,
-      courses: frontendCourses,
-    } = req.body;
-
-    if (
-      !year ||
-      !assignedBy ||
-      !instructorIds?.length ||
-      !frontendCourses?.length
-    ) {
-      return res.status(400).json({
-        message: "Year, assignedBy, instructors, and courses are required.",
-      });
-    }
-
-    const courseIds = frontendCourses.map((course) => course.courseId);
-    const courseObjectIds = courseIds
-      .filter((id) => mongoose.Types.ObjectId.isValid(id))
-      .map((id) => new mongoose.Types.ObjectId(id));
-
-    if (courseObjectIds.length === 0) {
-      return res.status(400).json({ message: "No valid course IDs provided." });
-    }
-
-    const instructors = await User.find({
-      _id: { $in: instructorIds },
-      role: "Instructor",
-    });
-    const courses = await Course.find({ _id: { $in: courseObjectIds } });
-    if (!instructors.length)
-      return res.status(404).json({ message: "No valid instructors found." });
-    if (!courses.length)
-      return res.status(404).json({ message: "No valid courses found." });
-
-    let assignments = [];
-    let benefitMap = new Map();
-
-    for (const frontendCourse of frontendCourses) {
-      const { courseId, section, labDivision } = frontendCourse;
-      const course = courses.find((c) => c._id.toString() === courseId);
-      if (!course) continue;
-
-      for (let instructor of instructors) {
-        let instructorRecord = await Instructor.findOne({
-          userId: instructor._id,
-        });
-        if (!instructorRecord) {
-          instructorRecord = new Instructor({
-            userId: instructor._id,
-            assignedCourses: [],
-            workload: [],
-          });
-        }
-
-        let position = await Position.findOne({ name: instructor.position });
-        let exemption = position ? position.exemption : 0;
-        let expectedLoad = 12 - exemption;
-
-        let creditHour =
-          course.lecture + (2 / 3) * course.lab + (2 / 3) * course.tutorial;
-        if (course.numberOfStudents > 25) {
-          creditHour =
-            course.lecture +
-            2 * ((2 / 3) * course.lab) +
-            2 * ((2 / 3) * course.tutorial);
-        }
-        let workload = creditHour * (labDivision === "Yes" ? 2 : 1);
-
-        let existingWorkloads = instructorRecord.workload.filter((w) =>
-          ["Regular 1", "Regular 2"].includes(w.semester)
-        );
-        let totalExistingWorkload = existingWorkloads.reduce(
-          (sum, w) => sum + w.value,
-          0
-        );
-
-        let extensionWorkloads = instructorRecord.workload.filter((w) =>
-          ["Extension 1", "Extension 2", "Summer"].includes(w.semester)
-        );
-        let totalExtensionWorkload = extensionWorkloads.reduce(
-          (sum, w) => sum + w.value,
-          0
-        );
-
-        let existingSummerWorkload = instructorRecord.workload.find(
-          (w) => w.year === year && w.program === "Summer"
-        );
-        let totalWorkload =
-          totalExistingWorkload +
-          (existingSummerWorkload
-            ? existingSummerWorkload.value + workload
-            : workload);
-        let overload = totalWorkload - expectedLoad;
-        let benefit =
-          ["Regular 1", "Regular 2"].includes(course.semester) && overload > 3
-            ? (overload - 3) * 0.942
-            : 0;
-
-        // Add extension and summer workload to benefit
-        let totalBenefit = benefit + totalExtensionWorkload;
-        if (course.chair === instructor._id.toString()) {
-          totalBenefit += 2; // Bonus for being chair
-        }
-        console.log(
-          `Instructor: ${instructor.fullName} (ID: ${instructor._id})`
-        );
-        console.log(`  - Expected Load: ${expectedLoad}`);
-        console.log(`  - Current Workload: ${totalWorkload}`);
-        console.log(`  - Overload: ${overload}`);
-        console.log(`  - Benefit: ${totalBenefit.toFixed(3)}\n`);
-
-        instructorRecord.workload.push({
-          year,
-          semester: "Summer",
-          program: "Summer",
-          value: workload,
-        });
-        await instructorRecord.save();
-
-        // Store course-instructor pairing with the benefit value
-        if (!benefitMap.has(courseId)) {
-          benefitMap.set(courseId, []);
-        }
-        benefitMap.get(courseId).push({
-          instructorId: instructor._id,
-          courseId: course._id,
-          section,
-          labDivision,
-          workload,
-          benefit: totalBenefit,
-        });
-      }
-    }
-
-    // For each course, assign to the instructor with the minimum benefit
-    // If multiple instructors have the same benefit, randomly select one
-    for (const [courseId, instructorList] of benefitMap.entries()) {
-      // Sort by benefit in ascending order
-      instructorList.sort((a, b) => a.benefit - b.benefit);
-
-      // Get the minimum benefit value
-      const minBenefit = instructorList[0].benefit;
-
-      // Filter all instructors who have this minimum benefit
-      const instructorsWithMinBenefit = instructorList.filter(
-        (instructor) => instructor.benefit === minBenefit
-      );
-
-      // Randomly select one instructor from those with min benefit
-      const selectedInstructor =
-        instructorsWithMinBenefit[
-          Math.floor(Math.random() * instructorsWithMinBenefit.length)
-        ];
-
-      assignments.push(selectedInstructor);
-    }
-
-    if (assignments.length > 0) {
-      await Assignment.create({
-        year,
-        semester: "Summer",
-        program: "Summer",
-        assignedBy,
-        assignments,
-      });
-    }
-
-    res.status(201).json({
-      message: "Automatic assignment completed successfully!",
-      assignments,
-    });
-  } catch (error) {
-    console.error("Error in auto assignment:", error);
-    res.status(500).json({ message: "Error in auto assignment", error });
-  }
-};
-
 // Update an Assignment
 export const updateAssignment = async (req, res) => {
   try {
@@ -973,10 +446,18 @@ export const getAutomaticAssignments = async (req, res) => {
       JSON.stringify(assignments, null, 2)
     );
 
-    // Add human-readable assignment reasons to each assignment
+    // Create plain objects and ensure every assignment has a reason (use the stored one or generate a fallback)
     const assignmentsWithReasons = assignments.map(assignment => {
       const updatedAssignments = assignment.assignments.map(a => {
-        // Generate human-readable reason based on preference rank and experience
+        // Convert to a plain object
+        const assignmentObj = a.toObject ? a.toObject() : a;
+        
+        // If the assignment already has a stored reason, use it
+        if (assignmentObj.assignmentReason) {
+          return assignmentObj;
+        }
+        
+        // Otherwise, generate a fallback reason based on available data
         let reasonText = "";
         
         // Add preference reasoning
@@ -1005,8 +486,6 @@ export const getAutomaticAssignments = async (req, res) => {
           reasonText = "Assignment information not available";
         }
         
-        // Convert to a plain object to add the assignmentReason field
-        const assignmentObj = a.toObject ? a.toObject() : a;
         return {
           ...assignmentObj,
           assignmentReason: reasonText
@@ -1075,6 +554,7 @@ export const getAssignmentsByFilters = async (req, res) => {
     res.status(500).json({ message: "Error fetching assignments", error });
   }
 };
+
 export const runAutomaticAssignment = async (req, res) => {
   try {
     const { year, semester, program, assignedBy } = req.body;
@@ -1305,6 +785,28 @@ export const runAutomaticAssignment = async (req, res) => {
 
       console.log(`Calculated workload for course ${courseId}: ${workload} (lecture: ${course.lecture}, lab: ${course.lab}, tutorial: ${course.tutorial})`);
 
+      // Generate human-readable assignment reason
+      let reasonText = "";
+      
+      // Add preference reasoning
+      if (preferenceRank) {
+        if (preferenceRank <= 3) {
+          reasonText += `This course was listed as preference #${preferenceRank} by the instructor. `;
+        } else {
+          reasonText += `This course was listed as preference #${preferenceRank} (lower priority) by the instructor. `;
+        }
+      }
+      
+      // Add experience reasoning
+      if (experienceYears > 0) {
+        reasonText += `The instructor has ${experienceYears} year${experienceYears > 1 ? 's' : ''} of experience teaching this course. `;
+      } else {
+        reasonText += `The instructor has no previous experience teaching this course. `;
+      }
+      
+      // Add score reasoning
+      reasonText += `Final assignment score: ${score?.toFixed(2) || 0}`;
+
       // Include assignment reason data in the assignments
       assignmentData.assignments.push({
         instructorId,
@@ -1316,7 +818,8 @@ export const runAutomaticAssignment = async (req, res) => {
         // Assignment reasoning data
         score,
         preferenceRank,
-        experienceYears
+        experienceYears,
+        assignmentReason: reasonText
       });
 
       let instructor = await Instructor.findOne({ userId: instructorId });
@@ -1348,44 +851,737 @@ export const runAutomaticAssignment = async (req, res) => {
     const savedAssignment = await Assignment.create(assignmentData);
     console.log("\nAssignment saved successfully:", savedAssignment._id);
 
-    // Generate human-readable reasons for the response
-    const assignmentsWithReasons = assignmentData.assignments.map(a => {
-      let reasonText = "";
-      
-      // Add preference reasoning
-      if (a.preferenceRank) {
-        if (a.preferenceRank <= 3) {
-          reasonText += `This course was listed as preference #${a.preferenceRank} by the instructor. `;
-        } else {
-          reasonText += `This course was listed as preference #${a.preferenceRank} (lower priority) by the instructor. `;
-        }
-      }
-      
-      // Add experience reasoning
-      if (a.experienceYears > 0) {
-        reasonText += `The instructor has ${a.experienceYears} year${a.experienceYears > 1 ? 's' : ''} of experience teaching this course. `;
-      } else {
-        reasonText += `The instructor has no previous experience teaching this course. `;
-      }
-      
-      // Add score reasoning
-      reasonText += `Final assignment score: ${a.score?.toFixed(2) || 0}`;
-      
-      return {
-        ...a,
-        assignmentReason: reasonText
-      };
-    });
-
     res.json({
       message: "Courses assigned successfully",
-      assignment: {
-        ...assignmentData,
-        assignments: assignmentsWithReasons
-      }
+      assignment: assignmentData
     });
   } catch (error) {
     console.error("Error in automatic assignment:", error);
     res.status(500).json({ message: "Error in automatic assignment", error });
+  }
+};// Automatic Assignment for Common Courses
+export const autoAssignCommonCourses = async (req, res) => {
+  try {
+    console.log('Starting auto assignment process...');
+    const {
+      year,
+      semester,
+      assignedBy,
+      instructors: instructorIds,
+      courses: frontendCourses,
+    } = req.body;
+
+    console.log('Received request with data:', {
+      year,
+      semester,
+      assignedBy,
+      instructorIds,
+      frontendCourses: frontendCourses.map(c => ({ courseId: c.courseId, section: c.section, labDivision: c.labDivision }))
+    });
+
+    if (
+      !year ||
+      !semester ||
+      !assignedBy ||
+      !instructorIds?.length ||
+      !frontendCourses?.length
+    ) {
+      console.log('Validation failed - missing required fields');
+      return res.status(400).json({
+        message:
+          "Year, semester, assignedBy, instructors, and courses are required.",
+      });
+    }
+
+    const courseIds = frontendCourses.map((course) => course.courseId);
+    const courseObjectIds = courseIds
+      .filter((id) => mongoose.Types.ObjectId.isValid(id))
+      .map((id) => new mongoose.Types.ObjectId(id));
+
+    console.log('Processed course IDs:', courseObjectIds);
+
+    if (courseObjectIds.length === 0) {
+      console.log('No valid course IDs found');
+      return res.status(400).json({ message: "No valid course IDs provided." });
+    }
+
+    console.log('Fetching instructors and courses from database...');
+    const instructors = await User.find({
+      _id: { $in: instructorIds },
+      role: "Instructor",
+    });
+    const courses = await Course.find({ _id: { $in: courseObjectIds } });
+
+    console.log(`Found ${instructors.length} instructors and ${courses.length} courses`);
+
+    if (courses.length === 0) {
+      console.log('No valid courses found in database');
+      return res.status(404).json({ message: "No valid courses found." });
+    }
+    if (instructors.length === 0) {
+      console.log('No valid instructors found in database');
+      return res.status(404).json({ message: "No valid instructors found." });
+    }
+
+    console.log('Fetching instructor workload records...');
+    const instructorRecords = await Instructor.find({
+      userId: { $in: instructors.map((i) => i._id) },
+    });
+    console.log(`Found ${instructorRecords.length} instructor records`);
+
+    let assignments = [];
+
+    console.log('Starting course assignment loop...');
+    for (const frontendCourse of frontendCourses) {
+      const { courseId, section, labDivision } = frontendCourse;
+      console.log(`\nProcessing course ${courseId}, section ${section}, lab division ${labDivision}`);
+
+      const course = courses.find((c) => c._id.toString() === courseId);
+      if (!course) {
+        console.log(`Course ${courseId} not found in database courses, skipping`);
+        continue;
+      }
+
+      console.log(`Calculating workloads for ${instructors.length} instructors...`);
+      
+      // Get current workloads specifically for the same year, semester and program
+      const instructorWorkloads = await Promise.all(
+        instructors.map(async (instructor) => {
+          const record = instructorRecords.find(
+            (r) => r.userId.toString() === instructor._id.toString()
+          ) || {};
+          
+          // Find workload for the exact year, semester, and program = "Regular"
+          const workloadEntry = record.workload?.find(
+            (w) => w.year === parseInt(year) && 
+                   w.semester === semester && 
+                   w.program === "Regular"
+          ) || {};
+          
+          // Calculate experience years
+          const experienceYears = record.assignedCourses?.filter(
+            ac => ac.course.toString() === course._id.toString()
+          ).length || 0;
+          
+          return {
+            instructor,
+            workload: workloadEntry.value || 0,
+            locationPriority: instructor.location === course.location ? -1 : 1,
+            experienceYears,
+            record // Include the full record for later use
+          };
+        })
+      );
+      
+      console.log('Current instructor workloads:', instructorWorkloads.map(iw => ({
+        instructor: iw.instructor._id,
+        name: iw.instructor.fullName,
+        workload: iw.workload,
+        locationPriority: iw.locationPriority,
+        location: iw.instructor.location,
+        courseLocation: course.location
+      })));
+      
+      // Group instructors by their workload to handle ties
+      const workloadGroups = {};
+      instructorWorkloads.forEach(iw => {
+        const workload = iw.workload;
+        if (!workloadGroups[workload]) {
+          workloadGroups[workload] = [];
+        }
+        workloadGroups[workload].push(iw);
+      });
+      
+      // Sort workloads in ascending order (lowest first)
+      const sortedWorkloads = Object.keys(workloadGroups)
+        .map(Number)
+        .sort((a, b) => a - b);
+      
+      console.log('Sorted workload groups:', sortedWorkloads);
+      
+      let selectedInstructor = null;
+      
+      // Select the instructor with the lowest workload
+      if (sortedWorkloads.length > 0) {
+        const lowestWorkload = sortedWorkloads[0];
+        const lowestWorkloadGroup = workloadGroups[lowestWorkload];
+        
+        console.log(`Found ${lowestWorkloadGroup.length} instructors with lowest workload of ${lowestWorkload}`);
+        
+        if (lowestWorkloadGroup.length === 1) {
+          // Only one instructor with the lowest workload
+          selectedInstructor = lowestWorkloadGroup[0];
+          console.log(`Selected instructor ${selectedInstructor.instructor.fullName} with lowest workload ${lowestWorkload}`);
+        } else {
+          // Multiple instructors with the same workload, check location
+          console.log('Multiple instructors with the same workload, checking location match...');
+          
+          // Filter by location match
+          const locationMatches = lowestWorkloadGroup.filter(
+            iw => iw.instructor.location === course.location
+          );
+          
+          if (locationMatches.length === 1) {
+            // Only one instructor matches location
+            selectedInstructor = locationMatches[0];
+            console.log(`Selected instructor ${selectedInstructor.instructor.fullName} based on location match and lowest workload ${lowestWorkload}`);
+          } else if (locationMatches.length > 1) {
+            // Multiple instructors match location, use lottery (random selection)
+            const randomIndex = Math.floor(Math.random() * locationMatches.length);
+            selectedInstructor = locationMatches[randomIndex];
+            console.log(`Selected instructor ${selectedInstructor.instructor.fullName} randomly from ${locationMatches.length} instructors with same workload and location match`);
+          } else {
+            // No location matches, use lottery among all with lowest workload
+            const randomIndex = Math.floor(Math.random() * lowestWorkloadGroup.length);
+            selectedInstructor = lowestWorkloadGroup[randomIndex];
+            console.log(`Selected instructor ${selectedInstructor.instructor.fullName} randomly from ${lowestWorkloadGroup.length} instructors with same workload (no location matches)`);
+          }
+        }
+      }
+      
+      if (!selectedInstructor) {
+        console.log('No suitable instructor found for this course, skipping');
+        continue;
+      }
+      
+      const bestInstructor = selectedInstructor.instructor;
+      const bestInstructorData = selectedInstructor;
+      console.log(`Selected instructor ${bestInstructor.fullName} (${bestInstructor._id}) with workload ${bestInstructorData.workload} and location priority ${bestInstructorData.locationPriority}`);
+
+      // Fetch or create the instructor's workload record
+      let instructorRecord = selectedInstructor.record;
+
+      if (!instructorRecord) {
+        console.log(`Creating new workload record for instructor ${bestInstructor._id}`);
+        instructorRecord = new Instructor({
+          userId: bestInstructor._id,
+          assignedCourses: [],
+          workload: [],
+        });
+        instructorRecords.push(instructorRecord); // Add to array to avoid re-fetching
+      }
+
+      // Calculate workload
+      let workload =
+        course.lecture + (2 / 3) * course.lab + (2 / 3) * course.tutorial;
+      if (labDivision === "Yes") {
+        workload += (2 / 3) * course.lab + (2 / 3) * course.tutorial;
+      }
+
+      console.log(`Calculated workload for this course: ${workload}`);
+
+      // Update workload for the instructor
+      const existingWorkload = instructorRecord.workload.find(
+        (w) =>
+          w.year === parseInt(year) && w.semester === semester && w.program === "Regular"
+      );
+
+      if (existingWorkload) {
+        console.log(`Updating existing workload from ${existingWorkload.value} to ${existingWorkload.value + workload}`);
+        existingWorkload.value += workload;
+      } else {
+        console.log(`Adding new workload entry with value ${workload}`);
+        instructorRecord.workload.push({
+          year: parseInt(year),
+          semester,
+          program: "Regular",
+          value: workload,
+        });
+      }
+      
+      // Add to assigned courses
+      instructorRecord.assignedCourses.push({
+        course: course._id,
+        year: parseInt(year),
+        semester,
+        program: "Regular"
+      });
+
+      await instructorRecord.save();
+      console.log('Instructor record saved successfully');
+
+      // Get final selection criteria values for assignment reason
+      const locationMatch = bestInstructor.location === course.location;
+      const currentWorkload = bestInstructorData.workload;
+      const experienceYears = bestInstructorData.experienceYears;
+      const wasRandomlySelected = bestInstructorData.randomlySelected || false;
+      
+      // Generate detailed assignment reason based on selection criteria
+      let assignmentReason;
+      if (wasRandomlySelected) {
+        assignmentReason = 
+          `Instructor was selected through a lottery system from multiple candidates with equal qualifications. ` +
+          `Current workload: ${currentWorkload.toFixed(1)} hrs. ` +
+          `${locationMatch ? "Instructor's location matches the course location. " : ""}` +
+          `${experienceYears > 0 ? `Instructor has ${experienceYears} year${experienceYears !== 1 ? 's' : ''} of experience teaching this course. ` : "Instructor has no previous experience teaching this course. "}`;
+      } else {
+        assignmentReason = 
+          `Instructor was selected based on workload balancing (current workload: ${currentWorkload.toFixed(1)} hrs). ` +
+          `${locationMatch ? "Instructor's location matches the course location. " : ""}` +
+          `${experienceYears > 0 ? `Instructor has ${experienceYears} year${experienceYears !== 1 ? 's' : ''} of experience teaching this course. ` : "Instructor has no previous experience teaching this course. "}`;
+      }
+
+      console.log('Assignment reason:', assignmentReason);
+
+      // Save assignment details with reasoning data
+      assignments.push({
+        instructorId: bestInstructor._id,
+        courseId: course._id,
+        section,
+        labDivision,
+        workload,
+        // Assignment reasoning data
+        score: 10 - (currentWorkload / 2) - (locationMatch ? 0 : 1),
+        experienceYears,
+        assignmentReason
+      });
+
+      console.log(`Assignment for course ${courseId} section ${section} completed`);
+    }
+
+    if (assignments.length > 0) {
+      console.log(`Creating new assignment document with ${assignments.length} assignments`);
+      const newAssignment = new Assignment({
+        year: parseInt(year),
+        semester,
+        program: "Regular",
+        assignedBy,
+        assignments,
+      });
+
+      await newAssignment.save();
+      console.log('Assignment document saved successfully');
+    } else {
+      console.log('No assignments were made');
+    }
+
+    console.log('Auto assignment process completed successfully');
+    res.status(201).json({
+      message:
+        "Automatic assignment for common courses completed successfully.",
+      assignments,
+    });
+  } catch (error) {
+    console.error("Error in auto assignment:", error);
+    res.status(500).json({ message: "Error in auto assignment", error: error.message });
+  }
+};
+
+// Automatic Assignment for Extension Courses
+export const autoAssignExtensionCourses = async (req, res) => {
+  try {
+    const {
+      year,
+      semester,
+      assignedBy,
+      instructors: instructorIds,
+      courses: frontendCourses,
+    } = req.body;
+
+    if (
+      !year ||
+      !semester ||
+      !assignedBy ||
+      !instructorIds?.length ||
+      !frontendCourses?.length
+    ) {
+      return res.status(400).json({
+        message:
+          "Year, semester, assignedBy, instructors, and courses are required.",
+      });
+    }
+
+    const courseIds = frontendCourses.map((course) => course.courseId);
+    const courseObjectIds = courseIds
+      .filter((id) => mongoose.Types.ObjectId.isValid(id))
+      .map((id) => new mongoose.Types.ObjectId(id));
+
+    if (courseObjectIds.length === 0) {
+      return res.status(400).json({ message: "No valid course IDs provided." });
+    }
+
+    const instructors = await User.find({
+      _id: { $in: instructorIds },
+      role: "Instructor",
+    });
+    const courses = await Course.find({ _id: { $in: courseObjectIds } });
+    if (!instructors.length)
+      return res.status(404).json({ message: "No valid instructors found." });
+    if (!courses.length)
+      return res.status(404).json({ message: "No valid courses found." });
+
+    let finalAssignments = [];
+
+    const equivalentSemester =
+      semester === "Extension 1"
+        ? "Regular 1"
+        : semester === "Extension 2"
+        ? "Regular 2"
+        : semester;
+
+    console.log("\n===== STARTING AUTO ASSIGNMENT =====\n");
+
+    for (const frontendCourse of frontendCourses) {
+      const { courseId, section, labDivision } = frontendCourse;
+      const course = courses.find((c) => c._id.toString() === courseId);
+      if (!course) continue;
+
+      let instructorBenefits = [];
+
+      for (let instructor of instructors) {
+        let instructorRecord =
+          (await Instructor.findOne({ userId: instructor._id })) ||
+          new Instructor({
+            userId: instructor._id,
+            assignedCourses: [],
+            workload: [],
+          });
+
+        let position = await Position.findOne({ name: instructor.position });
+        let exemption = position ? position.exemption : 0;
+        let expectedLoad = 12 - exemption;
+
+        let creditHour =
+          course.lecture + (2 / 3) * course.lab + (2 / 3) * course.tutorial;
+        if (course.numberOfStudents > 25) {
+          creditHour =
+            course.lecture +
+            2 * ((2 / 3) * course.lab) +
+            2 * ((2 / 3) * course.tutorial);
+        }
+        let workload = creditHour * (labDivision === "Yes" ? 2 : 1);
+
+        let existingRegularWorkload = instructorRecord.workload.find(
+          (w) => w.year === year && w.semester === equivalentSemester
+        );
+
+        let existingExtensionWorkload = instructorRecord.workload.find(
+          (w) =>
+            w.year === year &&
+            w.semester === semester &&
+            w.program === "Extension"
+        );
+
+        let totalExistingWorkload = existingRegularWorkload?.value || 0;
+        let totalWorkload = totalExistingWorkload + workload;
+        let overload = totalWorkload - expectedLoad;
+        let benefit =
+          (overload <= 3 ? 0 : (overload - 3) * 0.942) +
+          (existingExtensionWorkload?.value || 0);
+          
+        // Count instructor's experience with this course
+        const experienceYears = instructorRecord.assignedCourses.filter(
+          ac => ac.course.toString() === course._id.toString()
+        ).length;
+          
+        console.log(
+          `Instructor: ${instructor.fullName} (ID: ${instructor._id})`
+        );
+        console.log(`  - Expected Load: ${expectedLoad}`);
+        console.log(`  - Current Workload: ${totalWorkload}`);
+        console.log(`  - Overload: ${overload}`);
+        console.log(`  - Benefit: ${benefit.toFixed(3)}\n`);
+        instructorBenefits.push({
+          instructorId: instructor._id,
+          instructorRecord,
+          courseId: course._id,
+          section,
+          labDivision,
+          workload,
+          benefit,
+          experienceYears,
+          existingExtensionWorkload,
+          expectedLoad,
+          totalWorkload,
+          overload
+        });
+      }
+
+      const minBenefit = Math.min(
+        ...instructorBenefits.map((ib) => ib.benefit)
+      );
+      const bestInstructors = instructorBenefits.filter(
+        (ib) => ib.benefit === minBenefit
+      );
+
+      let selectedInstructor =
+        bestInstructors.length > 1
+          ? bestInstructors[Math.floor(Math.random() * bestInstructors.length)]
+          : bestInstructors[0];
+
+      if (selectedInstructor.existingExtensionWorkload) {
+        selectedInstructor.existingExtensionWorkload.value +=
+          selectedInstructor.workload;
+      } else {
+        selectedInstructor.instructorRecord.workload.push({
+          year,
+          semester,
+          program: "Extension",
+          value: selectedInstructor.workload,
+        });
+      }
+
+      await selectedInstructor.instructorRecord.save();
+      
+      // Generate assignment reason
+      const assignmentReason = 
+        `Assigned based on minimum benefit value (${selectedInstructor.benefit.toFixed(2)}). ` +
+        `Expected workload: ${selectedInstructor.expectedLoad} hrs. ` +
+        `Current workload: ${selectedInstructor.totalWorkload.toFixed(1)} hrs. ` +
+        `Overload: ${selectedInstructor.overload.toFixed(1)} hrs. ` +
+        `${selectedInstructor.experienceYears > 0 ? `Instructor has ${selectedInstructor.experienceYears} year${selectedInstructor.experienceYears !== 1 ? 's' : ''} of experience teaching this course. ` : ""}` +
+        `${bestInstructors.length > 1 ? "Selected randomly from multiple instructors with equal benefit value." : ""}`;
+
+      finalAssignments.push({
+        instructorId: selectedInstructor.instructorId,
+        courseId: selectedInstructor.courseId,
+        section: selectedInstructor.section,
+        labDivision: selectedInstructor.labDivision,
+        workload: selectedInstructor.workload,
+        // Assignment reasoning data
+        score: -selectedInstructor.benefit, // Negative since lower benefit is better
+        experienceYears: selectedInstructor.experienceYears,
+        assignmentReason
+      });
+    }
+
+    const existingAssignment = await Assignment.findOne({
+      year,
+      semester,
+      program: "Extension",
+    });
+
+    if (existingAssignment) {
+      existingAssignment.assignments.push(...finalAssignments);
+      await existingAssignment.save();
+    } else {
+      await Assignment.create({
+        year,
+        semester,
+        program: "Extension",
+        assignedBy,
+        assignments: finalAssignments,
+      });
+    }
+
+    console.log("\n===== ASSIGNMENT COMPLETED SUCCESSFULLY =====\n");
+
+    res.status(201).json({
+      message: "Automatic assignment completed successfully!",
+      assignments: finalAssignments,
+    });
+  } catch (error) {
+    console.error("Error in auto assignment:", error);
+    res.status(500).json({ message: "Error in auto assignment", error });
+  }
+};
+
+// Automatic Assignment for Summer Courses
+export const autoAssignSummerCourses = async (req, res) => {
+  try {
+    const {
+      year,
+      assignedBy,
+      instructors: instructorIds,
+      courses: frontendCourses,
+    } = req.body;
+
+    if (
+      !year ||
+      !assignedBy ||
+      !instructorIds?.length ||
+      !frontendCourses?.length
+    ) {
+      return res.status(400).json({
+        message: "Year, assignedBy, instructors, and courses are required.",
+      });
+    }
+
+    const courseIds = frontendCourses.map((course) => course.courseId);
+    const courseObjectIds = courseIds
+      .filter((id) => mongoose.Types.ObjectId.isValid(id))
+      .map((id) => new mongoose.Types.ObjectId(id));
+
+    if (courseObjectIds.length === 0) {
+      return res.status(400).json({ message: "No valid course IDs provided." });
+    }
+
+    const instructors = await User.find({
+      _id: { $in: instructorIds },
+      role: "Instructor",
+    });
+    const courses = await Course.find({ _id: { $in: courseObjectIds } });
+    if (!instructors.length)
+      return res.status(404).json({ message: "No valid instructors found." });
+    if (!courses.length)
+      return res.status(404).json({ message: "No valid courses found." });
+
+    let assignments = [];
+    let benefitMap = new Map();
+
+    for (const frontendCourse of frontendCourses) {
+      const { courseId, section, labDivision } = frontendCourse;
+      const course = courses.find((c) => c._id.toString() === courseId);
+      if (!course) continue;
+
+      for (let instructor of instructors) {
+        let instructorRecord = await Instructor.findOne({
+          userId: instructor._id,
+        });
+        if (!instructorRecord) {
+          instructorRecord = new Instructor({
+            userId: instructor._id,
+            assignedCourses: [],
+            workload: [],
+          });
+        }
+
+        let position = await Position.findOne({ name: instructor.position });
+        let exemption = position ? position.exemption : 0;
+        let expectedLoad = 12 - exemption;
+
+        let creditHour =
+          course.lecture + (2 / 3) * course.lab + (2 / 3) * course.tutorial;
+        if (course.numberOfStudents > 25) {
+          creditHour =
+            course.lecture +
+            2 * ((2 / 3) * course.lab) +
+            2 * ((2 / 3) * course.tutorial);
+        }
+        let workload = creditHour * (labDivision === "Yes" ? 2 : 1);
+
+        let existingWorkloads = instructorRecord.workload.filter((w) =>
+          ["Regular 1", "Regular 2"].includes(w.semester)
+        );
+        let totalExistingWorkload = existingWorkloads.reduce(
+          (sum, w) => sum + w.value,
+          0
+        );
+
+        let extensionWorkloads = instructorRecord.workload.filter((w) =>
+          ["Extension 1", "Extension 2", "Summer"].includes(w.semester)
+        );
+        let totalExtensionWorkload = extensionWorkloads.reduce(
+          (sum, w) => sum + w.value,
+          0
+        );
+
+        let existingSummerWorkload = instructorRecord.workload.find(
+          (w) => w.year === year && w.program === "Summer"
+        );
+        let totalWorkload =
+          totalExistingWorkload +
+          (existingSummerWorkload
+            ? existingSummerWorkload.value + workload
+            : workload);
+        let overload = totalWorkload - expectedLoad;
+        let benefit =
+          ["Regular 1", "Regular 2"].includes(course.semester) && overload > 3
+            ? (overload - 3) * 0.942
+            : 0;
+
+        // Add extension and summer workload to benefit
+        let totalBenefit = benefit + totalExtensionWorkload;
+        let isChair = false;
+        if (course.chair === instructor._id.toString()) {
+          totalBenefit += 2; // Bonus for being chair
+          isChair = true;
+        }
+        
+        // Count instructor's experience with this course
+        const experienceYears = instructorRecord.assignedCourses.filter(
+          ac => ac.course.toString() === course._id.toString()
+        ).length;
+        
+        console.log(
+          `Instructor: ${instructor.fullName} (ID: ${instructor._id})`
+        );
+        console.log(`  - Expected Load: ${expectedLoad}`);
+        console.log(`  - Current Workload: ${totalWorkload}`);
+        console.log(`  - Overload: ${overload}`);
+        console.log(`  - Benefit: ${totalBenefit.toFixed(3)}\n`);
+
+        instructorRecord.workload.push({
+          year,
+          semester: "Summer",
+          program: "Summer",
+          value: workload,
+        });
+        await instructorRecord.save();
+
+        // Store course-instructor pairing with the benefit value and additional information
+        if (!benefitMap.has(courseId)) {
+          benefitMap.set(courseId, []);
+        }
+        benefitMap.get(courseId).push({
+          instructorId: instructor._id,
+          courseId: course._id,
+          section,
+          labDivision,
+          workload,
+          benefit: totalBenefit,
+          expectedLoad,
+          totalWorkload,
+          overload,
+          experienceYears,
+          isChair
+        });
+      }
+    }
+
+    // For each course, assign to the instructor with the minimum benefit
+    // If multiple instructors have the same benefit, randomly select one
+    for (const [courseId, instructorList] of benefitMap.entries()) {
+      // Sort by benefit in ascending order
+      instructorList.sort((a, b) => a.benefit - b.benefit);
+
+      // Get the minimum benefit value
+      const minBenefit = instructorList[0].benefit;
+
+      // Filter all instructors who have this minimum benefit
+      const instructorsWithMinBenefit = instructorList.filter(
+        (instructor) => instructor.benefit === minBenefit
+      );
+
+      // Randomly select one instructor from those with min benefit
+      const selectedIndex = Math.floor(Math.random() * instructorsWithMinBenefit.length);
+      const selectedInstructor = instructorsWithMinBenefit[selectedIndex];
+      
+      // Generate assignment reason
+      const assignmentReason = 
+        `Assigned based on minimum benefit value (${selectedInstructor.benefit.toFixed(2)}). ` +
+        `Expected workload: ${selectedInstructor.expectedLoad} hrs. ` +
+        `Current workload: ${selectedInstructor.totalWorkload.toFixed(1)} hrs. ` +
+        `Overload: ${selectedInstructor.overload.toFixed(1)} hrs. ` +
+        `${selectedInstructor.experienceYears > 0 ? `Instructor has ${selectedInstructor.experienceYears} year${selectedInstructor.experienceYears !== 1 ? 's' : ''} of experience teaching this course. ` : ""}` +
+        `${selectedInstructor.isChair ? "Instructor is the chair of this course (additional consideration). " : ""}` +
+        `${instructorsWithMinBenefit.length > 1 ? "Selected randomly from " + instructorsWithMinBenefit.length + " instructors with equal benefit value." : ""}`;
+
+      // Add the assignment reason to the selected instructor
+      selectedInstructor.assignmentReason = assignmentReason;
+      
+      // Add score data
+      selectedInstructor.score = -selectedInstructor.benefit; // Negative since lower benefit is better
+      
+      assignments.push(selectedInstructor);
+    }
+
+    if (assignments.length > 0) {
+      await Assignment.create({
+        year,
+        semester: "Summer",
+        program: "Summer",
+        assignedBy,
+        assignments,
+      });
+    }
+
+    res.status(201).json({
+      message: "Automatic assignment completed successfully!",
+      assignments,
+    });
+  } catch (error) {
+    console.error("Error in auto assignment:", error);
+    res.status(500).json({ message: "Error in auto assignment", error });
   }
 };

@@ -18,7 +18,13 @@ import {
   MoreVertical,
   Check,
   Search,
-  SlidersHorizontal
+  SlidersHorizontal,
+  Info,
+  Star,
+  Award,
+  PieChart,
+  ListFilter,
+  Eye
 } from "lucide-react";
 import api from "../../utils/api";
 
@@ -37,6 +43,7 @@ const CommonCoursesCOC = () => {
   const [editingAssignment, setEditingAssignment] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [showInstructorDropdown, setShowInstructorDropdown] = useState(false);
+  const [viewAssignmentReason, setViewAssignmentReason] = useState(null);
   
   // State for year and semester selection
   const [years, setYears] = useState([]);
@@ -56,6 +63,14 @@ const CommonCoursesCOC = () => {
     department: "",
     chair: "",
     search: ""
+  });
+  
+  // Column visibility
+  const [columnSettings, setColumnSettings] = useState({
+    score: true,
+    experience: false,
+    preference: false,
+    showDetails: false
   });
 
   useEffect(() => {
@@ -175,6 +190,14 @@ const CommonCoursesCOC = () => {
     setError(null);
   };
 
+  // Toggle column visibility
+  const toggleColumn = (column) => {
+    setColumnSettings(prev => ({
+      ...prev,
+      [column]: !prev[column]
+    }));
+  };
+
   // Fetch available common courses
   const fetchCourses = async () => {
     try {
@@ -236,6 +259,14 @@ const CommonCoursesCOC = () => {
     const updatedAssignments = [...manualAssignments];
     updatedAssignments[index][field] = value;
     setManualAssignments(updatedAssignments);
+  };
+
+  // Show assignment reason modal
+  const viewAssignmentDetail = (subAssignment, parentAssignment) => {
+    setViewAssignmentReason({
+      ...subAssignment,
+      parentData: parentAssignment
+    });
   };
 
   // Edit assignment with the correct nested structure
@@ -443,6 +474,17 @@ const CommonCoursesCOC = () => {
     exit: { opacity: 0, y: -20 },
   };
 
+  // Helper to format numerical scores with consistent precision
+  const formatScore = (score) => {
+    if (score === undefined || score === null) return "N/A";
+    return typeof score === "number" ? score.toFixed(2) : score;
+  };
+
+  // Check if the assignment is made by COC (to determine whether to hide preference/experience)
+  const isAssignedByCOC = (assignment) => {
+    return assignment?.assignedBy === "COC";
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -489,6 +531,108 @@ const CommonCoursesCOC = () => {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Assignment Reason Detail Modal */}
+        {viewAssignmentReason && (
+          <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 md:p-6 w-full max-w-2xl shadow-lg">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Assignment Details</h3>
+                <button
+                  onClick={() => setViewAssignmentReason(null)}
+                  className="p-1 rounded-md text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Instructor</h4>
+                  <p className="text-gray-900 dark:text-white">
+                    {viewAssignmentReason.instructorId?.fullName || "Unassigned"}
+                  </p>
+                </div>
+                
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Course</h4>
+                  <p className="text-gray-900 dark:text-white">
+                    {viewAssignmentReason.courseId?.name || "N/A"} ({viewAssignmentReason.courseId?.code || "N/A"})
+                  </p>
+                </div>
+                
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Section</h4>
+                  <p className="text-gray-900 dark:text-white">
+                    {viewAssignmentReason.section || "N/A"}
+                  </p>
+                </div>
+                
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Workload</h4>
+                  <p className="text-gray-900 dark:text-white">
+                    {viewAssignmentReason.workload?.toFixed(2) || "N/A"} LEH
+                  </p>
+                </div>
+              </div>
+              
+              {!isAssignedByCOC(viewAssignmentReason.parentData) && (
+                <div className="grid grid-cols-3 gap-4 mb-4">
+                  <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg text-center">
+                    <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Score</h4>
+                    <p className="text-gray-900 dark:text-white font-medium">
+                      {formatScore(viewAssignmentReason.score)}
+                    </p>
+                  </div>
+                  
+                  <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg text-center">
+                    <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Preference Rank</h4>
+                    <p className="text-gray-900 dark:text-white font-medium">
+                      {viewAssignmentReason.preferenceRank || "N/A"}
+                    </p>
+                  </div>
+                  
+                  <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg text-center">
+                    <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Teaching Experience</h4>
+                    <p className="text-gray-900 dark:text-white font-medium">
+                      {viewAssignmentReason.experienceYears 
+                        ? `${viewAssignmentReason.experienceYears} year${viewAssignmentReason.experienceYears !== 1 ? 's' : ''}` 
+                        : "None"}
+                    </p>
+                  </div>
+                </div>
+              )}
+              
+              <div className="mb-4">
+                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center">
+                  <Info className="mr-1.5 text-indigo-600 dark:text-indigo-400" size={16} />
+                  Assignment Reasoning
+                </h4>
+                <div className="p-3 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 rounded-lg">
+                  <p className="text-gray-800 dark:text-gray-200 text-sm">
+                    {viewAssignmentReason.assignmentReason || "No assignment reasoning available."}
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => setViewAssignmentReason(null)}
+                  className="px-3 py-1.5 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg transition-colors text-sm"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => handleEditAssignment(viewAssignmentReason, viewAssignmentReason.parentData?._id)}
+                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm flex items-center"
+                >
+                  <Edit size={14} className="mr-1.5" />
+                  Edit Assignment
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Delete Confirmation Dialog */}
         {deleteConfirm && (
@@ -1146,24 +1290,85 @@ const CommonCoursesCOC = () => {
               )}
             </AnimatePresence>
 
-            {/* Filter Section */}
+            {/* Filter and Column Settings */}
             <motion.div
               {...fadeIn}
               className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 mb-4 md:mb-5"
             >
               <div className="p-3">
                 <div className="flex flex-wrap items-center justify-between mb-3 gap-2">
-                  <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
-                    <Filter className="mr-2 text-indigo-600 dark:text-indigo-400" size={18} />
-                    Filter Assignments
-                  </h2>
-                  <button
-                    onClick={() => setFilterOpen(!filterOpen)}
-                    className="inline-flex items-center px-2 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg border border-indigo-100 dark:border-indigo-800 hover:bg-indigo-100 dark:hover:bg-indigo-800/40 transition-colors text-sm"
-                  >
-                    <SlidersHorizontal size={16} className="mr-1.5" />
-                    {filterOpen ? 'Hide Filters' : 'Show Filters'}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
+                      <Filter className="mr-2 text-indigo-600 dark:text-indigo-400" size={18} />
+                      Filter Assignments
+                    </h2>
+                    <button
+                      onClick={() => setFilterOpen(!filterOpen)}
+                      className="inline-flex items-center px-2 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg border border-indigo-100 dark:border-indigo-800 hover:bg-indigo-100 dark:hover:bg-indigo-800/40 transition-colors text-sm"
+                    >
+                      <SlidersHorizontal size={16} className="mr-1.5" />
+                      {filterOpen ? 'Hide Filters' : 'Show Filters'}
+                    </button>
+                  </div>
+                  
+                  {/* Column Settings Dropdown */}
+                  <div className="relative">
+                    <button
+                      onClick={() => setColumnSettings(prev => ({ ...prev, showDetails: !prev.showDetails }))}
+                      className="inline-flex items-center px-2 py-1 bg-gray-50 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg border border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors text-sm"
+                    >
+                      <ListFilter size={16} className="mr-1.5" />
+                      Show Details
+                      <ChevronDown size={14} className={`ml-1.5 transition-transform ${columnSettings.showDetails ? 'rotate-180' : ''}`} />
+                    </button>
+                    
+                    {columnSettings.showDetails && (
+                      <div className="absolute right-0 mt-1 w-48 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-lg shadow-lg z-10">
+                        <div className="p-2">
+                          <div className="space-y-1.5">
+                            <div 
+                              className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-600 rounded cursor-pointer"
+                              onClick={() => toggleColumn('score')}
+                            >
+                              <div className={`w-4 h-4 rounded ${columnSettings.score ? 'bg-indigo-600 dark:bg-indigo-500' : 'border border-gray-300 dark:border-gray-500'} flex items-center justify-center`}>
+                                {columnSettings.score && <Check size={12} className="text-white" />}
+                              </div>
+                              <span className="text-sm text-gray-700 dark:text-gray-300 flex items-center">
+                                <PieChart size={14} className="mr-1.5 text-indigo-600 dark:text-indigo-400" />
+                                Score
+                              </span>
+                            </div>
+                            
+                            <div 
+                              className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-600 rounded cursor-pointer"
+                              onClick={() => toggleColumn('preference')}
+                            >
+                              <div className={`w-4 h-4 rounded ${columnSettings.preference ? 'bg-indigo-600 dark:bg-indigo-500' : 'border border-gray-300 dark:border-gray-500'} flex items-center justify-center`}>
+                                {columnSettings.preference && <Check size={12} className="text-white" />}
+                              </div>
+                              <span className="text-sm text-gray-700 dark:text-gray-300 flex items-center">
+                                <Star size={14} className="mr-1.5 text-indigo-600 dark:text-indigo-400" />
+                                Preference
+                              </span>
+                            </div>
+                            
+                            <div 
+                              className="flex items-center gap-2 px-3 py-1.5 hover:bg-gray-100 dark:hover:bg-gray-600 rounded cursor-pointer"
+                              onClick={() => toggleColumn('experience')}
+                            >
+                              <div className={`w-4 h-4 rounded ${columnSettings.experience ? 'bg-indigo-600 dark:bg-indigo-500' : 'border border-gray-300 dark:border-gray-500'} flex items-center justify-center`}>
+                                {columnSettings.experience && <Check size={12} className="text-white" />}
+                              </div>
+                              <span className="text-sm text-gray-700 dark:text-gray-300 flex items-center">
+                                <Award size={14} className="mr-1.5 text-indigo-600 dark:text-indigo-400" />
+                                Experience
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 
                 <AnimatePresence>
@@ -1334,6 +1539,37 @@ const CommonCoursesCOC = () => {
                               <th scope="col" className="sticky top-0 px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider bg-gray-50 dark:bg-gray-700 hidden md:table-cell">
                                 LEH
                               </th>
+                              
+                              {/* Score Column - Always visible for COC assignments */}
+                              {columnSettings.score && (
+                                <th scope="col" className="sticky top-0 px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider bg-gray-50 dark:bg-gray-700 hidden md:table-cell">
+                                  <div className="flex items-center">
+                                    <PieChart size={12} className="mr-1 text-indigo-600 dark:text-indigo-400" />
+                                    Score
+                                  </div>
+                                </th>
+                              )}
+                              
+                              {/* Preference Column - Only shown if enabled and not COC assignment */}
+                              {columnSettings.preference && (
+                                <th scope="col" className="sticky top-0 px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider bg-gray-50 dark:bg-gray-700 hidden lg:table-cell">
+                                  <div className="flex items-center">
+                                    <Star size={12} className="mr-1 text-indigo-600 dark:text-indigo-400" />
+                                    Pref.
+                                  </div>
+                                </th>
+                              )}
+                              
+                              {/* Experience Column - Only shown if enabled and not COC assignment */}
+                              {columnSettings.experience && (
+                                <th scope="col" className="sticky top-0 px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider bg-gray-50 dark:bg-gray-700 hidden lg:table-cell">
+                                  <div className="flex items-center">
+                                    <Award size={12} className="mr-1 text-indigo-600 dark:text-indigo-400" />
+                                    Exp.
+                                  </div>
+                                </th>
+                              )}
+                              
                               <th scope="col" className="sticky top-0 px-3 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider bg-gray-50 dark:bg-gray-700">
                                 Actions
                               </th>
@@ -1341,52 +1577,89 @@ const CommonCoursesCOC = () => {
                           </thead>
                           <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-100 dark:divide-gray-700">
                             {filteredAssignments.flatMap((assignment) =>
-                              assignment.assignments.map((subAssignment) => (
-                                <motion.tr
-                                  key={subAssignment._id}
-                                  initial={{ opacity: 0 }}
-                                  animate={{ opacity: 1 }}
-                                  whileHover={{ backgroundColor: "rgba(249, 250, 251, 0.5)" }}
-                                  className="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700"
-                                >
-                                  <td className="px-3 py-2 text-sm font-medium text-gray-900 dark:text-white truncate max-w-[150px]">
-                                    {subAssignment.instructorId?.fullName || "Unassigned"}
-                                  </td>
-                                  <td className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 truncate max-w-[200px]">
-                                    {subAssignment.courseId?.name || "N/A"}
-                                  </td>
-                                  <td className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300">
-                                    {subAssignment.courseId?.code || "N/A"}
-                                  </td>
-                                  <td className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hidden sm:table-cell">
-                                    {subAssignment.section || "N/A"}
-                                  </td>
-                                  <td className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hidden sm:table-cell">
-                                    {subAssignment.labDivision}
-                                  </td>
-                                  <td className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hidden md:table-cell">
-                                    {subAssignment.workload?.toFixed(2) || "N/A"}
-                                  </td>
-                                  <td className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400 text-right">
-                                    <div className="flex space-x-1 justify-end">
-                                      <button
-                                        onClick={() => handleEditAssignment(subAssignment, assignment._id)}
-                                        className="p-1 rounded-md text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30"
-                                        title="Edit"
-                                      >
-                                        <Edit size={14} />
-                                      </button>
-                                      <button
-                                        onClick={() => confirmDeleteAssignment(subAssignment._id, assignment._id)}
-                                        className="p-1 rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30"
-                                        title="Delete"
-                                      >
-                                        <Trash2 size={14} />
-                                      </button>
-                                    </div>
-                                  </td>
-                                </motion.tr>
-                              ))
+                              assignment.assignments.map((subAssignment) => {
+                                // Check if it's a COC assignment (to hide preference/experience)
+                                const isCOCAssignment = assignment.assignedBy === "COC";
+                                
+                                return (
+                                  <motion.tr
+                                    key={subAssignment._id}
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    whileHover={{ backgroundColor: "rgba(249, 250, 251, 0.5)" }}
+                                    className="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700"
+                                  >
+                                    <td className="px-3 py-2 text-sm font-medium text-gray-900 dark:text-white truncate max-w-[150px]">
+                                      {subAssignment.instructorId?.fullName || "Unassigned"}
+                                    </td>
+                                    <td className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 truncate max-w-[200px]">
+                                      {subAssignment.courseId?.name || "N/A"}
+                                    </td>
+                                    <td className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300">
+                                      {subAssignment.courseId?.code || "N/A"}
+                                    </td>
+                                    <td className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hidden sm:table-cell">
+                                      {subAssignment.section || "N/A"}
+                                    </td>
+                                    <td className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hidden sm:table-cell">
+                                      {subAssignment.labDivision}
+                                    </td>
+                                    <td className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hidden md:table-cell">
+                                      {subAssignment.workload?.toFixed(2) || "N/A"}
+                                    </td>
+                                    
+                                    {/* Score Column - Always visible for COC assignments */}
+                                    {columnSettings.score && (
+                                      <td className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hidden md:table-cell">
+                                        {formatScore(subAssignment.score)}
+                                      </td>
+                                    )}
+                                    
+                                    {/* Preference Column - Only shown if enabled and not COC assignment */}
+                                    {columnSettings.preference && !isCOCAssignment && (
+                                      <td className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hidden lg:table-cell">
+                                        {subAssignment.preferenceRank || "N/A"}
+                                      </td>
+                                    )}
+                                    
+                                    {/* Experience Column - Only shown if enabled and not COC assignment */}
+                                    {columnSettings.experience && !isCOCAssignment && (
+                                      <td className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hidden lg:table-cell">
+                                        {subAssignment.experienceYears !== undefined ? 
+                                          `${subAssignment.experienceYears} yr${subAssignment.experienceYears !== 1 ? 's' : ''}` : 
+                                          "N/A"}
+                                      </td>
+                                    )}
+                                    
+                                    <td className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400 text-right">
+                                      <div className="flex space-x-1 justify-end">
+                                        {/* View Assignment Reason Button */}
+                                        <button
+                                          onClick={() => viewAssignmentDetail(subAssignment, assignment)}
+                                          className="p-1 rounded-md text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30"
+                                          title="View Details"
+                                        >
+                                          <Eye size={14} />
+                                        </button>
+                                        <button
+                                          onClick={() => handleEditAssignment(subAssignment, assignment._id)}
+                                          className="p-1 rounded-md text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30"
+                                          title="Edit"
+                                        >
+                                          <Edit size={14} />
+                                        </button>
+                                        <button
+                                          onClick={() => confirmDeleteAssignment(subAssignment._id, assignment._id)}
+                                          className="p-1 rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30"
+                                          title="Delete"
+                                        >
+                                          <Trash2 size={14} />
+                                        </button>
+                                      </div>
+                                    </td>
+                                  </motion.tr>
+                                );
+                              })
                             )}
                           </tbody>
                         </table>

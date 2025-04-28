@@ -17,6 +17,7 @@ const assignmentSchema = new mongoose.Schema({
       score: { type: Number }, // Assignment score from algorithm
       preferenceRank: { type: Number }, // Instructor's preference rank for this course
       experienceYears: { type: Number }, // Instructor's experience teaching this course (in years)
+      assignmentReason: { type: String }, // Human-readable explanation for the assignment
     }
   ],
 
