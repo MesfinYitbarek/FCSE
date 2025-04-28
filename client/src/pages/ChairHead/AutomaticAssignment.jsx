@@ -4,7 +4,7 @@ import { useSelector } from "react-redux";
 import { 
   Loader2, AlertCircle, Check, RefreshCw, Download, 
   BookOpen, User, Mail, Hash, Layers, Divide, Clock,
-  ChevronRight, ChevronDown
+  ChevronRight, ChevronDown, Info, Award, Brain, BarChart
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 
@@ -22,6 +22,7 @@ const AutomaticAssignment = ({ fetchAssignments, filters }) => {
     instructors: 0
   });
   const [expandedRows, setExpandedRows] = useState({});
+  const [showingReasonFor, setShowingReasonFor] = useState(null);
 
   useEffect(() => {
     if (filters) {
@@ -52,6 +53,12 @@ const AutomaticAssignment = ({ fetchAssignments, filters }) => {
           section: a.section || "N/A",
           labDivision: a.labDivision || "No",
           workload: a.workload || 0,
+          // Assignment reasoning data
+          score: a.score || 0,
+          preferenceRank: a.preferenceRank || "N/A",
+          experienceYears: a.experienceYears || 0,
+          // Use reason directly from API if available, otherwise generate one
+          reasonDescription: a.assignmentReason || getAssignmentReason(a.preferenceRank, a.experienceYears, a.score)
         }))
       );
 
@@ -75,6 +82,34 @@ const AutomaticAssignment = ({ fetchAssignments, filters }) => {
       setLoading(false);
     }
   };
+  
+  // Generate human-readable reason for assignment (fallback if backend doesn't provide reason)
+  const getAssignmentReason = (preferenceRank, experienceYears, score) => {
+    if (!preferenceRank || preferenceRank === "N/A") {
+      return "Assigned based on availability";
+    }
+    
+    let reason = "";
+    
+    // Add preference reasoning
+    if (preferenceRank <= 3) {
+      reason += `This course was listed as preference #${preferenceRank} by the instructor. `;
+    } else {
+      reason += `This course was listed as preference #${preferenceRank} (lower priority) by the instructor. `;
+    }
+    
+    // Add experience reasoning
+    if (experienceYears > 0) {
+      reason += `The instructor has ${experienceYears} year${experienceYears > 1 ? 's' : ''} of experience teaching this course. `;
+    } else {
+      reason += `The instructor has no previous experience teaching this course. `;
+    }
+    
+    // Add score reasoning
+    reason += `Final assignment score: ${score.toFixed(2)}`;
+    
+    return reason;
+  };
 
   const handleAutoAssign = async () => {
     setGenerating(true);
@@ -82,13 +117,14 @@ const AutomaticAssignment = ({ fetchAssignments, filters }) => {
     setError(null);
     
     try {
-      await api.post("/assignments/automatic", {
+      const response = await api.post("/assignments/automatic", {
         year: filters.year,
         semester: filters.semester,
         program: "Regular",
         assignedBy: user.chair,
       });
       
+      // Immediately fetch the new assignments with reasoning
       await fetchAssignments();
       await fetchAutomaticAssignments();
       
@@ -109,7 +145,8 @@ const AutomaticAssignment = ({ fetchAssignments, filters }) => {
   };
 
   const handleExportCSV = () => {
-    const headers = ["Instructor", "Email", "Course", "Code", "Section", "Lab Division", "Workload"];
+    // Include the assignment reasoning in the export
+    const headers = ["Instructor", "Email", "Course", "Code", "Section", "Lab Division", "Workload", "Preference Rank", "Experience (Years)", "Score", "Assignment Reason"];
     const rows = assignedCourses.map(assignment => [
       assignment.instructorName,
       assignment.instructorEmail,
@@ -117,7 +154,11 @@ const AutomaticAssignment = ({ fetchAssignments, filters }) => {
       assignment.courseCode,
       assignment.section,
       assignment.labDivision,
-      assignment.workload
+      assignment.workload,
+      assignment.preferenceRank,
+      assignment.experienceYears,
+      assignment.score.toFixed(2),
+      `"${assignment.reasonDescription || ''}"`
     ]);
     
     const csvContent = [
@@ -143,6 +184,10 @@ const AutomaticAssignment = ({ fetchAssignments, filters }) => {
       ...expandedRows,
       [index]: !expandedRows[index]
     });
+  };
+
+  const toggleReasonDisplay = (index) => {
+    setShowingReasonFor(showingReasonFor === index ? null : index);
   };
 
   return (
@@ -222,6 +267,25 @@ const AutomaticAssignment = ({ fetchAssignments, filters }) => {
         </div>
       )}
 
+      {/* Info Card */}
+      <div className="bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg border border-blue-200 dark:border-blue-800/30 text-sm">
+        <div className="flex items-start">
+          <Info className="w-5 h-5 mr-2.5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <p className="font-medium text-blue-800 dark:text-blue-300 mb-1">How Automatic Assignment Works</p>
+            <p className="text-xs text-blue-700 dark:text-blue-200 mb-2">
+              Assignments are calculated based on instructor preferences and teaching experience:
+            </p>
+            <ul className="text-xs space-y-1 text-blue-700 dark:text-blue-200 list-disc pl-4">
+              <li>Higher preference rank scores (courses instructors prefer to teach)</li>
+              <li>Prior experience teaching the course (more experience = higher score)</li>
+              <li>Submission time (earlier submissions get priority for tied scores)</li>
+              <li>Click on "See Reason" for any assignment to view detailed information</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+
       {/* Stats Cards */}
       {assignedCourses.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -274,12 +338,7 @@ const AutomaticAssignment = ({ fetchAssignments, filters }) => {
                         <span className="truncate">Instructor</span>
                       </div>
                     </th>
-                    <th scope="col" className="px-2 py-2 font-medium">
-                      <div className="flex items-center">
-                        <Mail className="w-3.5 h-3.5 mr-1 flex-shrink-0" />
-                        <span className="truncate">Email</span>
-                      </div>
-                    </th>
+                    
                     <th scope="col" className="px-2 py-2 font-medium">
                       <div className="flex items-center">
                         <BookOpen className="w-3.5 h-3.5 mr-1 flex-shrink-0" />
@@ -301,59 +360,116 @@ const AutomaticAssignment = ({ fetchAssignments, filters }) => {
                     <th scope="col" className="px-2 py-2 font-medium hidden md:table-cell">
                       <div className="flex items-center">
                         <Divide className="w-3.5 h-3.5 mr-1 flex-shrink-0" />
-                        <span className="truncate">Lab Division</span>
+                        <span className="truncate">Lab</span>
                       </div>
                     </th>
                     <th scope="col" className="px-2 py-2 font-medium">
                       <div className="flex items-center">
                         <Clock className="w-3.5 h-3.5 mr-1 flex-shrink-0" />
-                        <span className="truncate">Workload</span>
+                        <span className="truncate">Credit Hour</span>
+                      </div>
+                    </th>
+                    <th scope="col" className="px-2 py-2 font-medium">
+                      <div className="flex items-center">
+                        <Info className="w-3.5 h-3.5 mr-1 flex-shrink-0" />
+                        <span className="truncate">Reason</span>
                       </div>
                     </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-200 dark:divide-gray-700">
                   {assignedCourses.map((assignment, index) => (
-                    <tr 
-                      key={index} 
-                      className={`${
-                        index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-800/50'
-                      } ${
-                        assignment.instructorName === 'Unassigned' ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''
-                      } hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors`}
-                    >
-                      <td className="px-2 py-2 font-medium">
-                        {assignment.instructorName === 'Unassigned' ? (
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200">
-                            Unassigned
-                          </span>
-                        ) : (
-                          <span className="truncate block max-w-[120px] xl:max-w-full">{assignment.instructorName}</span>
-                        )}
-                      </td>
-                      <td className="px-2 py-2 text-gray-600 dark:text-gray-400">
-                        <span className="truncate block max-w-[120px] xl:max-w-full">{assignment.instructorEmail}</span>
-                      </td>
-                      <td className="px-2 py-2">
-                        <span className="truncate block max-w-[120px] xl:max-w-full">{assignment.courseName}</span>
-                      </td>
-                      <td className="px-2 py-2 font-medium">
-                        {assignment.courseCode}
-                      </td>
-                      <td className="px-2 py-2">
-                        {assignment.section}
-                      </td>
-                      <td className="px-2 py-2 hidden md:table-cell">
-                        {assignment.labDivision !== 'No' ? (
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-200">
-                            {assignment.labDivision}
-                          </span>
-                        ) : 'N/A'}
-                      </td>
-                      <td className="px-2 py-2 font-medium whitespace-nowrap">
-                        {assignment.workload} hrs
-                      </td>
-                    </tr>
+                    <>
+                      <tr 
+                        key={index} 
+                        className={`${
+                          index % 2 === 0 ? 'bg-white dark:bg-gray-800' : 'bg-gray-50 dark:bg-gray-800/50'
+                        } ${
+                          assignment.instructorName === 'Unassigned' ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''
+                        } hover:bg-gray-100 dark:hover:bg-gray-700/50 transition-colors`}
+                      >
+                        <td className="px-2 py-2 font-medium">
+                          {assignment.instructorName === 'Unassigned' ? (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-200">
+                              Unassigned
+                            </span>
+                          ) : (
+                            <span className="truncate block max-w-[120px] xl:max-w-full">{assignment.instructorName}</span>
+                          )}
+                        </td>
+                        
+                        <td className="px-2 py-2">
+                          <span className="truncate block max-w-[120px] xl:max-w-full">{assignment.courseName}</span>
+                        </td>
+                        <td className="px-2 py-2 font-medium">
+                          {assignment.courseCode}
+                        </td>
+                        <td className="px-2 py-2">
+                          {assignment.section}
+                        </td>
+                        <td className="px-2 py-2 hidden md:table-cell">
+                          {assignment.labDivision !== 'No' ? (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900/30 text-indigo-800 dark:text-indigo-200">
+                              {assignment.labDivision}
+                            </span>
+                          ) : 'N/A'}
+                        </td>
+                        <td className="px-2 py-2 font-medium whitespace-nowrap">
+                          {assignment.workload} hrs
+                        </td>
+                        
+                        <td className="px-2 py-2">
+                          <button 
+                            onClick={() => toggleReasonDisplay(index)}
+                            className="px-2 py-1 text-xs bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded hover:bg-indigo-200 dark:hover:bg-indigo-800/40 transition-colors"
+                          >
+                            {showingReasonFor === index ? "Hide" : "See Reason"}
+                          </button>
+                        </td>
+                      </tr>
+                      {showingReasonFor === index && (
+                        <tr className="bg-indigo-50/50 dark:bg-indigo-900/10">
+                          <td colSpan="9" className="px-4 py-3 text-sm text-indigo-700 dark:text-indigo-300">
+                            <div className="flex items-start">
+                              <Info className="w-4 h-4 mr-2 text-indigo-600 dark:text-indigo-400 flex-shrink-0 mt-0.5" />
+                              <div>
+                                <p className="font-medium mb-1">Assignment Reasoning</p>
+                                <p className="text-sm">{assignment.reasonDescription}</p>
+                                <div className="mt-2 grid grid-cols-3 gap-2 text-xs">
+                                  <div className="bg-white dark:bg-indigo-900/30 rounded p-2 border border-indigo-200 dark:border-indigo-800/30">
+                                    <div className="font-medium text-indigo-800 dark:text-indigo-200 mb-1 flex items-center">
+                                      <Award className="w-3.5 h-3.5 mr-1" />
+                                      Preference Rank
+                                    </div>
+                                    <div className="text-indigo-700 dark:text-indigo-300 font-bold text-lg">
+                                      {assignment.preferenceRank !== "N/A" ? `#${assignment.preferenceRank}` : "N/A"}
+                                    </div>
+                                  </div>
+                                  <div className="bg-white dark:bg-indigo-900/30 rounded p-2 border border-indigo-200 dark:border-indigo-800/30">
+                                    <div className="font-medium text-indigo-800 dark:text-indigo-200 mb-1 flex items-center">
+                                      <Brain className="w-3.5 h-3.5 mr-1" />
+                                      Years Experience
+                                    </div>
+                                    <div className="text-indigo-700 dark:text-indigo-300 font-bold text-lg">
+                                      {assignment.experienceYears}
+                                    </div>
+                                  </div>
+                                  <div className="bg-white dark:bg-indigo-900/30 rounded p-2 border border-indigo-200 dark:border-indigo-800/30">
+                                    <div className="font-medium text-indigo-800 dark:text-indigo-200 mb-1 flex items-center">
+                                      <BarChart className="w-3.5 h-3.5 mr-1" />
+                                      Final Score
+                                    </div>
+                                    <div className="text-indigo-700 dark:text-indigo-300 font-bold text-lg">
+                                      {assignment.score.toFixed(2)}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </>
                   ))}
                 </tbody>
               </table>
@@ -444,6 +560,52 @@ const AutomaticAssignment = ({ fetchAssignments, filters }) => {
                     <div className="col-span-2 font-medium text-gray-800 dark:text-gray-200">
                       {assignment.workload} hrs
                     </div>
+                  </div>
+                  
+                  {/* Assignment Reason Stats - Mobile */}
+                  <div className="border-t border-gray-100 dark:border-gray-700 mt-2 pt-2">
+                    <div className="flex justify-between mb-2">
+                      <div className="text-gray-500 dark:text-gray-400 flex items-center">
+                        <Info className="w-3 h-3 mr-1" />
+                        Assignment Data
+                      </div>
+                      <button 
+                        onClick={() => toggleReasonDisplay(index)}
+                        className="px-2 py-0.5 text-xs bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 rounded hover:bg-indigo-200 dark:hover:bg-indigo-800/40 transition-colors"
+                      >
+                        {showingReasonFor === index ? "Hide Details" : "See Details"}
+                      </button>
+                    </div>
+                    
+                    <div className="grid grid-cols-3 gap-2 text-center">
+                      <div className="p-1 rounded bg-indigo-50 dark:bg-indigo-900/20">
+                        <div className="text-[10px] text-indigo-600 dark:text-indigo-400 mb-0.5">Preference</div>
+                        <div className="font-medium text-indigo-800 dark:text-indigo-200 flex items-center justify-center">
+                          <Award className="w-2.5 h-2.5 mr-0.5" />
+                          {assignment.preferenceRank !== "N/A" ? `#${assignment.preferenceRank}` : "-"}
+                        </div>
+                      </div>
+                      <div className="p-1 rounded bg-blue-50 dark:bg-blue-900/20">
+                        <div className="text-[10px] text-blue-600 dark:text-blue-400 mb-0.5">Experience</div>
+                        <div className="font-medium text-blue-800 dark:text-blue-200 flex items-center justify-center">
+                          <Brain className="w-2.5 h-2.5 mr-0.5" />
+                          {assignment.experienceYears} yrs
+                        </div>
+                      </div>
+                      <div className="p-1 rounded bg-purple-50 dark:bg-purple-900/20">
+                        <div className="text-[10px] text-purple-600 dark:text-purple-400 mb-0.5">Score</div>
+                        <div className="font-medium text-purple-800 dark:text-purple-200 flex items-center justify-center">
+                          <BarChart className="w-2.5 h-2.5 mr-0.5" />
+                          {assignment.score.toFixed(1)}
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {showingReasonFor === index && (
+                      <div className="mt-2 p-2 text-xs bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/30 rounded-lg">
+                        <p className="text-indigo-700 dark:text-indigo-300">{assignment.reasonDescription}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

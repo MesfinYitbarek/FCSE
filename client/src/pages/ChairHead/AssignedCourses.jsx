@@ -7,7 +7,7 @@ import {
 import api from '../../utils/api';
 import { toast } from 'react-hot-toast';
 
-const AssignedCourses = ({ fetchAssignments, assignments, handleDelete, currentFilters }) => {
+const AssignedCourses = ({ fetchAssignments, assignments, currentFilters }) => {
   const [editingData, setEditingData] = useState({
     parentId: null,
     subId: null,
@@ -56,6 +56,33 @@ const AssignedCourses = ({ fetchAssignments, assignments, handleDelete, currentF
       });
     }
   }, [assignments, currentFilters]);
+
+  // Implementation of handleDelete function
+  const handleDelete = async (parentId, subId) => {
+    if (!window.confirm('Are you sure you want to delete this assignment?')) {
+      return;
+    }
+    
+    setLoading(true);
+    setError(null);
+    try {
+      await api.delete(`/assignments/sub/${parentId}/${subId}`);
+      
+      // Show success message
+      setSuccess("Assignment deleted successfully");
+      toast.success("Assignment deleted successfully");
+      setTimeout(() => setSuccess(null), 3000);
+      
+      // Refresh assignments
+      await fetchAssignments();
+    } catch (err) {
+      console.error("Error deleting assignment:", err);
+      setError(err.response?.data?.message || "Failed to delete assignment");
+      toast.error(err.response?.data?.message || "Failed to delete assignment");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleEditClick = (parentAssignment, subAssignment) => {
     setEditingData({
@@ -265,7 +292,7 @@ const AssignedCourses = ({ fetchAssignments, assignments, handleDelete, currentF
                         Lab Division
                       </th>
                       <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                        Workload
+                      Credit Hour
                       </th>
                       <th scope="col" className="px-3 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         Actions

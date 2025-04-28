@@ -13,6 +13,10 @@ const assignmentSchema = new mongoose.Schema({
       NoOfSections: { type: Number },
       labDivision: { type: String }, // Lab division, if applicable
       workload: { type: Number, required: true }, // Workload assigned to instructor
+      // Assignment reasoning fields
+      score: { type: Number }, // Assignment score from algorithm
+      preferenceRank: { type: Number }, // Instructor's preference rank for this course
+      experienceYears: { type: Number }, // Instructor's experience teaching this course (in years)
     }
   ],
 

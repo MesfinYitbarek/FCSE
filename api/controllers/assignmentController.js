@@ -756,7 +756,6 @@ export const autoAssignSummerCourses = async (req, res) => {
 };
 
 // Update an Assignment
-// PUT /assignments/sub/:parentId/:subId
 export const updateAssignment = async (req, res) => {
   try {
     const { parentId, subId } = req.params;
@@ -974,7 +973,55 @@ export const getAutomaticAssignments = async (req, res) => {
       JSON.stringify(assignments, null, 2)
     );
 
-    res.status(200).json({ assignments });
+    // Add human-readable assignment reasons to each assignment
+    const assignmentsWithReasons = assignments.map(assignment => {
+      const updatedAssignments = assignment.assignments.map(a => {
+        // Generate human-readable reason based on preference rank and experience
+        let reasonText = "";
+        
+        // Add preference reasoning
+        if (a.preferenceRank) {
+          if (a.preferenceRank <= 3) {
+            reasonText += `This course was listed as preference #${a.preferenceRank} by the instructor. `;
+          } else {
+            reasonText += `This course was listed as preference #${a.preferenceRank} (lower priority) by the instructor. `;
+          }
+        }
+        
+        // Add experience reasoning
+        if (a.experienceYears > 0) {
+          reasonText += `The instructor has ${a.experienceYears} year${a.experienceYears > 1 ? 's' : ''} of experience teaching this course. `;
+        } else {
+          reasonText += `The instructor has no previous experience teaching this course. `;
+        }
+        
+        // Add score reasoning
+        if (a.score) {
+          reasonText += `Final assignment score: ${a.score.toFixed(2)}`;
+        }
+        
+        // If no reason information is available
+        if (!reasonText) {
+          reasonText = "Assignment information not available";
+        }
+        
+        // Convert to a plain object to add the assignmentReason field
+        const assignmentObj = a.toObject ? a.toObject() : a;
+        return {
+          ...assignmentObj,
+          assignmentReason: reasonText
+        };
+      });
+      
+      // Create a modified assignment object
+      const assignmentObj = assignment.toObject ? assignment.toObject() : assignment;
+      return {
+        ...assignmentObj,
+        assignments: updatedAssignments
+      };
+    });
+
+    res.status(200).json({ assignments: assignmentsWithReasons });
   } catch (error) {
     console.error("Error fetching automatic assignments:", error);
     res.status(500).json({ message: "Error fetching automatic assignments" });
@@ -1028,7 +1075,6 @@ export const getAssignmentsByFilters = async (req, res) => {
     res.status(500).json({ message: "Error fetching assignments", error });
   }
 };
-
 export const runAutomaticAssignment = async (req, res) => {
   try {
     const { year, semester, program, assignedBy } = req.body;
@@ -1238,7 +1284,7 @@ export const runAutomaticAssignment = async (req, res) => {
 
     console.log("\nProcessing workload calculations and updating instructor records...");
     for (const assignment of assignedCourses) {
-      const { instructorId, courseId } = assignment;
+      const { instructorId, courseId, score, preferenceRank, experienceYears } = assignment;
       const course = await Course.findById(courseId);
       if (!course) {
         console.log(`Course ${courseId} not found, skipping`);
@@ -1259,6 +1305,7 @@ export const runAutomaticAssignment = async (req, res) => {
 
       console.log(`Calculated workload for course ${courseId}: ${workload} (lecture: ${course.lecture}, lab: ${course.lab}, tutorial: ${course.tutorial})`);
 
+      // Include assignment reason data in the assignments
       assignmentData.assignments.push({
         instructorId,
         courseId,
@@ -1266,6 +1313,10 @@ export const runAutomaticAssignment = async (req, res) => {
         NoOfSections: meta.NoOfSections || 1,
         labDivision: meta.labDivision || "No",
         workload,
+        // Assignment reasoning data
+        score,
+        preferenceRank,
+        experienceYears
       });
 
       let instructor = await Instructor.findOne({ userId: instructorId });
@@ -1297,9 +1348,41 @@ export const runAutomaticAssignment = async (req, res) => {
     const savedAssignment = await Assignment.create(assignmentData);
     console.log("\nAssignment saved successfully:", savedAssignment._id);
 
+    // Generate human-readable reasons for the response
+    const assignmentsWithReasons = assignmentData.assignments.map(a => {
+      let reasonText = "";
+      
+      // Add preference reasoning
+      if (a.preferenceRank) {
+        if (a.preferenceRank <= 3) {
+          reasonText += `This course was listed as preference #${a.preferenceRank} by the instructor. `;
+        } else {
+          reasonText += `This course was listed as preference #${a.preferenceRank} (lower priority) by the instructor. `;
+        }
+      }
+      
+      // Add experience reasoning
+      if (a.experienceYears > 0) {
+        reasonText += `The instructor has ${a.experienceYears} year${a.experienceYears > 1 ? 's' : ''} of experience teaching this course. `;
+      } else {
+        reasonText += `The instructor has no previous experience teaching this course. `;
+      }
+      
+      // Add score reasoning
+      reasonText += `Final assignment score: ${a.score?.toFixed(2) || 0}`;
+      
+      return {
+        ...a,
+        assignmentReason: reasonText
+      };
+    });
+
     res.json({
       message: "Courses assigned successfully",
-      assignment: assignmentData,
+      assignment: {
+        ...assignmentData,
+        assignments: assignmentsWithReasons
+      }
     });
   } catch (error) {
     console.error("Error in automatic assignment:", error);
