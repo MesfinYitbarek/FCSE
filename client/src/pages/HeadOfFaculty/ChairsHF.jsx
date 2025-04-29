@@ -3,6 +3,7 @@ import api from "../../utils/api";
 import { useSelector } from "react-redux";
 import { motion } from "framer-motion";
 import { toast } from "react-hot-toast";
+import ReactDOM from 'react-dom';
 import {
   Search,
   Plus,
@@ -18,6 +19,48 @@ import {
   User,
   ChevronRight
 } from "lucide-react";
+
+// Modal component using React Portal for more reliable rendering
+const Modal = ({ isOpen, onClose, title, children, footer }) => {
+  if (!isOpen) return null;
+  
+  // Using portal to render modal at the document root level
+  return ReactDOM.createPortal(
+    <div className="fixed inset-0 z-[9999] overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+      <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div 
+          className="fixed inset-0 bg-gray-500 bg-opacity-75 dark:bg-gray-900 dark:bg-opacity-75 transition-opacity" 
+          aria-hidden="true"
+          onClick={onClose}
+        ></div>
+
+        <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+        <div 
+          className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+            <div className="sm:flex sm:items-start">
+              <div className="mt-3 text-center sm:mt-0 sm:text-left w-full">
+                <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white" id="modal-title">
+                  {title}
+                </h3>
+                <div className="mt-4">
+                  {children}
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+            {footer}
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+};
 
 const ChairsHF = () => {
   const { user } = useSelector((state) => state.auth);
@@ -421,7 +464,6 @@ const ChairsHF = () => {
                                 <p className="text-sm text-gray-600 dark:text-gray-300">
                                   <span className="font-medium">Created:</span> {new Date(chair.createdAt).toLocaleDateString()}
                                 </p>
-                                
                               </div>
                             </div>
                             {chair.head && (
@@ -451,213 +493,178 @@ const ChairsHF = () => {
         </div>
       )}
 
-      {/* Add Chair Modal */}
-      {openAddModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 dark:bg-gray-900 dark:bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+      {/* Add Chair Modal using Portal */}
+      <Modal
+        isOpen={openAddModal}
+        onClose={() => setOpenAddModal(false)}
+        title="Add New Chair"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={handleAddChair}
+              disabled={loading || !newChair.name}
+              className={`w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 text-base font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm ${
+                loading || !newChair.name
+                  ? "bg-indigo-400 cursor-not-allowed"
+                  : "bg-indigo-600 hover:bg-indigo-700"
+              }`}
+            >
+              {loading ? "Adding..." : "Add Chair"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setOpenAddModal(false)}
+              className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:w-auto sm:text-sm"
+            >
+              Cancel
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Chair Name
+            </label>
+            <input
+              type="text"
+              name="name"
+              id="name"
+              value={newChair.name}
+              onChange={handleChange}
+              className="mt-1 block w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              placeholder="Enter chair name"
+            />
+          </div>
+          <div>
+            <label htmlFor="head" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Chair Head
+            </label>
+            <select
+              id="head"
+              name="head"
+              value={newChair.head}
+              onChange={handleChange}
+              className="mt-1 block w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            >
+              <option value="">Select Chair Head</option>
+              {chairHeads.map((ch) => (
+                <option key={ch._id} value={ch._id}>
+                  {ch.fullName}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </Modal>
 
-            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+      {/* Edit Chair Modal using Portal */}
+      <Modal
+        isOpen={openEditModal}
+        onClose={() => setOpenEditModal(false)}
+        title="Edit Chair"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={handleEditChair}
+              disabled={loading || !newChair.name}
+              className={`w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 text-base font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm ${
+                loading || !newChair.name
+                  ? "bg-indigo-400 cursor-not-allowed"
+                  : "bg-indigo-600 hover:bg-indigo-700"
+              }`}
+            >
+              {loading ? "Updating..." : "Update Chair"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setOpenEditModal(false)}
+              className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:w-auto sm:text-sm"
+            >
+              Cancel
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <label htmlFor="edit-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Chair Name
+            </label>
+            <input
+              type="text"
+              name="name"
+              id="edit-name"
+              value={newChair.name}
+              onChange={handleChange}
+              className="mt-1 block w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+              placeholder="Enter chair name"
+            />
+          </div>
+          <div>
+            <label htmlFor="edit-head" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+              Chair Head
+            </label>
+            <select
+              id="edit-head"
+              name="head"
+              value={newChair.head}
+              onChange={handleChange}
+              className="mt-1 block w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
+            >
+              <option value="">Select Chair Head</option>
+              {chairHeads.map((ch) => (
+                <option key={ch._id} value={ch._id}>
+                  {ch.fullName}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </Modal>
 
-            <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-              <div className="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <div className="sm:flex sm:items-start">
-                  <div className="mt-3 text-center sm:mt-0 sm:text-left w-full">
-                    <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white" id="modal-title">
-                      Add New Chair
-                    </h3>
-                    <div className="mt-4 space-y-4">
-                      <div>
-                        <label htmlFor="name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Chair Name
-                        </label>
-                        <input
-                          type="text"
-                          name="name"
-                          id="name"
-                          value={newChair.name}
-                          onChange={handleChange}
-                          className="mt-1 block w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                          placeholder="Enter chair name"
-                        />
-                      </div>
-                      <div>
-                        <label htmlFor="head" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Chair Head
-                        </label>
-                        <select
-                          id="head"
-                          name="head"
-                          value={newChair.head}
-                          onChange={handleChange}
-                          className="mt-1 block w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                        >
-                          <option value="">Select Chair Head</option>
-                          {chairHeads.map((ch) => (
-                            <option key={ch._id} value={ch._id}>
-                              {ch.fullName}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                <button
-                  type="button"
-                  onClick={handleAddChair}
-                  disabled={loading || !newChair.name}
-                  className={`w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 text-base font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm ${
-                    loading || !newChair.name
-                      ? "bg-indigo-400 cursor-not-allowed"
-                      : "bg-indigo-600 hover:bg-indigo-700"
-                  }`}
-                >
-                  {loading ? "Adding..." : "Add Chair"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setOpenAddModal(false)}
-                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:w-auto sm:text-sm"
-                >
-                  Cancel
-                </button>
-              </div>
+      {/* Delete Confirmation Modal using Portal */}
+      <Modal
+        isOpen={openDeleteModal}
+        onClose={() => setOpenDeleteModal(false)}
+        title="Delete Chair"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={handleDeleteChair}
+              disabled={loading}
+              className={`w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 text-base font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm ${
+                loading ? "bg-red-400 cursor-not-allowed" : "bg-red-600 hover:bg-red-700"
+              }`}
+            >
+              {loading ? "Deleting..." : "Delete"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setOpenDeleteModal(false)}
+              className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:w-auto sm:text-sm"
+            >
+              Cancel
+            </button>
+          </>
+        }
+      >
+        <div className="sm:flex sm:items-start">
+          <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-900 sm:mx-0 sm:h-10 sm:w-10">
+            <Trash2 className="h-6 w-6 text-red-600 dark:text-red-300" />
+          </div>
+          <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+            <div className="mt-2">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                Are you sure you want to delete the chair "{selectedChair?.name}"? This action cannot be undone.
+              </p>
             </div>
           </div>
         </div>
-      )}
-
-      {/* Edit Chair Modal */}
-      {openEditModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 dark:bg-gray-900 dark:bg-opacity-75 transition-opacity" aria-hidden="true"></div>
-
-            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-
-            <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-              <div className="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <div className="sm:flex sm:items-start">
-                  <div className="mt-3 text-center sm:mt-0 sm:text-left w-full">
-                    <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white" id="modal-title">
-                      Edit Chair
-                    </h3>
-                    <div className="mt-4 space-y-4">
-                      <div>
-                        <label htmlFor="edit-name" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Chair Name
-                        </label>
-                        <input
-                          type="text"
-                          name="name"
-                          id="edit-name"
-                          value={newChair.name}
-                          onChange={handleChange}
-                          className="mt-1 block w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                          placeholder="Enter chair name"
-                        />
-                      </div>
-                      <div>
-                        <label htmlFor="edit-head" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Chair Head
-                        </label>
-                        <select
-                          id="edit-head"
-                          name="head"
-                          value={newChair.head}
-                          onChange={handleChange}
-                          className="mt-1 block w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                        >
-                          <option value="">Select Chair Head</option>
-                          {chairHeads.map((ch) => (
-                            <option key={ch._id} value={ch._id}>
-                              {ch.fullName}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                <button
-                  type="button"
-                  onClick={handleEditChair}
-                  disabled={loading || !newChair.name}
-                  className={`w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 text-base font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:ml-3 sm:w-auto sm:text-sm ${
-                    loading || !newChair.name
-                      ? "bg-indigo-400 cursor-not-allowed"
-                      : "bg-indigo-600 hover:bg-indigo-700"
-                  }`}
-                >
-                  {loading ? "Updating..." : "Update Chair"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setOpenEditModal(false)}
-                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:w-auto sm:text-sm"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Delete Confirmation Modal */}
-      {openDeleteModal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
-          <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 dark:bg-gray-900 dark:bg-opacity-75 transition-opacity" aria-hidden="true"></div>
-
-            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
-
-            <div className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
-              <div className="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                <div className="sm:flex sm:items-start">
-                  <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 dark:bg-red-900 sm:mx-0 sm:h-10 sm:w-10">
-                    <Trash2 className="h-6 w-6 text-red-600 dark:text-red-300" />
-                  </div>
-                  <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-                    <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white" id="modal-title">
-                      Delete Chair
-                    </h3>
-                    <div className="mt-2">
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        Are you sure you want to delete the chair "{selectedChair?.name}"? This action cannot be undone.
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
-                <button
-                  type="button"
-                  onClick={handleDeleteChair}
-                  disabled={loading}
-                  className={`w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 text-base font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm ${
-                    loading ? "bg-red-400 cursor-not-allowed" : "bg-red-600 hover:bg-red-700"
-                  }`}
-                >
-                  {loading ? "Deleting..." : "Delete"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setOpenDeleteModal(false)}
-                  className="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 dark:border-gray-600 shadow-sm px-4 py-2 bg-white dark:bg-gray-800 text-base font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 sm:mt-0 sm:w-auto sm:text-sm"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      </Modal>
     </div>
   );
 };
