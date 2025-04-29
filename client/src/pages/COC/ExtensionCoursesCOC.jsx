@@ -18,7 +18,9 @@ import {
   Search,
   SlidersHorizontal,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Eye,
+  Info
 } from "lucide-react";
 import api from "../../utils/api";
 
@@ -37,6 +39,7 @@ const ExtensionCoursesCOC = () => {
   const [editingAssignment, setEditingAssignment] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
   const [showInstructorDropdown, setShowInstructorDropdown] = useState(false);
+  const [viewAssignmentReason, setViewAssignmentReason] = useState(null);
 
   // State for year selection
   const [semesters, setSemesters] = useState([
@@ -77,8 +80,8 @@ const ExtensionCoursesCOC = () => {
     setSelectedSemester(defaultSemester);
     
     // Sample data for departments and chairs (replace with real data)
-    setDepartments(["Computer Science", "Information Technology","Software Engineering"]);
-    setChairs(["Database", "Networking", "Programming", "Software"]);
+    setDepartments(["Computer Science", "Electrical", "Mechanical", "Civil", "Software"]);
+    setChairs(["Common", "CSE", "EEE", "Civil", "Software"]);
   }, []);
 
   useEffect(() => {
@@ -269,6 +272,14 @@ const ExtensionCoursesCOC = () => {
     const updatedAssignments = [...manualAssignments];
     updatedAssignments[index][field] = value;
     setManualAssignments(updatedAssignments);
+  };
+  
+  // Show assignment reason modal
+  const viewAssignmentDetail = (subAssignment, parentAssignment) => {
+    setViewAssignmentReason({
+      ...subAssignment,
+      parentData: parentAssignment
+    });
   };
 
   // Edit assignment with the correct nested structure
@@ -495,6 +506,17 @@ const ExtensionCoursesCOC = () => {
 
     setLoading(false);
   };
+  
+  // Helper to format numerical scores with consistent precision
+  const formatScore = (score) => {
+    if (score === undefined || score === null) return "N/A";
+    return typeof score === "number" ? score.toFixed(2) : score;
+  };
+
+  // Check if the assignment is made by COC (to determine whether to hide preference/experience)
+  const isAssignedByCOC = (assignment) => {
+    return assignment?.assignedBy === "COC";
+  };
 
   const fadeIn = {
     initial: { opacity: 0, y: 20 },
@@ -548,6 +570,108 @@ const ExtensionCoursesCOC = () => {
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Assignment Reason Detail Modal */}
+        {viewAssignmentReason && (
+          <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-800 rounded-xl p-4 md:p-6 w-full max-w-2xl shadow-lg">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Assignment Details</h3>
+                <button
+                  onClick={() => setViewAssignmentReason(null)}
+                  className="p-1 rounded-md text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Instructor</h4>
+                  <p className="text-gray-900 dark:text-white">
+                    {viewAssignmentReason.instructorId?.fullName || "Unassigned"}
+                  </p>
+                </div>
+                
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Course</h4>
+                  <p className="text-gray-900 dark:text-white">
+                    {viewAssignmentReason.courseId?.name || "N/A"} ({viewAssignmentReason.courseId?.code || "N/A"})
+                  </p>
+                </div>
+                
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Section</h4>
+                  <p className="text-gray-900 dark:text-white">
+                    {viewAssignmentReason.section || "N/A"}
+                  </p>
+                </div>
+                
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Workload</h4>
+                  <p className="text-gray-900 dark:text-white">
+                    {viewAssignmentReason.workload?.toFixed(2) || "N/A"} LEH
+                  </p>
+                </div>
+              </div>
+              
+              {!isAssignedByCOC(viewAssignmentReason.parentData) && (
+                <div className="grid grid-cols-3 gap-4 mb-4">
+                  <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg text-center">
+                    <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Score</h4>
+                    <p className="text-gray-900 dark:text-white font-medium">
+                      {formatScore(viewAssignmentReason.score)}
+                    </p>
+                  </div>
+                  
+                  <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg text-center">
+                    <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Preference Rank</h4>
+                    <p className="text-gray-900 dark:text-white font-medium">
+                      {viewAssignmentReason.preferenceRank || "N/A"}
+                    </p>
+                  </div>
+                  
+                  <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg text-center">
+                    <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Teaching Experience</h4>
+                    <p className="text-gray-900 dark:text-white font-medium">
+                      {viewAssignmentReason.experienceYears 
+                        ? `${viewAssignmentReason.experienceYears} year${viewAssignmentReason.experienceYears !== 1 ? 's' : ''}` 
+                        : "None"}
+                    </p>
+                  </div>
+                </div>
+              )}
+              
+              <div className="mb-4">
+                <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center">
+                  <Info className="mr-1.5 text-indigo-600 dark:text-indigo-400" size={16} />
+                  Assignment Reasoning
+                </h4>
+                <div className="p-3 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800 rounded-lg">
+                  <p className="text-gray-800 dark:text-gray-200 text-sm">
+                    {viewAssignmentReason.assignmentReason || "No assignment reasoning available."}
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => setViewAssignmentReason(null)}
+                  className="px-3 py-1.5 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg transition-colors text-sm"
+                >
+                  Close
+                </button>
+                <button
+                  onClick={() => handleEditAssignment(viewAssignmentReason, viewAssignmentReason.parentData?._id)}
+                  className="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm flex items-center"
+                >
+                  <Edit size={14} className="mr-1.5" />
+                  Edit Assignment
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Delete Confirmation Dialog */}
         {deleteConfirm && (
@@ -1463,6 +1587,13 @@ const ExtensionCoursesCOC = () => {
                                 </td>
                                 <td className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400 text-right">
                                   <div className="flex space-x-1 justify-end">
+                                    <button
+                                      onClick={() => viewAssignmentDetail(subAssignment, subAssignment.parentData)}
+                                      className="p-1 rounded-md text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30"
+                                      title="View Details"
+                                    >
+                                      <Eye size={14} />
+                                    </button>
                                     <button
                                       onClick={() => handleEditAssignment(subAssignment, subAssignment.parentId)}
                                       className="p-1 rounded-md text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30"

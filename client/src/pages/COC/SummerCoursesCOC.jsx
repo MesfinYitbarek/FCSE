@@ -73,8 +73,8 @@ const SummerCoursesCOC = () => {
     setSelectedYear(currentYear.toString());
     
     // Sample data for departments and chairs (replace with real data)
-    setDepartments(["Computer Science", "Electrical", "Mechanical", "Civil", "Software"]);
-    setChairs(["Common", "CSE", "EEE", "Civil", "Software"]);
+    setDepartments(["Computer Science", "Information Technology", "Software Engineering"]);
+    setChairs(["Database", "Programming", "Networking", "Software"]);
   }, []);
 
   useEffect(() => {
