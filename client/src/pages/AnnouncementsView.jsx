@@ -130,9 +130,7 @@ const AnnouncementsView = () => {
                         {announcement.publishedAt && (
                           <span>Published: {new Date(announcement.publishedAt).toLocaleDateString()}</span>
                         )}
-                        {announcement.validUntil && (
-                          <span className="ml-2">· Valid until: {new Date(announcement.validUntil).toLocaleDateString()}</span>
-                        )}
+                        
                       </div>
                     </div>
                   </div>

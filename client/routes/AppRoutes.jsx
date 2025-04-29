@@ -94,6 +94,7 @@ const AppRoutes = () => {
               <Route path="/reports/:reportId" element={<ReportsDetail />} />
               <Route path="/weights" element={<ManageWeights />} />
               <Route path="/announcementsView" element={<AnnouncementsView />} />
+              <Route path="/announcementsHF" element={<AnnouncementsCH />} />
             </Route>
 
             {/* ChairHead Protected Routes */}
@@ -109,6 +110,7 @@ const AppRoutes = () => {
               <Route path="/reportsCH" element={<ReportsHF />} />
               <Route path="/reportsCH/:reportId" element={<ReportsDetail />} />
               <Route path="/announcementsCH" element={<AnnouncementsCH />} />
+              <Route path="/announcementsViewByCH" element={<AnnouncementsView />} />
             </Route>
 
             {/* COC Protected Routes */}
@@ -122,6 +124,7 @@ const AppRoutes = () => {
               <Route path="/reportsCOC/:id" element={<ReportDetailCOC />} />
               <Route path="/reports/:id/edit" element={<EditReport />} />
               <Route path="/announcementsCOC" element={<AnnouncementsCOC />} />
+              <Route path="/announcementsViewByCOC" element={<AnnouncementsView />} />
             </Route>
 
             {/* Instructor Protected Routes */}

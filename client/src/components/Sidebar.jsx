@@ -273,7 +273,7 @@ const Layout = () => {
       }
 
       // Navigate to announcements page with the clicked announcement highlighted
-      navigate(user.role == "Instructor" ? `/announcementsInst`: user.role =="HeadOfFaculty" ? "/announcementsView" :user.role =="COC"? "/announcementsCOC" : "/announcementsCH", { state: { highlightId: announcement._id } });
+      navigate(user.role == "Instructor" ? `/announcementsInst`: user.role =="HeadOfFaculty" ? "/announcementsView" :user.role =="COC"? "/announcementsView" : "/announcementsView", { state: { highlightId: announcement._id } });
       setIsNotificationOpen(false);
     } catch (error) {
       console.error("Error handling announcement click:", error);
@@ -481,8 +481,8 @@ const Layout = () => {
               <SubNavItem to="/weights">Weight Management</SubNavItem>
             </NavGroup>
             <NavItem to="/reports" icon={Megaphone}>Reports</NavItem>
-            <NavItem to="/announcementsView" icon={Megaphone}>Announcements</NavItem>
-
+            <NavItem to="/announcementsView" icon={Megaphone}>View Announcements</NavItem>
+            <NavItem to="/announcementsHF" icon={Megaphone}>Manage Announcements</NavItem>
           </>
         );
 
@@ -514,7 +514,8 @@ const Layout = () => {
             <NavItem to="/assignments/auto/regular" icon={FileSpreadsheet}>Regular Assignment</NavItem>
             <NavItem to="/complaintsCH" icon={AlertTriangle}>Complaints</NavItem>
             <NavItem to="/reportsCH" icon={TrendingUp}>Reports</NavItem>
-            <NavItem to="/announcementsCH" icon={Megaphone}>Announcements</NavItem>
+            <NavItem to="/announcementsCH" icon={Megaphone}>Manage Announcements</NavItem>
+            <NavItem to="/announcementsViewByCH" icon={Megaphone}>View Announcements</NavItem>
           </>
         );
 
@@ -536,7 +537,8 @@ const Layout = () => {
 
             <NavItem to="/complaintsCOC" icon={AlertTriangle}>Complaints</NavItem>
             <NavItem to="/reportsCOC" icon={TrendingUp}>Reports</NavItem>
-            <NavItem to="/announcementsCOC" icon={Megaphone}>Announcements</NavItem>
+            <NavItem to="/announcementsCOC" icon={Megaphone}>Manage Announcements</NavItem>
+            <NavItem to="/announcementsViewByCOC" icon={Megaphone}>View Announcements</NavItem>
           </>
         );
 
