@@ -115,6 +115,7 @@ const AppRoutes = () => {
 
             {/* COC Protected Routes */}
             <Route element={<ProtectedRoute allowedRoles={["COC"]} />}>
+              <Route path="/coursesCOC" element={<CoursesCH />} />
               <Route path="/assignments/auto/common" element={<CommonCoursesCOC />} />
               <Route path="/assignments/auto/extension" element={<ExtensionCoursesCOC />} />
               <Route path="/assignments/auto/summer" element={<SummerCoursesCOC />} />

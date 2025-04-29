@@ -523,7 +523,7 @@ const Layout = () => {
         return (
           <>
             <NavItem to="/dashboard" icon={PieChart}>Dashboard</NavItem>
-
+            <NavItem to="/coursesCOC" icon={AlertTriangle}>Course Management</NavItem>
             <NavGroup
               title="Course Assignments"
               icon={FileSpreadsheet}
@@ -534,7 +534,7 @@ const Layout = () => {
               <SubNavItem to="/assignments/auto/extension">Extension Courses</SubNavItem>
               <SubNavItem to="/assignments/auto/summer">Summer Courses</SubNavItem>
             </NavGroup>
-
+            
             <NavItem to="/complaintsCOC" icon={AlertTriangle}>Complaints</NavItem>
             <NavItem to="/reportsCOC" icon={TrendingUp}>Reports</NavItem>
             <NavItem to="/announcementsCOC" icon={Megaphone}>Manage Announcements</NavItem>

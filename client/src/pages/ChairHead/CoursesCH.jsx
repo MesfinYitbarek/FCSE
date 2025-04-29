@@ -33,6 +33,8 @@ import { toast } from "react-hot-toast";
 const CoursesCH = () => {
   const { user } = useSelector((state) => state.auth);
   const [courses, setCourses] = useState([]);
+  const getChairValue = () => (user.role === "COC" ? user.role : user.chair);
+
   const [form, setForm] = useState({
     name: "",
     code: "",
@@ -44,7 +46,7 @@ const CoursesCH = () => {
     lecture: 2,
     lab: 1,
     tutorial: 0,
-    chair: user.chair,
+    chair: getChairValue(),
     likeness: "",
     location: "",
   });
@@ -93,9 +95,19 @@ const CoursesCH = () => {
   const fetchCourses = async () => {
     setLoading(true);
     setError(null);
+  
     try {
-      const { data } = await api.get(`/courses/${user.chair}`);
-      setCourses(data);
+      let response;
+      
+      if (user.role === "ChairHead") {
+        // Fetch courses based on chair
+        response = await api.get(`/courses/${user.chair}`);
+      } else {
+        // Fetch all courses
+        response = await api.get("/courses");
+      }
+  
+      setCourses(response.data);
     } catch (err) {
       console.error("Error fetching courses:", err);
       setError("Failed to load courses. Please try again.");
@@ -104,6 +116,7 @@ const CoursesCH = () => {
       setLoading(false);
     }
   };
+  
 
   // Categorize courses based on department
   const categorizedCourses = {
@@ -146,19 +159,19 @@ const CoursesCH = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-
-    // Process likeness string to array
+  
     const formData = {
       ...form,
-      likeness: form.likeness ? form.likeness.split(',').map(item => item.trim()) : []
+      likeness: form.likeness ? form.likeness.split(',').map(item => item.trim()) : [],
+      chair: getChairValue(),
     };
-
+  
     try {
       if (selectedCourse) {
-        await api.put(`/courses/${selectedCourse._id}`, { ...formData, chair: user.chair });
+        await api.put(`/courses/${selectedCourse._id}`, formData);
         toast.success("Course updated successfully");
       } else {
-        await api.post("/courses", { ...formData, chair: user.chair });
+        await api.post("/courses", formData);
         toast.success("Course added successfully");
       }
       fetchCourses();
@@ -187,7 +200,7 @@ const CoursesCH = () => {
       lecture: 2,
       lab: 1,
       tutorial: 0,
-      chair: user.chair,
+      chair: getChairValue(),
       likeness: "",
       location: "",
     });
