@@ -273,7 +273,7 @@ const Layout = () => {
       }
 
       // Navigate to announcements page with the clicked announcement highlighted
-      navigate(user.role == "Instructor" ? `/announcementsInst`: user.role =="HeadOfFaculty" ? "/announcementsView" :user.role =="COC"? "/announcementsView" : "/announcementsView", { state: { highlightId: announcement._id } });
+      navigate(user.role == "Instructor" ? `/announcementsInst`: user.role =="HeadOfFaculty" ? "/announcementsView" :user.role =="COC"? "/announcementsViewByCOC" : "/announcementsViewByCH", { state: { highlightId: announcement._id } });
       setIsNotificationOpen(false);
     } catch (error) {
       console.error("Error handling announcement click:", error);
