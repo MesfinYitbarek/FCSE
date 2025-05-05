@@ -33,7 +33,10 @@ import {
   ChevronRight,
   ChevronLeft,
   MoreHorizontal,
-  Info
+  Info,
+  UserX,
+  ToggleLeft,
+  ToggleRight,
 } from "lucide-react";
 
 dayjs.extend(relativeTime);
@@ -47,7 +50,8 @@ const UsersManagement = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filters, setFilters] = useState({
     role: "",
-    chair: ""
+    chair: "",
+    active: ""
   });
   
   const [sortConfig, setSortConfig] = useState({
@@ -72,7 +76,8 @@ const UsersManagement = () => {
     chair: "",
     rank: "",
     position: "",
-    location: ""
+    location: "",
+    active: true
   });
   const [showPassword, setShowPassword] = useState(false);
   const [formErrors, setFormErrors] = useState({});
@@ -184,6 +189,10 @@ const UsersManagement = () => {
     if (filters.chair) {
       result = result.filter(user => user.chair === filters.chair);
     }
+    if (filters.active !== "") {
+      const isActive = filters.active === "active";
+      result = result.filter(user => user.active === isActive);
+    }
 
     // Apply sorting
     if (sortConfig.key) {
@@ -231,7 +240,7 @@ const UsersManagement = () => {
 
   const resetFilters = () => {
     setSearchTerm("");
-    setFilters({ role: "", chair: "" });
+    setFilters({ role: "", chair: "", active: "" });
     if (searchInputRef.current) {
       searchInputRef.current.focus();
     }
@@ -268,6 +277,7 @@ const UsersManagement = () => {
         rank: newUserData.rank || userData.rank || "",
         position: newUserData.position || userData.position || "",
         location: newUserData.location || userData.location || "",
+        active: newUserData.active !== undefined ? newUserData.active : userData.active !== undefined ? userData.active : true,
         createdAt: newUserData.createdAt || new Date().toISOString()
       };
       
@@ -352,6 +362,24 @@ const UsersManagement = () => {
     }
   };
 
+  const toggleUserActive = async (userId, currentActiveState) => {
+    setLoading(true);
+    try {
+      const response = await api.put(`/users/${userId}`, { active: !currentActiveState });
+      
+      setUsers(prev => 
+        prev.map(u => u._id === userId ? { ...u, active: !currentActiveState } : u)
+      );
+      
+      toast.success(`User ${!currentActiveState ? 'activated' : 'deactivated'} successfully`);
+    } catch (err) {
+      console.error("Error toggling user active status:", err);
+      toast.error("Failed to update user status");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const validateForm = (isEdit = false) => {
     const errors = {};
     
@@ -401,7 +429,8 @@ const UsersManagement = () => {
       chair: "",
       rank: "",
       position: "",
-      location: ""
+      location: "",
+      active: true
     });
     setFormErrors({});
     setShowPassword(false);
@@ -420,7 +449,8 @@ const UsersManagement = () => {
       chair: user.chair || "",
       rank: user.rank || "",
       position: user.position || "",
-      location: user.location || ""
+      location: user.location || "",
+      active: user.active !== undefined ? user.active : true
     });
     setIsEditUserOpen(true);
   };
@@ -436,8 +466,11 @@ const UsersManagement = () => {
   };
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setNewUser(prev => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    setNewUser(prev => ({ 
+      ...prev, 
+      [name]: type === 'checkbox' ? checked : value 
+    }));
     
     // Clear validation error when field is edited
     if (formErrors[name]) {
@@ -467,6 +500,12 @@ const UsersManagement = () => {
     }
   };
 
+  const getStatusBadgeColor = (isActive) => {
+    return isActive
+      ? "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300"
+      : "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300";
+  };
+
   const getRoleIcon = (role) => {
     switch (role) {
       case "HeadOfFaculty":
@@ -493,6 +532,7 @@ const UsersManagement = () => {
       "Rank", 
       "Position", 
       "Location", 
+      "Status",
       "Created At"
     ];
     
@@ -512,6 +552,7 @@ const UsersManagement = () => {
         `"${user.rank || ''}"`,
         `"${user.position || ''}"`,
         `"${user.location || ''}"`,
+        `"${user.active !== undefined ? (user.active ? 'Active' : 'Inactive') : 'Active'}"`,
         `"${user.createdAt ? dayjs(user.createdAt).format('YYYY-MM-DD') : ''}"`,
       ];
       csvRows.push(values.join(','));
@@ -627,9 +668,9 @@ const UsersManagement = () => {
                 >
                   <Filter className="w-4 h-4 mr-1.5" />
                   {isMobile ? "" : "Filters"}
-                  {(filters.role || filters.chair) && (
+                  {(filters.role || filters.chair || filters.active !== "") && (
                     <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-300">
-                      {Object.values(filters).filter(Boolean).length}
+                      {Object.values(filters).filter(val => val !== "").length}
                     </span>
                   )}
                 </button>
@@ -685,6 +726,22 @@ const UsersManagement = () => {
                             ))}
                           </select>
                         </div>
+
+                        {/* Status filter */}
+                        <div>
+                          <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
+                            Status
+                          </label>
+                          <select
+                            value={filters.active}
+                            onChange={(e) => handleFilterChange("active", e.target.value)}
+                            className="bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white text-sm rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block w-full p-2"
+                          >
+                            <option value="">All Status</option>
+                            <option value="active">Active</option>
+                            <option value="inactive">Inactive</option>
+                          </select>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -704,7 +761,7 @@ const UsersManagement = () => {
         </div>
 
         {/* Active filters */}
-        {(searchTerm || filters.role || filters.chair) && (
+        {(searchTerm || filters.role || filters.chair || filters.active !== "") && (
           <div className="px-3 sm:px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="text-xs font-medium text-gray-500 dark:text-gray-400">Filters:</span>
@@ -744,6 +801,18 @@ const UsersManagement = () => {
                   </button>
                 </span>
               )}
+
+              {filters.active !== "" && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/60 text-green-800 dark:text-green-300">
+                  Status: {filters.active === "active" ? "Active" : "Inactive"}
+                  <button
+                    onClick={() => handleFilterChange("active", "")}
+                    className="ml-1 text-green-600 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300"
+                  >
+                    <X size={12} />
+                  </button>
+                </span>
+              )}
               
               <button
                 onClick={resetFilters}
@@ -768,12 +837,12 @@ const UsersManagement = () => {
             <Users className="h-10 w-10 text-gray-400 dark:text-gray-500 mx-auto mb-2" />
             <h3 className="text-base sm:text-lg font-medium text-gray-900 dark:text-white mb-1">No users found</h3>
             <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
-              {searchTerm || filters.role || filters.chair
+              {searchTerm || filters.role || filters.chair || filters.active !== ""
                 ? "Try adjusting your search or filters"
                 : "Add your first user to get started"}
             </p>
             
-            {searchTerm || filters.role || filters.chair ? (
+            {searchTerm || filters.role || filters.chair || filters.active !== "" ? (
               <button
                 onClick={resetFilters}
                 className="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 border border-gray-300 dark:border-gray-600 shadow-sm text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
@@ -831,6 +900,9 @@ const UsersManagement = () => {
                           {user.role === "HeadOfFaculty" ? "HoF" : 
                            user.role === "ChairHead" ? "Chair" : 
                            user.role}
+                        </span>
+                        <span className={`ml-1 inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeColor(user.active !== undefined ? user.active : true)}`}>
+                          {user.active !== undefined ? (user.active ? "Active" : "Inactive") : "Active"}
                         </span>
                       </div>
                       <div className="flex items-center justify-end">
@@ -895,6 +967,16 @@ const UsersManagement = () => {
                         <div className="flex items-center">
                           <span>Chair</span>
                           <div className="ml-1">{getSortIcon('chair')}</div>
+                        </div>
+                      </th>
+                      <th 
+                        scope="col" 
+                        className="px-3 py-2.5 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer"
+                        onClick={() => requestSort('active')}
+                      >
+                        <div className="flex items-center">
+                          <span>Status</span>
+                          <div className="ml-1">{getSortIcon('active')}</div>
                         </div>
                       </th>
                       <th 
@@ -968,6 +1050,28 @@ const UsersManagement = () => {
                               <span className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[100px]">{user.location}</span>
                             </div>
                           )}
+                        </td>
+                        <td className="px-3 py-2.5 whitespace-nowrap">
+                          <button
+                            onClick={() => toggleUserActive(user._id, user.active !== undefined ? user.active : true)}
+                            className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium ${user.active !== undefined ? (user.active ? "text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50" : "text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-900/50") : "text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30 hover:bg-green-200 dark:hover:bg-green-900/50"}`}
+                          >
+                            {user.active !== undefined ? (
+                              user.active ? (
+                                <>
+                                  <UserCheck className="w-3 h-3 mr-1" /> Active
+                                </>
+                              ) : (
+                                <>
+                                  <UserX className="w-3 h-3 mr-1" /> Inactive
+                                </>
+                              )
+                            ) : (
+                              <>
+                                <UserCheck className="w-3 h-3 mr-1" /> Active
+                              </>
+                            )}
+                          </button>
                         </td>
                         <td className="px-3 py-2.5 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400 hidden md:table-cell">
                           <div className="flex items-center">
@@ -1190,6 +1294,36 @@ const UsersManagement = () => {
                              selectedUser?.role}
                           </span>
                         </p>
+                      </div>
+                    </div>
+
+                    <div className="flex items-start">
+                      <div className={`w-4 h-4 mt-0.5 mr-2 ${selectedUser?.active !== undefined ? (selectedUser.active ? "text-green-500" : "text-red-500") : "text-green-500"}`}>
+                        {selectedUser?.active !== undefined ? (
+                          selectedUser.active ? <UserCheck size={16} /> : <UserX size={16} />
+                        ) : (
+                          <UserCheck size={16} />
+                        )}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900 dark:text-white">Status</p>
+                        <div className="flex items-center">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusBadgeColor(selectedUser?.active !== undefined ? selectedUser.active : true)}`}>
+                            {selectedUser?.active !== undefined ? (selectedUser.active ? "Active" : "Inactive") : "Active"}
+                          </span>
+                          <button 
+                            onClick={() => {
+                              toggleUserActive(selectedUser._id, selectedUser.active !== undefined ? selectedUser.active : true);
+                              setSelectedUser(prev => ({
+                                ...prev,
+                                active: prev.active !== undefined ? !prev.active : false
+                              }));
+                            }}
+                            className="ml-2 text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300"
+                          >
+                            {selectedUser?.active !== undefined ? (selectedUser.active ? "Deactivate" : "Activate") : "Deactivate"}
+                          </button>
+                        </div>
                       </div>
                     </div>
                     
@@ -1480,6 +1614,39 @@ const UsersManagement = () => {
                         ))}
                       </select>
                     </div>
+
+                    {/* Status field */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Status
+                      </label>
+                      <div className="flex items-center mt-1 space-x-2">
+                        <button
+                          type="button"
+                          onClick={() => setNewUser(prev => ({ ...prev, active: true }))}
+                          className={`flex-1 inline-flex justify-center items-center px-3 py-2 rounded text-sm font-medium ${
+                            newUser.active 
+                              ? "bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300 border border-green-300 dark:border-green-700" 
+                              : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600"
+                          }`}
+                        >
+                          <UserCheck className="w-4 h-4 mr-1.5" />
+                          Active
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setNewUser(prev => ({ ...prev, active: false }))}
+                          className={`flex-1 inline-flex justify-center items-center px-3 py-2 rounded text-sm font-medium ${
+                            !newUser.active 
+                              ? "bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-300 border border-red-300 dark:border-red-700" 
+                              : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600"
+                          }`}
+                        >
+                          <UserX className="w-4 h-4 mr-1.5" />
+                          Inactive
+                        </button>
+                      </div>
+                    </div>
                     
                     {/* Position field */}
                     <div>
@@ -1758,6 +1925,39 @@ const UsersManagement = () => {
                           </option>
                         ))}
                       </select>
+                    </div>
+
+                    {/* Status field */}
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                        Status
+                      </label>
+                      <div className="flex items-center mt-1 space-x-2">
+                        <button
+                          type="button"
+                          onClick={() => setNewUser(prev => ({ ...prev, active: true }))}
+                          className={`flex-1 inline-flex justify-center items-center px-3 py-2 rounded text-sm font-medium ${
+                            newUser.active 
+                              ? "bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-300 border border-green-300 dark:border-green-700" 
+                              : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600"
+                          }`}
+                        >
+                          <UserCheck className="w-4 h-4 mr-1.5" />
+                          Active
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setNewUser(prev => ({ ...prev, active: false }))}
+                          className={`flex-1 inline-flex justify-center items-center px-3 py-2 rounded text-sm font-medium ${
+                            !newUser.active 
+                              ? "bg-red-100 dark:bg-red-900/50 text-red-800 dark:text-red-300 border border-red-300 dark:border-red-700" 
+                              : "bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 border border-gray-300 dark:border-gray-600"
+                          }`}
+                        >
+                          <UserX className="w-4 h-4 mr-1.5" />
+                          Inactive
+                        </button>
+                      </div>
                     </div>
                     
                     {/* Position field */}

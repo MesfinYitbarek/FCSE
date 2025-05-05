@@ -11,6 +11,7 @@ const userSchema = new mongoose.Schema({
   rank: String,
   position: String,
   location: String,
+  active: { type: Boolean, default: true },
   createdAt: { type: Date, default: Date.now }
 });
 

@@ -32,7 +32,8 @@ const PreferenceForm = () => {
     submissionEnd: "",
     courses: [],
     instructors: [],
-    allInstructors: false
+    allInstructors: false,
+    excludedInstructors: [] // For tracking instructors excluded when "Select All" is checked
   });
   const [courses, setCourses] = useState([]);
   const [instructors, setInstructors] = useState([]);
@@ -56,7 +57,9 @@ const PreferenceForm = () => {
   const [filterChair, setFilterChair] = useState(user.chair);
   const [isFiltered, setIsFiltered] = useState(false);
   const [chairs, setChairs] = useState([]);
-  const [departments, setDepartments] = useState([]);
+  
+  // Specific departments for filtering
+  const departments = ["Computer Science", "Information Technology", "Software Engineering"];
 
   // Mobile responsiveness
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
@@ -78,7 +81,6 @@ const PreferenceForm = () => {
       try {
         const { data } = await api.get("/chairs");
         setChairs(data);
-        setDepartments([...new Set(data.map(chair => chair.department))]);
       } catch (error) {
         console.error("Error fetching chairs:", error);
       }
@@ -225,22 +227,51 @@ const PreferenceForm = () => {
   // Handle instructor selection
   const handleInstructorSelection = (instructorId) => {
     if (formData.allInstructors) {
-      return; // Do nothing if "All Instructors" is selected
+      // When "Select All" is enabled, we manage exclusions instead
+      const updatedExcludedInstructors = formData.excludedInstructors.includes(instructorId)
+        ? formData.excludedInstructors.filter(id => id !== instructorId) // Remove from exclusions (select)
+        : [...formData.excludedInstructors, instructorId]; // Add to exclusions (unselect)
+      
+      setFormData({ ...formData, excludedInstructors: updatedExcludedInstructors });
+    } else {
+      // Normal behavior when "Select All" is off
+      const updatedInstructors = formData.instructors.includes(instructorId)
+        ? formData.instructors.filter((id) => id !== instructorId)
+        : [...formData.instructors, instructorId];
+      
+      setFormData({ ...formData, instructors: updatedInstructors });
     }
-    
-    const updatedInstructors = formData.instructors.includes(instructorId)
-      ? formData.instructors.filter((id) => id !== instructorId)
-      : [...formData.instructors, instructorId];
-    setFormData({ ...formData, instructors: updatedInstructors });
   };
 
   // Handle "All Instructors" toggle
   const handleAllInstructorsToggle = () => {
-    setFormData({
-      ...formData,
-      allInstructors: !formData.allInstructors,
-      instructors: [] // Clear selected instructors when toggling "All"
-    });
+    if (formData.allInstructors) {
+      // Turning off "Select All"
+      setFormData({
+        ...formData,
+        allInstructors: false,
+        excludedInstructors: [] // Clear exclusions
+      });
+    } else {
+      // Turning on "Select All"
+      setFormData({
+        ...formData,
+        allInstructors: true,
+        excludedInstructors: [], // Start with no exclusions
+        instructors: [] // Clear selected instructors since we're using all now
+      });
+    }
+  };
+
+  // Check if instructor is selected considering both normal selection and exclusions
+  const isInstructorSelected = (instructorId) => {
+    if (formData.allInstructors) {
+      // When "Select All" is on, instructors are selected unless excluded
+      return !formData.excludedInstructors.includes(instructorId);
+    } else {
+      // Normal behavior
+      return formData.instructors.includes(instructorId);
+    }
   };
 
   // Reset filters
@@ -291,9 +322,22 @@ const PreferenceForm = () => {
         }
       });
       
+      // Prepare the list of instructors based on the selection mode
+      let finalInstructors;
+      if (formData.allInstructors) {
+        // When using "Select All", we use all instructors except the excluded ones
+        finalInstructors = instructors
+          .filter(instructor => !formData.excludedInstructors.includes(instructor._id))
+          .map(instructor => instructor._id);
+      } else {
+        // Use explicitly selected instructors
+        finalInstructors = formData.instructors;
+      }
+      
       const dataToSubmit = {
         ...formData,
         courses: formattedCourses,
+        instructors: finalInstructors,
         chair: filterChair || user.chair
       };
       
@@ -314,7 +358,8 @@ const PreferenceForm = () => {
         submissionEnd: "",
         courses: [],
         instructors: [],
-        allInstructors: false
+        allInstructors: false,
+        excludedInstructors: []
       });
       setSelectedCourseDetails({});
       setSelectedForm(null);
@@ -368,6 +413,16 @@ const PreferenceForm = () => {
     
     setSelectedCourseDetails(courseDetailsMap);
     
+    // Calculate excluded instructors if allInstructors is true
+    let excludedInstructorIds = [];
+    if (form.allInstructors) {
+      // If all instructors are enabled, calculate which ones are excluded
+      const selectedInstructorIds = form.instructors.map(instructor => instructor._id || instructor);
+      excludedInstructorIds = instructors
+        .filter(instructor => !selectedInstructorIds.includes(instructor._id))
+        .map(instructor => instructor._id);
+    }
+    
     setFormData({
       year: form.year,
       semester: form.semester,
@@ -376,7 +431,8 @@ const PreferenceForm = () => {
       submissionEnd: form.submissionEnd,
       courses: coursesWithDetails,
       instructors: form.instructors.map(instructor => instructor._id || instructor),
-      allInstructors: form.allInstructors || false
+      allInstructors: form.allInstructors || false,
+      excludedInstructors: excludedInstructorIds
     });
     
     setOpenModal(true);
@@ -522,7 +578,8 @@ const PreferenceForm = () => {
               submissionEnd: "",
               courses: [],
               instructors: [],
-              allInstructors: false
+              allInstructors: false,
+              excludedInstructors: []
             });
             setSelectedCourseDetails({});
             setOpenModal(true);
@@ -953,32 +1010,26 @@ const PreferenceForm = () => {
                     </label>
                   </div>
                   
-                  {/* Instructor selection (disabled if "All Instructors" is checked) */}
-                  <div className={`max-h-48 overflow-y-auto p-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-md ${formData.allInstructors ? 'opacity-50' : ''}`}>
+                  {/* Instructor selection list */}
+                  <div className="max-h-48 overflow-y-auto p-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-md">
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                       {instructors.length > 0 ? instructors.map((instructor) => (
                         <div key={instructor._id} className="flex items-center space-x-2">
                           <div 
-                            onClick={() => !formData.allInstructors && handleInstructorSelection(instructor._id)}
+                            onClick={() => handleInstructorSelection(instructor._id)}
                             className={`flex h-5 w-5 items-center justify-center border rounded cursor-pointer transition-colors ${
-                              formData.allInstructors 
-                                ? 'bg-gray-200 dark:bg-gray-700 border-gray-300 dark:border-gray-600' 
-                                : formData.instructors.includes(instructor._id) 
-                                  ? 'bg-indigo-500 border-indigo-500' 
-                                  : 'border-gray-300 dark:border-gray-600'
+                              isInstructorSelected(instructor._id)
+                                ? 'bg-indigo-500 border-indigo-500' 
+                                : 'border-gray-300 dark:border-gray-600'
                             }`}
                           >
-                            {(formData.allInstructors || formData.instructors.includes(instructor._id)) && (
-                              <Check size={14} className={formData.allInstructors ? 'text-gray-500 dark:text-gray-400' : 'text-white'} />
+                            {isInstructorSelected(instructor._id) && (
+                              <Check size={14} className="text-white" />
                             )}
                           </div>
                           <label
-                            onClick={() => !formData.allInstructors && handleInstructorSelection(instructor._id)}
-                            className={`text-sm truncate cursor-pointer ${
-                              formData.allInstructors 
-                                ? 'text-gray-500 dark:text-gray-400' 
-                                : 'text-gray-700 dark:text-gray-300'
-                            }`}
+                            onClick={() => handleInstructorSelection(instructor._id)}
+                            className="text-sm text-gray-700 dark:text-gray-300 truncate cursor-pointer"
                           >
                             {instructor.fullName}
                           </label>

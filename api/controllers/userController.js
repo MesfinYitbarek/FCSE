@@ -10,7 +10,7 @@ dotenv.config();
 // User signup
 export const signup = async (req, res) => {
   try {
-    const { fullName, username, email, password, role, phone, chair,rank, position, location } = req.body;
+    const { fullName, username, email, password, role, phone, chair, rank, position, location, active } = req.body;
     const hashedPassword = await bcrypt.hash(password, 10);
     
     const newUser = new User({
@@ -24,6 +24,7 @@ export const signup = async (req, res) => {
       rank,
       position,
       location,
+      active: active !== undefined ? active : true, // Use provided active status or default to true
     });
     
     await newUser.save();
@@ -40,6 +41,9 @@ export const login = async (req, res) => {
     const user = await User.findOne({ username });
     if (!user) return res.status(400).json({ message: "User not found" });
 
+    // Check if user account is active
+    if (!user.active) return res.status(403).json({ message: "Account is inactive. Please contact administrator." });
+
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
 
@@ -47,16 +51,6 @@ export const login = async (req, res) => {
     res.json({ token, user });
   } catch (error) {
     res.status(500).json({ message: "Error logging in", error });
-  }
-};
-
-// Get all users
-export const getUsers = async (req, res) => {
-  try {
-    const users = await User.find();
-    res.json(users);
-  } catch (error) {
-    res.status(500).json({ message: "Error fetching users", error });
   }
 };
 
@@ -68,6 +62,16 @@ export const updateUser = async (req, res) => {
     res.json({ message: "User updated successfully", user: updatedUser });
   } catch (error) {
     res.status(500).json({ message: "Error updating user", error });
+  }
+};
+
+// Get all users
+export const getUsers = async (req, res) => {
+  try {
+    const users = await User.find();
+    res.json(users);
+  } catch (error) {
+    res.status(500).json({ message: "Error fetching users", error });
   }
 };
 
