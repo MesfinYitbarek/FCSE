@@ -1,6 +1,6 @@
 import express from "express";
 import { check } from 'express-validator';
-import { signup, login, getUsers, updateUser, resetPassword, confirmReset, getUserByChair, getUserByRole, deleteUser, changePassword, getUserStatistics } from "../controllers/userController.js";
+import { signup, login, getUsers, updateUser,getUserByChair, getUserByRole, deleteUser, changePassword, getUserStatistics } from "../controllers/userController.js";
 import { authenticate } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
@@ -27,8 +27,5 @@ router.get("/role/:role", getUserByRole);
 
 router.put("/:id", updateUser);
 router.delete("/:id", deleteUser);
-router.post("/reset-password", resetPassword);
-router.post("/confirm-reset", confirmReset);
-
 
 export default router;

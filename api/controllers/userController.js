@@ -2,8 +2,6 @@ import User from "../models/User.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
-import { sendEmail } from "../utils/emailService.js";
-import { generateResetToken, validateResetToken } from "../utils/tokenService.js";
 import { validationResult } from "express-validator";
 dotenv.config();
 
@@ -57,8 +55,18 @@ export const login = async (req, res) => {
 // Update user details
 export const updateUser = async (req, res) => {
   try {
-    const updatedUser = await User.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const updates = { ...req.body };
+
+    // Check if password is being updated
+    if (updates.password) {
+      const salt = await bcrypt.genSalt(10);
+      updates.password = await bcrypt.hash(updates.password, salt);
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(req.params.id, updates, { new: true });
+
     if (!updatedUser) return res.status(404).json({ message: "User not found" });
+
     res.json({ message: "User updated successfully", user: updatedUser });
   } catch (error) {
     res.status(500).json({ message: "Error updating user", error });
@@ -84,34 +92,6 @@ export const deleteUser = async (req, res) => {
     res.status(500).json({ message: "Error deleting user", error });
   }
 };
-// Password Reset Route
-export const resetPassword = async (req, res) => {
-  try {
-    const { email } = req.body;
-    const token = generateResetToken(email);
-    await sendEmail(email, "Password Reset", `Your reset token: ${token}`);
-    res.json({ message: "Reset email sent" });
-  } catch (error) {
-    res.status(500).json({ message: "Error sending reset email", error });
-  }
-};
-
-// Confirm Password Reset Route
-export const confirmReset = async (req, res) => {
-  try {
-    const { token, newPassword } = req.body;
-    const email = validateResetToken(token);
-    if (!email) return res.status(400).json({ message: "Invalid or expired token" });
-    
-    const hashedPassword = await bcrypt.hash(newPassword, 10);
-    await User.findOneAndUpdate({ email }, { password: hashedPassword });
-    res.json({ message: "Password updated successfully" });
-  } catch (error) {
-    res.status(500).json({ message: "Error resetting password", error });
-  }
-};
-
-
 // Get course by chair
 export const getUserByChair = async (req, res) => {
   try {
