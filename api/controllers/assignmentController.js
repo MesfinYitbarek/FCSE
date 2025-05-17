@@ -8,6 +8,7 @@ import Position from "../models/Position.js";
 import mongoose from "mongoose";
 import User from "../models/User.js";
 import PreferenceForm from "../models/PreferenceForm.js";
+
 export const manualAssignment = async (req, res) => {
   try {
     const { assignments, year, semester, program, assignedBy } = req.body;
@@ -411,6 +412,7 @@ export const getAllAssignments = async (req, res) => {
   }
 };
 
+// get assignments using filtering
 export const getAutomaticAssignments = async (req, res) => {
   try {
     console.log("Received Query Params:", req.query);
@@ -526,39 +528,7 @@ export const getAssignmentById = async (req, res) => {
   }
 };
 
-export const getAssignmentsByFilters = async (req, res) => {
-  try {
-    const { year, semester, program } = req.query;
-
-    // ✅ Validate required filters
-    if (!year || !semester || !program) {
-      return res
-        .status(400)
-        .json({ message: "Year, semester, and program are required" });
-    }
-
-    // ✅ Convert year to a number for strict comparison
-    const numericYear = Number(year);
-    if (isNaN(numericYear)) {
-      return res.status(400).json({ message: "Year must be a valid number" });
-    }
-
-    // ✅ Query assignments based on filters
-    const assignments = await Assignment.find({
-      year: numericYear,
-      semester,
-      program,
-    })
-      .populate("instructorId", "userId name") // Fetch instructor details
-      .populate("courseId", "name"); // Fetch course details
-
-    res.json(assignments);
-  } catch (error) {
-    console.error("Error fetching assignments:", error);
-    res.status(500).json({ message: "Error fetching assignments", error });
-  }
-};
-
+// Automatic Assignment for Regular Courses
 export const runAutomaticAssignment = async (req, res) => {
   try {
     const { year, semester, program, assignedBy } = req.body;
@@ -925,7 +895,9 @@ export const runAutomaticAssignment = async (req, res) => {
     console.error("Error in automatic assignment:", error);
     res.status(500).json({ message: "Error in automatic assignment", error });
   }
-}; // Automatic Assignment for Common Courses
+}; 
+
+// Automatic Assignment for Common Courses
 export const autoAssignCommonCourses = async (req, res) => {
   try {
     console.log("Starting auto assignment process...");
@@ -1138,7 +1110,6 @@ export const autoAssignCommonCourses = async (req, res) => {
       .json({ message: "Error in auto assignment", error: error.message });
   }
 };
-
 
 // Automatic Assignment for Extension Courses
 export const autoAssignExtensionCourses = async (req, res) => {
