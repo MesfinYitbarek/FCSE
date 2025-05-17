@@ -12,7 +12,6 @@ import {
   PlusCircle, 
   Calendar,
   FileText,
-  Layers,
   Clock,
   User,
   AlertCircle

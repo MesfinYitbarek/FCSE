@@ -1,5 +1,5 @@
 import crypto from "crypto";
-// Password Reset Token Store
+
 export const resetTokens = new Map();
 
 export const generateResetToken = (email) => {
@@ -14,6 +14,6 @@ export const validateResetToken = (token) => {
     resetTokens.delete(token);
     return null;
   }
-  resetTokens.delete(token); // Invalidate after use
+  resetTokens.delete(token); 
   return data.email;
 };

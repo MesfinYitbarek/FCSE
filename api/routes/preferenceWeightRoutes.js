@@ -14,10 +14,9 @@ import { authenticate, authorize } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// Preference Weight Routes
 router.post("/", authenticate, authorize(["HeadOfFaculty"]), createPreferenceWeight);
 router.get("/", authenticate, getPreferenceWeights);
-router.put("/:id", authenticate, authorize(["HeadOfFaculty"]), updatePreferenceWeight); // Update preference weight
+router.put("/:id", authenticate, authorize(["HeadOfFaculty"]), updatePreferenceWeight); 
 router.delete("/:id", authenticate, deletePreferenceWeight)
 
 

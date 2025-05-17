@@ -1,4 +1,3 @@
-// routes/reportRoutes.js
 import express from "express";
 import {
   createReport,

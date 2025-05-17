@@ -3,7 +3,7 @@ import jwt from "jsonwebtoken";
 // Middleware for authentication
 export const authenticate = (req, res, next) => {
   const token = req.header("Authorization");
-  console.log("Received Token:", token); // Debugging
+  console.log("Received Token:", token); 
   if (!token) return res.status(401).json({ message: "Access Denied" });
 
   try {
@@ -11,7 +11,7 @@ export const authenticate = (req, res, next) => {
     req.user = verified;
     next();
   } catch (err) {
-    console.error("Token verification error:", err); // Debugging
+    console.error("Token verification error:", err); 
     res.status(400).json({ message: "Invalid Token" });
   }
 };

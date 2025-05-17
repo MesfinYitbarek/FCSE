@@ -79,7 +79,6 @@ export const createReport = async (req, res) => {
 
 
 // Get all reports
-// Updated getAllReports to filter by year, semester, and program
 export const getAllReports = async (req, res) => {
   try {
     const { year, semester, program } = req.query;

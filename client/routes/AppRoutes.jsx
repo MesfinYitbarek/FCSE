@@ -5,9 +5,6 @@ import { Toaster } from "react-hot-toast";
 
 
 import ProtectedRoute from "./ProtectedRoutes";
-
-//import NotFound from "./pages/NotFound";
-//import LoadingScreen from "./components/LoadingScreen";
 import Layout from "@/components/Sidebar";
 import Login from "@/pages/Login";
 import DashboardHF from "@/pages/HeadOfFaculty/DashboardHF";
@@ -32,8 +29,8 @@ import ExtensionCoursesCOC from "@/pages/COC/ExtensionCoursesCOC";
 import SummerCoursesCOC from "@/pages/COC/SummerCoursesCOC";
 import ComplaintsCOC from "@/pages/COC/ComplaintsCOC";
 import ReportDashboard from "@/pages/COC/ReportDashboard";
-import CreateReport from "@/pages/COC/ReportsCOC";
-import EditReport from "@/pages/COC/EditReport";
+import CreateReport from "@/components/ReportsCOC/ReportsCOC";
+import EditReport from "@/components/ReportsCOC/EditReport";
 import AnnouncementsCOC from "@/pages/COC/AnnouncementsCOC";
 import PreferencesInst from "@/pages/Instructor/PreferenceInst";
 import ComplaintsInst from "@/pages/Instructor/ComplaintsInst";
@@ -44,14 +41,13 @@ import PreferenceCH from "@/pages/ChairHead/PreferencesCH";
 import COCDashboard from "@/pages/COC/COCDashboard";
 import InstructorDashboard from "@/pages/Instructor/InstructorDashboard.jsx";
 import ReportsDetail from "@/components/ReportsHOF/ReportsDetail";
-import ReportDetailCOC from "@/pages/COC/ReportDetail";
+import ReportDetailCOC from "@/components/ReportsCOC/ReportDetail";
 
 const AppRoutes = () => {
   const { user, isLoading } = useSelector((state) => state.auth);
   const [appInitialized, setAppInitialized] = useState(false);
 
   useEffect(() => {
-    // Simulate initialization process
     const timer = setTimeout(() => {
       setAppInitialized(true);
     }, 1000);

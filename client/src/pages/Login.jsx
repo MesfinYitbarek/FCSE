@@ -20,7 +20,7 @@ const Login = () => {
 
   useEffect(() => {
     if (user) {
-      navigate("/dashboard", { replace: true }); // Ensures no back navigation to login
+      navigate("/dashboard", { replace: true }); 
     }
   }, [user, navigate]);
 

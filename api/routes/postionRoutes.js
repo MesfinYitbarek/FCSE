@@ -4,7 +4,6 @@ import { authenticate, authorize } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// Position Routes (Only Faculty Heads can manage positions)
 router.post("/", authenticate, authorize(["HeadOfFaculty"]), createPosition);
 router.get("/", authenticate, getPositions);
 router.put("/:id", authenticate, authorize(["HeadOfFaculty"]), updatePosition);

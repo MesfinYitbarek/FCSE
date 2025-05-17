@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState} from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { PlusCircle, BarChart2, Search, FileText, ChevronDown, X, Filter } from 'lucide-react';
-import ReportList from './ReportList';
-import ReportStats from './ReportStats';
+import { PlusCircle, BarChart2, Search, FileText,  X, Filter } from 'lucide-react';
+import ReportList from '../../components/ReportsCOC/ReportList';
+import ReportStats from '../../components/ReportsCOC/ReportStats';
 import api from '../../utils/api';
 
 // Define constants based on your schema

@@ -2,7 +2,7 @@
 import mongoose from "mongoose";
 import Instructor from "../models/Instructor.js";
 import User from "../models/User.js"
-// ✅ Create a new instructor
+// Create a new instructor
 export const createInstructor = async (req, res) => {
   try {
     const { userId } = req.body;
@@ -29,15 +29,15 @@ export const createInstructor = async (req, res) => {
   }
 };
 
-// ✅ Get all instructors for a specific chair
+// Get all instructors for a specific chair
 export const getInstructorsByChair = async (req, res) => {
   try {
     const { chair } = req.params;
 
-    // ✅ Get users who are Instructors in the chair
+    // Get users who are Instructors in the chair
     const users = await User.find({ chair, role: "Instructor" });
 
-    // ✅ Get instructor records linked to those users
+    // Get instructor records linked to those users
     const instructorIds = users.map(user => user._id);
     const instructors = await Instructor.find({ userId: { $in: instructorIds } }).populate("userId");
 
@@ -48,12 +48,12 @@ export const getInstructorsByChair = async (req, res) => {
   }
 };
 
-// ✅ Get all instructors
+// Get all instructors
 export const getInstructors = async (req, res) => {
   try {
     
     const users = await User.find({role: "Instructor" });
-    // ✅ Get instructor records linked to those users
+    //  Get instructor records linked to those users
     const instructorIds = users.map(user => user._id);
     const instructors = await Instructor.find({ userId: { $in: instructorIds } }).populate("userId");
 
@@ -64,7 +64,7 @@ export const getInstructors = async (req, res) => {
   }
 };
 
-// ✅ Update instructor details
+//  Update instructor details
 export const updateInstructor = async (req, res) => {
   try {
     const { id } = req.params;
@@ -79,7 +79,7 @@ export const updateInstructor = async (req, res) => {
   }
 };
 
-// ✅ Delete instructor
+//  Delete instructor
 export const deleteInstructor = async (req, res) => {
   try {
     const { id } = req.params;

@@ -1,4 +1,3 @@
-// server.js (Main Entry Point)
 import express from "express";
 import mongoose from "mongoose";
 import dotenv from "dotenv";
@@ -14,7 +13,6 @@ import preferenceFormRoutes from "./routes/preferenceFormRoutes.js";
 import assignmentRoutes from "./routes/assignmentRoutes.js";
 import complaintRoutes from "./routes/complaintRoutes.js";
 import chairRoutes from "./routes/chairRoutes.js";
-//import positionRoutes from "./routes/positionRoutes.js";
 import ruleRoutes from "./routes/ruleRoutes.js";
 import announcementRoutes from "./routes/announcementRoutes.js";
 import reportRoutes from "./routes/reportRoutes.js";

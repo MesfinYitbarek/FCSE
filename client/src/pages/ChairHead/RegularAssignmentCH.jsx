@@ -32,20 +32,19 @@ const RegularAssignmentCH = () => {
     }
   }, [showOptions, filters]);
 
-  // Fetch assignments from the API
   const fetchAssignments = async () => {
     try {
       setLoading(true);
-      // Update API call to include correct filter parameters
+ 
       const queryParams = new URLSearchParams({
         year: filters.year,
         semester: filters.semester,
-        program: "Regular", // Ensure program is included if needed
-        assignedBy: filters.chair // Ensure assignedBy matches backend expectations
+        program: "Regular", 
+        assignedBy: filters.chair 
       }).toString();
       
       const { data } = await api.get(`/assignments/automatic?${queryParams}`);
-      setAssignments(data.assignments); // Adjust response handling
+      setAssignments(data.assignments); 
     } catch (error) {
       console.error("Error fetching assignments:", error);
       setError("Failed to fetch assignments. Please try again.");

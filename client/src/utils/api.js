@@ -24,11 +24,11 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       console.warn("Session expired. Logging out...");
       
-      // ⚡ Remove token and user
+      // Remove token and user
       localStorage.removeItem("token");
       localStorage.removeItem("user");
 
-      // ⚡ Important: reload the page ONCE to reset app state
+      // reload the page ONCE to reset app state
       window.location.href = "/";
     }
 

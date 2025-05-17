@@ -2,8 +2,8 @@ import { useEffect, useState, useMemo } from "react";
 import api from "../../utils/api";
 import { useSelector } from "react-redux";
 import { 
-  Users, Plus, Search, Trash2, Filter, User, 
-  ArrowUpDown, ChevronDown, X, AlertCircle, Loader2 
+  Users, Plus, Search, Trash2,  User, 
+  ArrowUpDown,  X, AlertCircle, Loader2 
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 

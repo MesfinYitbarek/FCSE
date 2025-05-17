@@ -5,7 +5,6 @@ import { authenticate } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// User Authentication Routes
 router.post("/signup", signup);
 router.post("/login", login);
 router.post(
@@ -22,7 +21,7 @@ router.post(
   );
 router.get("/", getUsers);
 router.get("/statics", getUserStatistics);
-router.get("/users/:chair", getUserByChair); // Get users by chair
+router.get("/users/:chair", getUserByChair); 
 router.get("/role/:role", getUserByRole);
 
 router.put("/:id", updateUser);

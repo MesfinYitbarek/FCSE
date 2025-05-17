@@ -1,18 +1,17 @@
 import mongoose from "mongoose";
 
 const assignmentSchema = new mongoose.Schema({
-  year: { type: Number, required: true }, // Academic Year
-  semester: { type: String, enum: ["Regular 1", "Regular 2", "Summer", "Extension 1", "Extension 2"], required: true }, // Semester
-  program: { type: String, enum: ["Regular", "Common", "Extension", "Summer"], required: true }, // Program
-
+  year: { type: Number, required: true }, 
+  semester: { type: String, enum: ["Regular 1", "Regular 2", "Summer", "Extension 1", "Extension 2"], required: true }, 
+  program: { type: String, enum: ["Regular", "Common", "Extension", "Summer"], required: true }, 
   assignments: [
     {
-      instructorId: { type: mongoose.Schema.Types.ObjectId, ref: "Instructor", required: true }, // Instructor assigned
-      courseId: { type: mongoose.Schema.Types.ObjectId, ref: "Course", required: true }, // Course assigned
-      section: { type: String }, // Section information
+      instructorId: { type: mongoose.Schema.Types.ObjectId, ref: "Instructor", required: true }, 
+      courseId: { type: mongoose.Schema.Types.ObjectId, ref: "Course", required: true }, 
+      section: { type: String }, 
       NoOfSections: { type: Number },
-      labDivision: { type: String }, // Lab division, if applicable
-      workload: { type: Number, required: true }, // Workload assigned to instructor
+      labDivision: { type: String }, // Lab division, yes or no
+      workload: { type: Number, required: true }, 
       // Assignment reasoning fields
       score: { type: Number }, // Assignment score from algorithm
       preferenceRank: { type: Number }, // Instructor's preference rank for this course

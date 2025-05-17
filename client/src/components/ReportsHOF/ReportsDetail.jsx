@@ -13,8 +13,7 @@ import {
 import api from '@/utils/api';
 
 const ReportsDetail = () => {
-  const { reportId } = useParams();
-  
+  const { reportId } = useParams(); 
   const [report, setReport] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);

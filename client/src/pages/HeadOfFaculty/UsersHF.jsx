@@ -32,11 +32,8 @@ import {
   XCircle,
   ChevronRight,
   ChevronLeft,
-  MoreHorizontal,
   Info,
   UserX,
-  ToggleLeft,
-  ToggleRight,
 } from "lucide-react";
 
 dayjs.extend(relativeTime);

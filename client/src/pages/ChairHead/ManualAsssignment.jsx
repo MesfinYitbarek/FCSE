@@ -8,7 +8,6 @@ import {
   ChevronDown, 
   BookOpen,
   Users,
-  Award
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 

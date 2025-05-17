@@ -12,14 +12,13 @@ import { authenticate, authorize } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// Announcement Routes
 router.post("/", authenticate, authorize(["ChairHead", "HeadOfFaculty", "COC"]), createAnnouncement);
 router.get("/", authenticate, getAnnouncements);
 router.get("/publisher", authenticate, getAnnouncementsForPublisher);
 router.put("/:id", authenticate, authorize(["ChairHead", "HeadOfFaculty", "COC"]), updateAnnouncement);
 router.delete("/:id", authenticate, authorize(["HeadOfFaculty","ChairHead", "COC"]), deleteAnnouncement);
 
-// New routes for mark as read functionality and read statistics
+//routes for mark as read functionality and read statistics
 router.post("/:id/read", authenticate, markAnnouncementAsRead);
 router.get("/:id/stats", authenticate, authorize(["ChairHead", "HeadOfFaculty", "COC"]), getAnnouncementReadStats);
 

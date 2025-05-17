@@ -18,6 +18,6 @@ const router = express.Router();
 router.delete("/:id", authenticate, deleteCourseExperienceWeight)
 router.post("/", authenticate, authorize(["HeadOfFaculty"]), createCourseExperienceWeight);
 router.get("/", authenticate, getCourseExperienceWeights);
-router.put("/:id", authenticate, authorize(["HeadOfFaculty"]), updateCourseExperienceWeight); // Update course experience weight
+router.put("/:id", authenticate, authorize(["HeadOfFaculty"]), updateCourseExperienceWeight); 
 
 export default router;

@@ -4,7 +4,6 @@ import { authenticate, authorize } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// Chair Routes (Only Faculty Heads can manage chairs)
 router.post("/create", authenticate, authorize(["HeadOfFaculty"]), createChair);
 router.get("/", authenticate,authorize(["HeadOfFaculty","COC", "ChairHead"]), getChairs);
 router.get("/statics", authenticate, authorize(["HeadOfFaculty"]), getChairStatistics);

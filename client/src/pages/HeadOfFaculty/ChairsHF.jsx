@@ -16,8 +16,6 @@ import {
   SortAsc,
   SortDesc,
   Filter,
-  User,
-  ChevronRight
 } from "lucide-react";
 
 // Modal component using React Portal for more reliable rendering

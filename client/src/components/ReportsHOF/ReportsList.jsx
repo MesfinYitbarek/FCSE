@@ -6,7 +6,6 @@ import {
   ArrowUp,
   ArrowDown,
   Calendar,
-  Users,
   User,
   Briefcase,
   FileText

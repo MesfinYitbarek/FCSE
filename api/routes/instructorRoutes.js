@@ -4,7 +4,7 @@ import { authenticate, authorize } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// Instructor Routes
+
 router.post("/", authenticate, authorize(["HeadOfFaculty", "ChairHead"]), createInstructor);
 router.get("/chair/:chair", authenticate, getInstructorsByChair);
 router.get("/instructors", authenticate, getInstructors);

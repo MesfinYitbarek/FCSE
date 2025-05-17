@@ -1,4 +1,3 @@
-// assignmentRoutes.js
 import express from "express";
 import { 
   manualAssignment, 
@@ -17,7 +16,7 @@ import { authenticate, authorize } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// ✅ Assignment management routes
+//Assignment management routes
 router.get("/", authenticate, getAllAssignments);
 router.get("/automatic", getAutomaticAssignments);
 router.post("/automatic", runAutomaticAssignment);
@@ -26,11 +25,11 @@ router.put("/sub/:parentId/:subId", authenticate, authorize(["ChairHead", "COC"]
 router.delete("/sub/:parentId/:subId", authenticate, authorize(["ChairHead", "COC"]), deleteAssignment);
 
 
-// ✅ Manual assignment by Chair Head or COC
+// Manual assignment by Chair Head or COC
 router.post("/manual", authenticate, authorize(["ChairHead", "COC"]), manualAssignment);
 router.post("/common/manual", authenticate, authorize(["ChairHead", "COC"]), commonManualAssignment);
 
-// ✅ Automatic assignment routes
+// Automatic assignment routes
 router.post("/auto/common", authenticate, authorize(["COC"]), autoAssignCommonCourses);
 router.post("/auto/extension", authenticate, authorize(["COC"]), autoAssignExtensionCourses);
 router.post("/auto/summer", authenticate, authorize(["COC"]), autoAssignSummerCourses);

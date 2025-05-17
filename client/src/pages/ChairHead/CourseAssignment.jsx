@@ -1,4 +1,3 @@
-// src/pages/ChairHead/CourseAssignment.jsx
 import { useEffect, useState } from "react";
 import api from "../../utils/api";
 import { useSelector } from "react-redux";
