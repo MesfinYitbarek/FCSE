@@ -31,7 +31,6 @@ import ComplaintsCOC from "@/pages/COC/ComplaintsCOC";
 import ReportDashboard from "@/pages/COC/ReportDashboard";
 import CreateReport from "@/components/ReportsCOC/ReportsCOC";
 import EditReport from "@/components/ReportsCOC/EditReport";
-import AnnouncementsCOC from "@/pages/COC/AnnouncementsCOC";
 import PreferencesInst from "@/pages/Instructor/PreferenceInst";
 import ComplaintsInst from "@/pages/Instructor/ComplaintsInst";
 import InstructorReports from "@/pages/Instructor/InstructorReports";
@@ -120,7 +119,7 @@ const AppRoutes = () => {
               <Route path="/reports/create" element={<CreateReport />} />
               <Route path="/reportsCOC/:id" element={<ReportDetailCOC />} />
               <Route path="/reports/:id/edit" element={<EditReport />} />
-              <Route path="/announcementsCOC" element={<AnnouncementsCOC />} />
+              <Route path="/announcementsCOC" element={<AnnouncementsCH />} />
               <Route path="/announcementsViewByCOC" element={<AnnouncementsView />} />
             </Route>
 

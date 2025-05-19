@@ -38,12 +38,10 @@ const AnnouncementsCH = () => {
 
   const fetchChairs = async () => {
     try {
-      // Replace with your actual API endpoint to fetch chairs
       const { data } = await api.get("/chairs");
       setChairs(data);
     } catch (error) {
       console.error("Error fetching chairs:", error);
-      // Fallback with some example chairs if API fails
       setChairs(["Computer Science", "Information Technology", "Software Engineering"]);
     }
   };
@@ -105,8 +103,23 @@ const AnnouncementsCH = () => {
     setLoading(true);
     setError("");
     
+    // Validate target audience
     if (form.targetAudience.roles.length === 0 && form.targetAudience.chairs.length === 0) {
       setError("Please select at least one role or chair for the target audience");
+      setLoading(false);
+      return;
+    }
+    
+    // Validate deadline
+    const currentDate = new Date();
+    const selectedDate = new Date(form.validUntil);
+    
+    // Set time to midnight for date comparison
+    currentDate.setHours(0, 0, 0, 0);
+    selectedDate.setHours(0, 0, 0, 0);
+    
+    if (selectedDate < currentDate) {
+      setError("The deadline must be today or a future date");
       setLoading(false);
       return;
     }
@@ -175,7 +188,6 @@ const AnnouncementsCH = () => {
     announcement.message.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Format the target audience display
   const formatTargetAudience = (announcement) => {
     const roles = announcement.targetAudience?.roles || [];
     const chairs = announcement.targetAudience?.chairs || [];
@@ -189,6 +201,15 @@ const AnnouncementsCH = () => {
     }
     
     return audience.join(' | ') || 'None specified';
+  };
+
+  // Get current date in YYYY-MM-DD format for the date input min attribute
+  const getCurrentDate = () => {
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   };
 
   const MobileAnnouncementCard = ({ announcement }) => (
@@ -439,6 +460,7 @@ const AnnouncementsCH = () => {
                       name="validUntil"
                       value={form.validUntil}
                       onChange={handleChange}
+                      min={getCurrentDate()}
                       className="mt-1 block w-full rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-2 focus:border-indigo-500 dark:focus:border-indigo-400 focus:ring-2 focus:ring-indigo-200 dark:focus:ring-indigo-800 focus:outline-none text-gray-900 dark:text-white"
                       required
                     />
