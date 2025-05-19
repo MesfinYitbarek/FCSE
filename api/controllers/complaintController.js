@@ -5,10 +5,13 @@ import mongoose from "mongoose";
 // Submit a complaint
 export const submitComplaint = async (req, res) => {
   try {
-    const { instructorId, reportId, reason } = req.body;
+    const { instructorId, year, semester, program, reason } = req.body;
+    
     const newComplaint = new Complaint({
       instructorId,
-      reportId,
+      year,
+      semester,
+      program,
       reason,
       submittedAt: new Date()
     });
@@ -33,12 +36,12 @@ export const getComplaints = async (req, res) => {
         model: "User",
       })
       .populate({
-        path: "reportId",
-        populate: {
-          path: "assignments.courseId",
-          select: "name code",
-        },
-      });
+        path: "resolvedBy",
+        select: "fullName email",
+        model: "User",
+      })
+      .sort({ submittedAt: -1 });
+    
     res.json(complaints);
   } catch (error) {
     res.status(500).json({ message: "Error fetching complaints", error });
@@ -131,34 +134,21 @@ export const searchComplaints = async (req, res) => {
     }
     
     // Build the query
-    let reportQuery = {
+    let query = {
       year: parseInt(year),
       semester: semester
     };
     
     if (program) {
-      reportQuery.program = program;
+      query.program = program;
     }
     
-    // First, find the matching reports
-    const matchingReportIds = await mongoose.model("Assignment")
-      .find(reportQuery)
-      .select('_id')
-      .lean();
-      
-    const reportIds = matchingReportIds.map(report => report._id);
-    
-    // Now build the complaints query
-    let complaintsQuery = {
-      reportId: { $in: reportIds }
-    };
-    
     if (status) {
-      complaintsQuery.status = status;
+      query.status = status;
     }
     
     if (instructorId) {
-      complaintsQuery.instructorId = instructorId;
+      query.instructorId = instructorId;
     }
     
     // If chair is provided, need to find instructors from that chair first
@@ -168,22 +158,20 @@ export const searchComplaints = async (req, res) => {
         .lean();
       
       const instructorIds = instructorsInChair.map(user => user._id);
-      complaintsQuery.instructorId = { $in: instructorIds };
+      query.instructorId = { $in: instructorIds };
     }
     
     // Execute the final query with population
-    const complaints = await Complaint.find(complaintsQuery)
+    const complaints = await Complaint.find(query)
       .populate({
         path: "instructorId",
         select: "fullName email chair",
         model: "User",
       })
       .populate({
-        path: "reportId",
-        populate: {
-          path: "assignments.courseId",
-          select: "name code",
-        },
+        path: "resolvedBy",
+        select: "fullName email role chair",
+        model: "User",
       })
       .sort({ submittedAt: -1 });  // Most recent first
     
@@ -197,15 +185,15 @@ export const searchComplaints = async (req, res) => {
 // Get available filter options
 export const getFilterOptions = async (req, res) => {
   try {
-    // Get unique years, semesters, and programs from Assignment model
-    const years = await mongoose.model("Assignment")
+    // Get unique years, semesters, and programs from Complaint model
+    const years = await Complaint
       .distinct("year")
       .sort((a, b) => b - a);  // Sort descending
       
-    const semesters = await mongoose.model("Assignment")
+    const semesters = await Complaint
       .distinct("semester");
       
-    const programs = await mongoose.model("Assignment")
+    const programs = await Complaint
       .distinct("program");
     
     res.json({
@@ -237,12 +225,11 @@ export const getInstructorComplaints = async (req, res) => {
         model: "User",
       })
       .populate({
-        path: "reportId",
-        populate: {
-          path: "assignments.courseId",
-          select: "name code",
-        },
-      });
+        path: "resolvedBy",
+        select: "fullName email role chair",
+        model: "User",
+      })
+      .sort({ submittedAt: -1 });
 
     // Check if complaints exist
     if (!complaints || complaints.length === 0) {
@@ -269,15 +256,6 @@ export const getInstructorComplaintStats = async (req, res) => {
         $match: { instructorId: new mongoose.Types.ObjectId(instructorId) }
       },
       {
-        $lookup: {
-          from: "assignments",
-          localField: "reportId",
-          foreignField: "_id",
-          as: "report"
-        }
-      },
-      { $unwind: "$report" },
-      {
         $group: {
           _id: null,
           totalComplaints: { $sum: 1 },
@@ -286,8 +264,9 @@ export const getInstructorComplaintStats = async (req, res) => {
           rejected: { $sum: { $cond: [{ $eq: ["$status", "Rejected"] }, 1, 0] } },
           groupedBySemester: {
             $push: {
-              year: "$report.year",
-              semester: "$report.semester"
+              year: "$year",
+              semester: "$semester",
+              program: "$program"
             }
           }
         }
@@ -316,21 +295,11 @@ export const getInstructorComplaintStats = async (req, res) => {
     res.status(500).json({ message: "Error fetching instructor complaint stats", error });
   }
 };
+
 // Complaint statistics
 export const getComplaintStats = async (req, res) => {
   try {
     const stats = await Complaint.aggregate([
-      {
-        $lookup: {
-          from: "assignments",
-          localField: "reportId",
-          foreignField: "_id",
-          as: "report"
-        }
-      },
-      {
-        $unwind: "$report"
-      },
       {
         $lookup: {
           from: "users",
@@ -351,9 +320,9 @@ export const getComplaintStats = async (req, res) => {
           rejected: { $sum: { $cond: [{ $eq: ["$status", "Rejected"] }, 1, 0] } },
           byYear: {
             $push: {
-              year: "$report.year",
-              semester: "$report.semester",
-              program: "$report.program",
+              year: "$year",
+              semester: "$semester",
+              program: "$program",
               complaintId: "$_id"
             }
           }
@@ -365,7 +334,7 @@ export const getComplaintStats = async (req, res) => {
       return res.status(200).json({ message: "No complaints found", data: {} });
     }
 
-    // Optionally, structure `byYear` for easier consumption
+    // Structure `byYear` for easier consumption
     const groupedByYearSemester = stats[0].byYear.reduce((acc, item) => {
       const key = `${item.year}-${item.semester}`;
       if (!acc[key]) acc[key] = { total: 0, programMap: {} };

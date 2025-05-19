@@ -1,16 +1,17 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useSelector } from "react-redux";
-import { 
-  AlertCircle, 
-  Check,  
-  Clock, 
-  Filter, 
-  Search, 
+import {
+  AlertCircle,
+  Check,
+  Clock,
+  Filter,
+  Search,
   X,
   FileText,
   ThumbsUp,
   ThumbsDown,
-  SlidersIcon
+  SlidersIcon,
+  RefreshCw
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import api from "@/utils/api";
@@ -20,14 +21,24 @@ const ComplaintsCH = () => {
   const [complaints, setComplaints] = useState([]);
   const [loading, setLoading] = useState(false);
   const [initialFetch, setInitialFetch] = useState(false);
-  const [filters, setFilters] = useState({
-    year: new Date().getFullYear().toString(),
-    semester: "",
-    program: "",
-    status: ""
+
+  // Initialize filters from localStorage or defaults
+  const [filters, setFilters] = useState(() => {
+    const savedFilters = localStorage.getItem('complaintCHFilters');
+    if (savedFilters) {
+      return JSON.parse(savedFilters);
+    }
+    return {
+      year: new Date().getFullYear().toString(),
+      semester: "",
+      program: "",
+      status: ""
+    };
   });
+
   const [showFilters, setShowFilters] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchError, setSearchError] = useState("");
   const [resolvingComplaint, setResolvingComplaint] = useState(null);
   const [resolveData, setResolveData] = useState({
     status: "Resolved",
@@ -36,28 +47,54 @@ const ComplaintsCH = () => {
   const [resolveErrors, setResolveErrors] = useState({});
   const [submitLoading, setSubmitLoading] = useState(false);
 
-  // Fixed options for semester and program
-  const semesterOptions = ["Regular 1", "Regular 2"];
-  const programOptions = ["Regular"];
+  // Program options
+  const programOptions = ["Regular", "Common", "Extension", "Summer"];
   const statusOptions = ["Pending", "Resolved", "Rejected"];
+
+  // Get dynamic semester options based on selected program
+  const getSemesterOptions = (program) => {
+    switch (program) {
+      case "Regular":
+        return ["Regular 1", "Regular 2"];
+      case "Extension":
+        return ["Extension 1", "Extension 2"];
+      case "Summer":
+        return ["Summer"];
+      case "Common":
+      default:
+        return ["Regular 1", "Regular 2", "Summer", "Extension 1", "Extension 2"];
+    }
+  };
+
+  // Get semester options for filters
+  const filterSemesterOptions = getSemesterOptions(filters.program);
+
+  // Save filters to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem('complaintCHFilters', JSON.stringify(filters));
+  }, [filters]);
 
   // Fetch complaints for chair head with filters
   const fetchComplaints = async () => {
+    // Clear any previous search errors
+    setSearchError("");
+
+    // Validate required fields
+    if (!filters.year || !filters.semester) {
+      setSearchError("Year and semester are required");
+      return;
+    }
+
     try {
-      if (!filters.year || !filters.semester) {
-        toast.error("Year and semester are required");
-        return;
-      }
-      
       setLoading(true);
-      
+
       let queryParams = new URLSearchParams();
       queryParams.append("chair", user.chair);
       queryParams.append("year", filters.year);
       queryParams.append("semester", filters.semester);
       if (filters.program) queryParams.append("program", filters.program);
       if (filters.status) queryParams.append("status", filters.status);
-      
+
       const response = await api.get(`/complaints/search?${queryParams}`);
       setComplaints(response.data);
       setInitialFetch(true);
@@ -69,13 +106,20 @@ const ComplaintsCH = () => {
     }
   };
 
+  // Auto-fetch complaints if we have saved filters with required fields
+  useEffect(() => {
+    if (user && filters.year && filters.semester && !initialFetch && !loading) {
+      fetchComplaints();
+    }
+  }, [user]);
+
   const handleResolveInputChange = (e) => {
     const { name, value } = e.target;
     setResolveData({
       ...resolveData,
       [name]: value,
     });
-    
+
     if (resolveErrors[name]) {
       setResolveErrors({
         ...resolveErrors,
@@ -89,16 +133,16 @@ const ComplaintsCH = () => {
     if (!resolveData.resolveNote.trim()) {
       errors.resolveNote = "Please provide a resolution note";
     }
-    
+
     setResolveErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
   const handleResolveSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!validateResolveForm()) return;
-    
+
     try {
       setSubmitLoading(true);
       await api.put(`/complaints/${resolvingComplaint._id}/resolve`, {
@@ -106,7 +150,7 @@ const ComplaintsCH = () => {
         status: resolveData.status,
         resolveNote: resolveData.resolveNote
       });
-      
+
       toast.success(`Complaint ${resolveData.status.toLowerCase()} successfully`);
       setResolvingComplaint(null);
       fetchComplaints();
@@ -120,10 +164,25 @@ const ComplaintsCH = () => {
 
   const handleFilterChange = (e) => {
     const { name, value } = e.target;
-    setFilters({
-      ...filters,
-      [name]: value,
-    });
+
+    // Clear any error when the user changes a field
+    if (searchError && (name === 'year' || name === 'semester')) {
+      setSearchError("");
+    }
+
+    if (name === 'program') {
+      // Reset semester when program changes to prevent invalid combinations
+      setFilters({
+        ...filters,
+        [name]: value,
+        semester: ""
+      });
+    } else {
+      setFilters({
+        ...filters,
+        [name]: value,
+      });
+    }
   };
 
   // Validate year input to ensure it's a valid number
@@ -135,15 +194,21 @@ const ComplaintsCH = () => {
   };
 
   const resetFilters = () => {
-    setFilters({
+    const newFilters = {
       year: new Date().getFullYear().toString(),
       semester: "",
       program: "",
       status: ""
-    });
+    };
+
+    setFilters(newFilters);
     setSearchQuery("");
     setComplaints([]);
     setInitialFetch(false);
+    setSearchError("");
+
+    // Update localStorage with reset filters
+    localStorage.setItem('complaintCHFilters', JSON.stringify(newFilters));
   };
 
   const startResolveProcess = (complaint) => {
@@ -159,16 +224,14 @@ const ComplaintsCH = () => {
   const filteredComplaints = complaints.filter(complaint => {
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      const courseMatches = complaint.reportId?.assignments?.some(a => 
-        a.courseId?.name?.toLowerCase().includes(query) || 
-        a.courseId?.code?.toLowerCase().includes(query)
-      );
       const instructorMatches = complaint.instructorId?.fullName?.toLowerCase().includes(query);
       const reasonMatches = complaint.reason?.toLowerCase().includes(query);
-      
-      return courseMatches || instructorMatches || reasonMatches;
+      const programMatches = complaint.program?.toLowerCase().includes(query);
+      const semesterMatches = complaint.semester?.toLowerCase().includes(query);
+
+      return instructorMatches || reasonMatches || programMatches || semesterMatches;
     }
-    
+
     return true;
   });
 
@@ -183,7 +246,7 @@ const ComplaintsCH = () => {
               ({user.chair} Chair)
             </span>
           </h2>
-          
+
           <div className="flex gap-2">
             <button
               onClick={() => fetchComplaints()}
@@ -191,30 +254,62 @@ const ComplaintsCH = () => {
               className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               aria-label="Refresh"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
-                <path d="M3 3v5h5"></path>
-                <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"></path>
-                <path d="M16 21h5v-5"></path>
-              </svg>
+              <RefreshCw size={18} />
             </button>
-            
+
             <button
               onClick={() => setShowFilters(!showFilters)}
-              className={`p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors ${
-                Object.values(filters).some(f => f) ? "bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400" : ""
-              }`}
+              className={`p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 transition-colors ${Object.values(filters).some(f => f) ? "bg-indigo-50 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400" : ""
+                }`}
               aria-label="Filters"
             >
               <Filter size={18} />
             </button>
           </div>
         </div>
-        
+
         {/* Filters Section */}
         {showFilters && (
           <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-700/40 rounded-lg animate-in fade-in-20 duration-300">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+              {/* Program filter comes first */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Program
+                </label>
+                <select
+                  name="program"
+                  value={filters.program}
+                  onChange={handleFilterChange}
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100"
+                >
+                  <option value="">All Programs</option>
+                  {programOptions.map(program => (
+                    <option key={program} value={program}>{program}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Semester filter depends on program */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Semester <span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="semester"
+                  value={filters.semester}
+                  onChange={handleFilterChange}
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100"
+                  required
+                >
+                  <option value="">Select Semester</option>
+                  {filterSemesterOptions.map(semester => (
+                    <option key={semester} value={semester}>{semester}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Year filter */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Academic Year <span className="text-red-500">*</span>
@@ -225,54 +320,19 @@ const ComplaintsCH = () => {
                   value={filters.year}
                   onChange={validateYearInput}
                   placeholder="Enter year"
-                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600 focus:border-transparent"
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100"
                   required
                   maxLength={4}
                 />
               </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Semester <span className="text-red-500">*</span>
-                </label>
-                <select
-                  name="semester"
-                  value={filters.semester}
-                  onChange={handleFilterChange}
-                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600 focus:border-transparent"
-                  required
-                >
-                  <option value="">Select Semester</option>
-                  {semesterOptions.map(semester => (
-                    <option key={semester} value={semester}>{semester}</option>
-                  ))}
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Program
-                </label>
-                <select
-                  name="program"
-                  value={filters.program}
-                  onChange={handleFilterChange}
-                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600 focus:border-transparent"
-                >
-                  <option value="">All Programs</option>
-                  {programOptions.map(program => (
-                    <option key={program} value={program}>{program}</option>
-                  ))}
-                </select>
-              </div>
-              
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Status</label>
                 <select
                   name="status"
                   value={filters.status}
                   onChange={handleFilterChange}
-                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600 focus:border-transparent"
+                  className="w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-sm text-gray-900 dark:text-gray-100"
                 >
                   <option value="">All Statuses</option>
                   {statusOptions.map(status => (
@@ -280,7 +340,7 @@ const ComplaintsCH = () => {
                   ))}
                 </select>
               </div>
-              
+
               <div className="flex flex-col justify-end">
                 <div className="flex gap-2">
                   <button
@@ -291,7 +351,7 @@ const ComplaintsCH = () => {
                   </button>
                   <button
                     onClick={fetchComplaints}
-                    disabled={loading || !filters.year || !filters.semester}
+                    disabled={loading}
                     className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-1 transition-colors"
                   >
                     <Search size={16} />
@@ -300,7 +360,17 @@ const ComplaintsCH = () => {
                 </div>
               </div>
             </div>
-            
+
+            {/* Show error message if search validation fails */}
+            {searchError && (
+              <div className="mt-3 bg-red-50 dark:bg-red-900/20 p-3 rounded-lg">
+                <p className="text-sm text-red-700 dark:text-red-400 flex items-center">
+                  <AlertCircle size={16} className="mr-2 flex-shrink-0" />
+                  {searchError}
+                </p>
+              </div>
+            )}
+
             {initialFetch && (
               <div className="mt-3 relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -308,25 +378,25 @@ const ComplaintsCH = () => {
                 </div>
                 <input
                   type="text"
-                  placeholder="Search by instructor, course or reason..."
+                  placeholder="Search by instructor, reason, program, or semester..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10 w-full rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-2 text-base text-gray-900 dark:text-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600 focus:border-transparent"
                 />
               </div>
             )}
-            
-            {!initialFetch && (
+
+            {!initialFetch && !searchError && (
               <div className="mt-3 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-lg">
                 <p className="text-sm text-blue-700 dark:text-blue-400 flex items-center">
                   <AlertCircle size={16} className="mr-2 flex-shrink-0" />
-                  Select academic year and semester and click Search
+                  Select program, semester and academic year, then click Search
                 </p>
               </div>
             )}
           </div>
         )}
-        
+
         {/* Resolve Form Modal */}
         {resolvingComplaint && (
           <div className="fixed inset-0 bg-black/50 z-40 flex items-center justify-center p-4">
@@ -342,7 +412,7 @@ const ComplaintsCH = () => {
                   <X size={18} />
                 </button>
               </div>
-              
+
               <div className="p-5">
                 <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-700/40 rounded-lg">
                   <div className="flex flex-col sm:flex-row sm:justify-between">
@@ -352,7 +422,7 @@ const ComplaintsCH = () => {
                         {resolvingComplaint.instructorId?.fullName || "Unknown"}
                       </p>
                     </div>
-                    
+
                     <div className="mt-2 sm:mt-0">
                       <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Submitted</h4>
                       <p className="text-base font-medium text-gray-900 dark:text-gray-100">
@@ -360,14 +430,14 @@ const ComplaintsCH = () => {
                       </p>
                     </div>
                   </div>
-                  
+
                   <div className="mt-4">
-                    <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Report Details</h4>
+                    <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Complaint Details</h4>
                     <p className="text-base font-medium text-gray-900 dark:text-gray-100">
-                      {resolvingComplaint.reportId?.year} - {resolvingComplaint.reportId?.semester} - {resolvingComplaint.reportId?.program}
+                      {resolvingComplaint.program} - {resolvingComplaint.year} - {resolvingComplaint.semester}
                     </p>
                   </div>
-                  
+
                   <div className="mt-4">
                     <h4 className="text-sm font-medium text-gray-500 dark:text-gray-400">Complaint Reason</h4>
                     <p className="text-base text-gray-900 dark:text-gray-100 mt-1">
@@ -375,7 +445,7 @@ const ComplaintsCH = () => {
                     </p>
                   </div>
                 </div>
-                
+
                 <form onSubmit={handleResolveSubmit}>
                   <div className="space-y-4">
                     <div>
@@ -383,32 +453,30 @@ const ComplaintsCH = () => {
                       <div className="flex gap-3">
                         <button
                           type="button"
-                          onClick={() => setResolveData({...resolveData, status: "Resolved"})}
-                          className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors ${
-                            resolveData.status === "Resolved" 
-                              ? "border-green-500 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400" 
+                          onClick={() => setResolveData({ ...resolveData, status: "Resolved" })}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors ${resolveData.status === "Resolved"
+                              ? "border-green-500 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400"
                               : "border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300"
-                          }`}
+                            }`}
                         >
                           <ThumbsUp size={16} />
                           Resolve
                         </button>
-                        
+
                         <button
                           type="button"
-                          onClick={() => setResolveData({...resolveData, status: "Rejected"})}
-                          className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors ${
-                            resolveData.status === "Rejected" 
-                              ? "border-red-500 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400" 
+                          onClick={() => setResolveData({ ...resolveData, status: "Rejected" })}
+                          className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors ${resolveData.status === "Rejected"
+                              ? "border-red-500 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400"
                               : "border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300"
-                          }`}
+                            }`}
                         >
                           <ThumbsDown size={16} />
                           Reject
                         </button>
                       </div>
                     </div>
-                    
+
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Resolution Note</label>
                       <textarea
@@ -423,7 +491,7 @@ const ComplaintsCH = () => {
                         <p className="mt-1 text-sm text-red-500">{resolveErrors.resolveNote}</p>
                       )}
                     </div>
-                    
+
                     <div className="flex justify-end gap-2 pt-2">
                       <button
                         type="button"
@@ -435,11 +503,10 @@ const ComplaintsCH = () => {
                       <button
                         type="submit"
                         disabled={submitLoading}
-                        className={`px-4 py-2 ${
-                          resolveData.status === "Resolved" 
-                            ? "bg-green-600 hover:bg-green-700" 
+                        className={`px-4 py-2 ${resolveData.status === "Resolved"
+                            ? "bg-green-600 hover:bg-green-700"
                             : "bg-red-600 hover:bg-red-700"
-                        } text-white rounded-lg disabled:opacity-70 disabled:cursor-not-allowed transition-colors`}
+                          } text-white rounded-lg disabled:opacity-70 disabled:cursor-not-allowed transition-colors`}
                       >
                         {submitLoading ? (
                           <span className="flex items-center justify-center">
@@ -459,7 +526,7 @@ const ComplaintsCH = () => {
           </div>
         )}
       </div>
-      
+
       {/* Complaints List */}
       <div className="overflow-x-auto">
         {!initialFetch && !loading ? (
@@ -469,7 +536,7 @@ const ComplaintsCH = () => {
             </div>
             <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-200">Specify search criteria</h3>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              Select at least the academic year and semester, then click Search
+              Select program, semester and academic year, then click Search
             </p>
           </div>
         ) : loading ? (
@@ -482,7 +549,7 @@ const ComplaintsCH = () => {
               <tr>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Date</th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Instructor</th>
-                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Report</th>
+                <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Details</th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Reason</th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
                 <th className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">Resolution</th>
@@ -493,7 +560,7 @@ const ComplaintsCH = () => {
               {filteredComplaints.map((complaint) => {
                 // Format date
                 const submittedDate = new Date(complaint.submittedAt).toLocaleDateString();
-                
+
                 // Get status classes
                 let statusClasses = "inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium";
                 if (complaint.status === "Pending") {
@@ -503,7 +570,7 @@ const ComplaintsCH = () => {
                 } else if (complaint.status === "Rejected") {
                   statusClasses += " bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-500";
                 }
-                
+
                 return (
                   <tr key={complaint._id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                     <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
@@ -519,10 +586,10 @@ const ComplaintsCH = () => {
                     </td>
                     <td className="px-3 py-2 text-sm text-gray-900 dark:text-gray-200">
                       <div className="font-medium">
-                        {complaint.reportId?.year} - {complaint.reportId?.semester}
+                        {complaint.program}
                       </div>
                       <div className="text-xs text-gray-500 dark:text-gray-400">
-                        {complaint.reportId?.program}
+                        {complaint.year} - {complaint.semester}
                       </div>
                     </td>
                     <td className="px-3 py-2 text-sm text-gray-500 dark:text-gray-400">
@@ -546,6 +613,18 @@ const ComplaintsCH = () => {
                           <span className="text-gray-400 dark:text-gray-600 italic">Awaiting resolution</span>
                         )}
                       </div>
+                      {complaint.resolvedBy && (
+                        <div className="text-xs text-gray-400 dark:text-gray-600 mt-1 truncate">
+                          By: {(complaint.resolvedBy.fullName || complaint.resolvedBy.role)
+                            ? `${complaint.resolvedBy.fullName ?? ""}${complaint.resolvedBy.role
+                              ? ` (${complaint.resolvedBy.role === "ChairHead"
+                                ? `Chair head${complaint.resolvedBy.chair ? ` of ${complaint.resolvedBy.chair}` : ""}`
+                                : complaint.resolvedBy.role})`
+                              : ""
+                            }`
+                            : "Unknown"}
+                        </div>
+                      )}
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap text-right text-sm font-medium">
                       {complaint.status === "Pending" ? (
@@ -571,8 +650,8 @@ const ComplaintsCH = () => {
             </div>
             <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-200">No complaints found</h3>
             <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-              {searchQuery 
-                ? "Try adjusting your search query" 
+              {searchQuery
+                ? "Try adjusting your search query"
                 : "There are no complaints for the selected filters"}
             </p>
           </div>
