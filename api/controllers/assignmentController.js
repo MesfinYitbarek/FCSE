@@ -32,7 +32,7 @@ export const manualAssignment = async (req, res) => {
 
     // Process each assignment
     for (const assignment of assignments) {
-      const { instructorId, courseId, section, labDivision } = assignment;
+      const { instructorId, courseId, section, labDivision, assignmentReason } = assignment;
 
       // Validate courseId
       if (!mongoose.Types.ObjectId.isValid(courseId)) {
@@ -81,13 +81,14 @@ export const manualAssignment = async (req, res) => {
       }
       workload = Math.round(workload * 100) / 100; // Round to 2 decimal places
 
-      // Add assignment to bulkAssignments array
+      // Add assignment to bulkAssignments array with assignment reason
       bulkAssignments.push({
         instructorId,
         courseId,
         section,
         labDivision,
         workload,
+        assignmentReason: assignmentReason || "", // Include assignment reason
       });
 
       // Update instructor workload
@@ -188,7 +189,7 @@ export const commonManualAssignment = async (req, res) => {
 
     // Process each assignment
     for (const assignment of assignments) {
-      const { instructorId, courseId, section, labDivision } = assignment;
+      const { instructorId, courseId, section, labDivision, assignmentReason } = assignment;
 
       // Validate courseId
       if (!mongoose.Types.ObjectId.isValid(courseId)) {
@@ -237,13 +238,14 @@ export const commonManualAssignment = async (req, res) => {
       }
       workload = Math.round(workload * 100) / 100; // Round to 2 decimal places
 
-      // Add assignment to bulkAssignments array
+      // Add assignment to bulkAssignments array with assignment reason
       bulkAssignments.push({
         instructorId,
         courseId,
         section,
         labDivision,
         workload,
+        assignmentReason: assignmentReason || "", // Include assignment reason
       });
 
       // Update instructor workload

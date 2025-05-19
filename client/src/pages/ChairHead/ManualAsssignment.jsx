@@ -73,8 +73,12 @@ const ManualAssignment = ({ fetchAssignments, filters }) => {
           const { [courseId]: removed, ...rest } = updated[instructorId];
           updated[instructorId] = rest;
         } else {
-          // If checking, add default values
-          updated[instructorId][courseId] = { section: "A", labDivision: "No" };
+          // If checking, add default values with empty assignment reason
+          updated[instructorId][courseId] = { 
+            section: "A", 
+            labDivision: "No", 
+            assignmentReason: "" 
+          };
         }
       } else {
         // Update existing field
@@ -99,8 +103,14 @@ const ManualAssignment = ({ fetchAssignments, filters }) => {
       const bulkAssignments = [];
 
       Object.entries(selectedAssignments).forEach(([instructorId, courses]) => {
-        Object.entries(courses).forEach(([courseId, { section, labDivision }]) => {
-          bulkAssignments.push({ instructorId, courseId, section, labDivision });
+        Object.entries(courses).forEach(([courseId, { section, labDivision, assignmentReason }]) => {
+          bulkAssignments.push({ 
+            instructorId, 
+            courseId, 
+            section, 
+            labDivision,
+            assignmentReason 
+          });
         });
       });
 
@@ -289,6 +299,22 @@ const ManualAssignment = ({ fetchAssignments, filters }) => {
                             <option value="No">No Lab Division</option>
                             <option value="Yes">With Lab Division</option>
                           </select>
+                          
+                          {/* Added Assignment Reason Field */}
+                          <textarea
+                            className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200 focus:ring-indigo-500 focus:border-indigo-500"
+                            placeholder="Assignment Reason (optional)"
+                            value={selectedAssignments[pref.instructorId._id][course._id].assignmentReason || ""}
+                            onChange={(e) =>
+                              handleAssignmentSelection(
+                                pref.instructorId._id,
+                                course._id,
+                                "assignmentReason",
+                                e.target.value
+                              )
+                            }
+                            rows="2"
+                          />
                         </div>
                       )}
                     </div>

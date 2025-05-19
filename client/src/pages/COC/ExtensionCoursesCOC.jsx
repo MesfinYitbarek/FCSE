@@ -257,7 +257,13 @@ const ExtensionCoursesCOC = () => {
 
   // Add assignment to local state
   const addAssignment = () => {
-    setManualAssignments([...manualAssignments, { instructorId: "", courseId: "", section: "", labDivision: "No" }]);
+    setManualAssignments([...manualAssignments, { 
+      instructorId: "", 
+      courseId: "", 
+      section: "", 
+      labDivision: "No",
+      assignmentReason: ""
+    }]);
   };
 
   // Remove assignment from local state
@@ -292,7 +298,8 @@ const ExtensionCoursesCOC = () => {
       instructorId: subAssignment.instructorId?._id || "",
       courseId: subAssignment.courseId?._id || "",
       section: subAssignment.section || "",
-      labDivision: subAssignment.labDivision || "No"
+      labDivision: subAssignment.labDivision || "No",
+      assignmentReason: subAssignment.assignmentReason || "" // Include assignment reason
     });
     setShowAssignmentForm(true);
   };
@@ -332,6 +339,7 @@ const ExtensionCoursesCOC = () => {
         courseId: editingAssignment.courseId,
         section: editingAssignment.section,
         labDivision: editingAssignment.labDivision,
+        assignmentReason: editingAssignment.assignmentReason, // Include assignment reason
         year: selectedYear,
         semester: selectedSemester,
         program: "Extension"
@@ -445,7 +453,8 @@ const ExtensionCoursesCOC = () => {
         courses.map(course => ({ 
           courseId: course._id, 
           section: "", 
-          labDivision: "No" 
+          labDivision: "No",
+          assignmentReason: "" // Include empty assignment reason
         }))
       );
     }
@@ -458,7 +467,12 @@ const ExtensionCoursesCOC = () => {
 
     setSelectedCourses((prevCourses) => {
       if (isChecked) {
-        return [...prevCourses, { courseId, section: "", labDivision: "No" }];
+        return [...prevCourses, { 
+          courseId, 
+          section: "", 
+          labDivision: "No",
+          assignmentReason: "" // Include empty assignment reason
+        }];
       } else {
         return prevCourses.filter((c) => c.courseId !== courseId);
       }
@@ -905,6 +919,18 @@ const ExtensionCoursesCOC = () => {
                             </div>
                           </div>
 
+                          {/* Assignment Reason Field for Edit Form */}
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Assignment Reason</label>
+                            <textarea
+                              placeholder="Enter reason for this assignment"
+                              value={editingAssignment.assignmentReason}
+                              onChange={(e) => handleUpdateInputChange("assignmentReason", e.target.value)}
+                              className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent text-base text-gray-900 dark:text-white"
+                              rows="3"
+                            />
+                          </div>
+
                           <div className="flex justify-end pt-3">
                             <button
                               type="submit"
@@ -1017,6 +1043,18 @@ const ExtensionCoursesCOC = () => {
                                   >
                                     <Trash2 size={16} />
                                   </button>
+                                </div>
+                                
+                                {/* Assignment Reason Field for Manual Assignment - Full width */}
+                                <div className="col-span-1 sm:col-span-2 lg:col-span-5 space-y-1">
+                                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Assignment Reason</label>
+                                  <textarea
+                                    placeholder="Enter reason for this assignment "
+                                    value={assignment.assignmentReason || ""}
+                                    onChange={(e) => handleInputChange(index, "assignmentReason", e.target.value)}
+                                    className="w-full px-3 py-1.5 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent text-sm text-gray-900 dark:text-white"
+                                    rows="2"
+                                  />
                                 </div>
                               </motion.div>
                             ))}
@@ -1273,25 +1311,28 @@ const ExtensionCoursesCOC = () => {
                                   </div>
 
                                   {selectedCourses.some((c) => c.courseId === course._id) && (
-                                    <div className="mt-2 grid grid-cols-2 gap-2">
-                                      {/* Section Input */}
-                                      <input
-                                        type="text"
-                                        placeholder="Section"
-                                        value={selectedCourses.find((c) => c.courseId === course._id)?.section || ""}
-                                        onChange={(e) => handleCourseDetailChange(course._id, "section", e.target.value)}
-                                        className="px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 text-sm text-gray-900 dark:text-white"
-                                      />
+                                    <div className="mt-2 space-y-2">
+                                      <div className="grid grid-cols-2 gap-2">
+                                        {/* Section Input */}
+                                        <input
+                                          type="text"
+                                          placeholder="Section"
+                                          value={selectedCourses.find((c) => c.courseId === course._id)?.section || ""}
+                                          onChange={(e) => handleCourseDetailChange(course._id, "section", e.target.value)}
+                                          className="px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 text-sm text-gray-900 dark:text-white"
+                                        />
 
-                                      {/* Lab Division Selection */}
-                                      <select
-                                        value={selectedCourses.find((c) => c.courseId === course._id)?.labDivision || "No"}
-                                        onChange={(e) => handleCourseDetailChange(course._id, "labDivision", e.target.value)}
-                                        className="px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 text-sm text-gray-900 dark:text-white"
-                                      >
-                                        <option value="No">No Lab</option>
-                                        <option value="Yes">With Lab</option>
-                                      </select>
+                                        {/* Lab Division Selection */}
+                                        <select
+                                          value={selectedCourses.find((c) => c.courseId === course._id)?.labDivision || "No"}
+                                          onChange={(e) => handleCourseDetailChange(course._id, "labDivision", e.target.value)}
+                                          className="px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 text-sm text-gray-900 dark:text-white"
+                                        >
+                                          <option value="No">No Lab</option>
+                                          <option value="Yes">With Lab</option>
+                                        </select>
+                                      </div>
+                                     
                                     </div>
                                   )}
                                 </div>
