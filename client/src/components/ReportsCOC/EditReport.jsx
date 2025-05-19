@@ -64,9 +64,9 @@ const EditReport = () => {
       await api.patch(`/reports/${id}`, formData);
       setSuccess(true);
       
-      // Navigate back to report view after 1.5 seconds
+      // Navigate back to report view after 1.5 seconds - using consistent routing path
       setTimeout(() => {
-        navigate(`/reports/${id}`);
+        navigate(`/reportsCOC/${id}`);
       }, 1500);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to update report');
@@ -112,7 +112,7 @@ const EditReport = () => {
               <p className="text-red-700 dark:text-red-300 font-medium">{error}</p>
             </div>
             <div className="mt-4">
-              <Link to="/reports" className="inline-flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-700 dark:hover:bg-indigo-600 text-white rounded-lg transition">
+              <Link to="/reportsCOC" className="inline-flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-700 dark:hover:bg-indigo-600 text-white rounded-lg transition">
                 <ArrowLeft className="mr-2" size={16} />
                 Back to Reports
               </Link>
@@ -137,7 +137,7 @@ const EditReport = () => {
             <div className="md:flex md:items-center md:justify-between">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center">
-                  <Link to={`/reports/${id}`} className="mr-4 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300">
+                  <Link to={`/reportsCOC/${id}`} className="mr-4 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300">
                     <ArrowLeft className="w-5 h-5" />
                   </Link>
                   <div>
@@ -229,7 +229,7 @@ const EditReport = () => {
                     </div>
                     
                     <div className="flex justify-end space-x-3 pt-5">
-                      <Link to={`/reports/${id}`}>
+                      <Link to={`/reportsCOC/${id}`}>
                         <button
                           type="button"
                           disabled={submitting}

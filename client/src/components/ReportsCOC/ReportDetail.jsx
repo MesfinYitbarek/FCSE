@@ -36,7 +36,8 @@ import {
   Clock3,
   ChevronDown,
   ChevronUp,
-  Sparkles
+  Sparkles,
+  ArrowLeft
 } from 'lucide-react';
 
 // Format number to 2 decimal places

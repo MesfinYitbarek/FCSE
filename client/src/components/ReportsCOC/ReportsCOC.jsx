@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import api from '../../utils/api';
 import { 
   Loader2, 
-  AlertCircle, 
+  AlertCircle,
+  BookOpen, 
   ArrowLeft, 
   Save,
   PlusCircle,
@@ -12,7 +13,6 @@ import {
   Layers,
   FileText,
   MessageSquare,
-  BookOpen,
   Clock,
   Info,
   User
@@ -20,6 +20,7 @@ import {
 
 const CreateReport = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   
   const [formData, setFormData] = useState({
     year: new Date().getFullYear(),
@@ -87,7 +88,8 @@ const CreateReport = () => {
     
     try {
       const response = await api.post('/reports', formData);
-      navigate(`/reports/${response.data.reportId}`, { 
+      // Navigate to the correct route for report details
+      navigate(`/reportsCOC/${response.data.reportId}`, { 
         state: { message: 'Report created successfully!' } 
       });
     } catch (err) {
@@ -138,7 +140,7 @@ const CreateReport = () => {
             <div className="md:flex md:items-center md:justify-between">
               <div className="flex-1 min-w-0">
                 <div className="flex items-center">
-                  <Link to="/reports" className="mr-4 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300">
+                  <Link to="/reportsCOC" className="mr-4 text-gray-400 hover:text-gray-500 dark:hover:text-gray-300">
                     <ArrowLeft className="w-5 h-5" />
                   </Link>
                   <div>
