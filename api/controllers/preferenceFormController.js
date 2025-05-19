@@ -30,6 +30,19 @@ export const createPreferenceForm = async (req, res) => {
       return res.status(400).json({ message: "Courses must be an array" });
     }
 
+    // Check for existing preference form with the same year and semester for this chair
+    const existingForm = await PreferenceForm.findOne({
+      chair,
+      year,
+      semester
+    });
+
+    if (existingForm) {
+      return res.status(400).json({
+        message: `A preference form for ${year} ${semester} already exists for this department. Please edit the existing form instead of creating a duplicate.`
+      });
+    }
+
     // Format courses with additional fields
     const formattedCourses = courses.map(course => {
       if (typeof course === 'object' && course.course) {

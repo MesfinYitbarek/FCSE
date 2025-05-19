@@ -476,6 +476,11 @@ const PreferenceForm = () => {
     );
   };
 
+  // Get current datetime in ISO format for min attribute on datetime-local inputs
+  const getCurrentDateTimeISO = () => {
+    return new Date().toISOString().slice(0, 16);
+  };
+
   return (
     <div className="max-w-7xl mx-auto">
       <div className="mb-6">
@@ -820,6 +825,7 @@ const PreferenceForm = () => {
                       name="submissionStart"
                       value={formData.submissionStart}
                       onChange={handleChange}
+                      min={getCurrentDateTimeISO()}
                       required
                       className="block w-full text-base bg-white dark:bg-slate-800 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                     />
