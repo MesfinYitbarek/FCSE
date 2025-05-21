@@ -24,12 +24,9 @@ api.interceptors.response.use(
     if (error.response?.status === 401) {
       console.warn("Session expired. Logging out...");
       
-      // Remove token and user
-      localStorage.removeItem("token");
-      localStorage.removeItem("user");
-
-      // reload the page ONCE to reset app state
-      window.location.href = "/";
+      // Dispatch a custom event that the Layout component will listen for
+      const sessionExpiredEvent = new CustomEvent('sessionExpired');
+      window.dispatchEvent(sessionExpiredEvent);
     }
 
     return Promise.reject(error);

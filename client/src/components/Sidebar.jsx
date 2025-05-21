@@ -69,6 +69,25 @@ const Layout = () => {
   const sidebarRef = useRef(null);
   const mainContentRef = useRef(null);
 
+  // Add this effect to the Layout component
+  useEffect(() => {
+    // Event listener for session expiration
+    const handleSessionExpired = () => {
+      console.log("Session expired event received. Logging out...");
+      dispatch(logout());
+      navigate("/");
+    };
+
+    // Add event listener
+    window.addEventListener('sessionExpired', handleSessionExpired);
+
+    // Clean up event listener on component unmount
+    return () => {
+      window.removeEventListener('sessionExpired', handleSessionExpired);
+    };
+  }, [dispatch, navigate]);
+
+  
   // Fetch announcements for the current user's role
   useEffect(() => {
     const fetchAnnouncements = async () => {
@@ -273,7 +292,7 @@ const Layout = () => {
       }
 
       // Navigate to announcements page with the clicked announcement highlighted
-      navigate(user.role == "Instructor" ? `/announcementsInst`: user.role =="HeadOfFaculty" ? "/announcementsView" :user.role =="COC"? "/announcementsViewByCOC" : "/announcementsViewByCH", { state: { highlightId: announcement._id } });
+      navigate(user.role == "Instructor" ? `/announcementsInst` : user.role == "HeadOfFaculty" ? "/announcementsView" : user.role == "COC" ? "/announcementsViewByCOC" : "/announcementsViewByCH", { state: { highlightId: announcement._id } });
       setIsNotificationOpen(false);
     } catch (error) {
       console.error("Error handling announcement click:", error);
@@ -535,7 +554,7 @@ const Layout = () => {
               <SubNavItem to="/assignments/auto/extension">Extension Courses</SubNavItem>
               <SubNavItem to="/assignments/auto/summer">Summer Courses</SubNavItem>
             </NavGroup>
-            
+
             <NavItem to="/complaintsCOC" icon={AlertTriangle}>Complaints</NavItem>
             <NavItem to="/reportsCOC" icon={TrendingUp}>Reports</NavItem>
             <NavItem to="/announcementsCOC" icon={Megaphone}>Manage Announcements</NavItem>
