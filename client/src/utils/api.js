@@ -1,4 +1,5 @@
 import axios from "axios";
+import { toast } from "react-hot-toast"; // Make sure you have this imported
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL,
@@ -17,16 +18,48 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+// Track if we're already handling a session expiration to prevent multiple alerts
+let isHandlingSessionExpiration = false;
+
 // Handle responses globally
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Check specifically for authentication errors
     if (error.response?.status === 401) {
-      console.warn("Session expired. Logging out...");
+      const errorMessage = error.response?.data?.message || "";
       
-      // Dispatch a custom event that the Layout component will listen for
-      const sessionExpiredEvent = new CustomEvent('sessionExpired');
-      window.dispatchEvent(sessionExpiredEvent);
+      // Only handle session expiration once to prevent multiple modals/redirects
+      if (!isHandlingSessionExpiration) {
+        isHandlingSessionExpiration = true;
+
+        // Show a user-friendly message
+        toast.error("Your session has expired. Please log in again.", {
+          duration: 5000,
+          id: "session-expired" // Use an ID to prevent duplicate toasts
+        });
+        
+        console.warn("Session expired. Logging out...", errorMessage);
+        
+        // Save current path for potential redirect after login
+        const currentPath = window.location.pathname;
+        if (currentPath !== "/" && currentPath !== "/login") {
+          localStorage.setItem("redirectAfterLogin", currentPath);
+        }
+        
+        // Clear auth data
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        
+        // Dispatch a custom event that the Layout component will listen for
+        const sessionExpiredEvent = new CustomEvent('sessionExpired');
+        window.dispatchEvent(sessionExpiredEvent);
+        
+        // Reset the flag after a short delay to allow for the event to be processed
+        setTimeout(() => {
+          isHandlingSessionExpiration = false;
+        }, 1000);
+      }
     }
 
     return Promise.reject(error);

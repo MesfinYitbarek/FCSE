@@ -69,22 +69,34 @@ const Layout = () => {
   const sidebarRef = useRef(null);
   const mainContentRef = useRef(null);
 
-  useEffect(() => {
-    // Event listener for session expiration
-    const handleSessionExpired = () => {
-      console.log("Session expired event received. Logging out...");
-      dispatch(logout());
-      navigate("/");
-    };
+// In Layout.jsx, find the useEffect for session expiration and update it:
 
-    // Add event listener
-    window.addEventListener('sessionExpired', handleSessionExpired);
+useEffect(() => {
+  // Event listener for session expiration
+  const handleSessionExpired = () => {
+    console.log("Session expired event received. Logging out...");
+    
+    // Clear any user data from the Redux store
+    dispatch(logout());
+    
+    // Redirect to login page
+    navigate("/");
+    
+    // Show a persistent notification to explain what happened
+    toast.error(
+      "Your session has expired due to inactivity. Please log in again to continue.",
+      { duration: 5000, id: "session-expired-detail" }
+    );
+  };
 
-    // Clean up event listener on component unmount
-    return () => {
-      window.removeEventListener('sessionExpired', handleSessionExpired);
-    };
-  }, [dispatch, navigate]);
+  // Add event listener
+  window.addEventListener('sessionExpired', handleSessionExpired);
+
+  // Clean up event listener on component unmount
+  return () => {
+    window.removeEventListener('sessionExpired', handleSessionExpired);
+  };
+}, [dispatch, navigate]);
 
   
   // Fetch announcements for the current user's role

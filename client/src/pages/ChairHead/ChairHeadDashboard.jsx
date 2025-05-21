@@ -23,35 +23,46 @@ const ChairHeadDashboard = () => {
   });
   const [isLoading, setIsLoading] = useState(true);
 
-  // Fetch dashboard data
-  useEffect(() => {
-    const fetchDashboardData = async () => {
-      try {
-        const chair = user?.chair;
+useEffect(() => {
+  const fetchDashboardData = async () => {
+    try {
+      const chair = user?.chair;
 
-        const [coursesRes, instructorsRes, announcementsRes] = await Promise.all([
-          api.get(`/courses/${chair}`),
-          api.get(`/instructors/chair/${chair}`),
-          api.get(`/announcements/publisher`)
-        ]);
+      const [coursesRes, instructorsRes, announcementsRes] = await Promise.all([
+        api.get(`/courses/assigned/${chair}`),
+        api.get(`/instructors/chair/${chair}`),
+        api.get(`/announcements/publisher`)
+      ]);
 
-        const courses = coursesRes.data;
-        const instructors = instructorsRes.data;
-        const announcements = announcementsRes.data;
+      const courses = coursesRes.data.courses; // adjust based on the new response structure
+      const instructors = instructorsRes.data;
+      const announcements = announcementsRes.data;
 
-        setStats({
-          courses: { total: courses.length, assigned: courses.filter(c => c.assigned).length, unassigned: courses.filter(c => !c.assigned).length },
-          instructors: { total: instructors.length, active: instructors.filter(i => i.active).length, inactive: instructors.filter(i => !i.active).length },
-          announcements: { total: announcements.length, recent: announcements.length }
-        });
-      } catch (error) {
-        console.error("Error fetching dashboard data:", error);
-      }
-      setIsLoading(false);
-    };
+      setStats({
+        courses: {
+          total: courses.length,
+          assigned: courses.filter(c => c.status === "active").length,
+          unassigned: courses.filter(c => c.status !== "active").length
+        },
+        instructors: {
+          total: instructors.length,
+          active: instructors.filter(i => i.active).length,
+          inactive: instructors.filter(i => !i.active).length
+        },
+        announcements: {
+          total: announcements.length,
+          recent: announcements.length // update if you plan to filter for recent items
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching dashboard data:", error);
+    }
+    setIsLoading(false);
+  };
 
-    fetchDashboardData();
-  }, [user]);
+  fetchDashboardData();
+}, [user]);
+
 
   // Calculate completion percentage
   const calculateCompletion = (completed, total) => {
