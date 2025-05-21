@@ -71,9 +71,11 @@ const CoursesCH = () => {
   const [openAssignModal, setOpenAssignModal] = useState(false);
   const [openUnassignModal, setOpenUnassignModal] = useState(false);
   const [openDebugModal, setOpenDebugModal] = useState(false); // For debugging
-  const [openActivateModal, setOpenActivateModal] = useState(false); // New modal for bulk activation
-  const [openArchiveModal, setOpenArchiveModal] = useState(false); // New modal for bulk archiving
-  const [openDraftModal, setOpenDraftModal] = useState(false); // New modal for bulk draft conversion
+  const [openActivateModal, setOpenActivateModal] = useState(false); // Modal for bulk activation
+  const [openArchiveModal, setOpenArchiveModal] = useState(false); // Modal for bulk archiving
+  const [openDraftModal, setOpenDraftModal] = useState(false); // Modal for bulk draft conversion
+  // New modal for converting assigned courses back to active status
+  const [openReactivateModal, setOpenReactivateModal] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [selectedCourses, setSelectedCourses] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -307,6 +309,35 @@ const CoursesCH = () => {
     }
   };
 
+  // New handler: Convert assigned courses back to active
+  const handleBulkReactivate = async () => {
+    if (selectedCourses.length === 0) {
+      toast.error("Please select at least one course to convert to active");
+      return;
+    }
+
+    setBulkActionLoading(true);
+    try {
+      await api.post("/courses/bulk-update", {
+        courseIds: selectedCourses,
+        updates: {
+          status: "active"
+        },
+        actionBy: user._id
+      });
+
+      toast.success(`Successfully converted ${selectedCourses.length} courses to active status`);
+      setSelectedCourses([]);
+      setOpenReactivateModal(false);
+      fetchCourses();
+    } catch (err) {
+      console.error("Error converting courses to active:", err);
+      toast.error("Failed to convert courses to active status");
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
   // Handle bulk archival of courses
   const handleBulkArchive = async () => {
     if (selectedCourses.length === 0) {
@@ -509,6 +540,15 @@ const CoursesCH = () => {
       return;
     }
     setOpenActivateModal(true);
+  };
+
+  // New: Open reactivate courses modal (convert from assigned to active)
+  const openReactivateCoursesModal = () => {
+    if (selectedCourses.length === 0) {
+      toast.error("Please select at least one course to convert to active");
+      return;
+    }
+    setOpenReactivateModal(true);
   };
 
   // Open archive courses modal
@@ -821,14 +861,27 @@ const CoursesCH = () => {
                 )}
                 
                 {/* For ChairHead or COC */}
-                {isChairOrCoc && selectedActiveCoursesCount > 0 && (
-                  <button
-                    onClick={openActivateCoursesModal}
-                    className="flex items-center justify-center gap-1.5 bg-yellow-600 hover:bg-yellow-700 text-white py-1.5 px-3 rounded-lg transition-colors text-sm"
-                  >
-                    <Send size={16} />
-                    Assign
-                  </button>
+                {isChairOrCoc && (
+                  <>
+                    {selectedActiveCoursesCount > 0 && (
+                      <button
+                        onClick={openActivateCoursesModal}
+                        className="flex items-center justify-center gap-1.5 bg-yellow-600 hover:bg-yellow-700 text-white py-1.5 px-3 rounded-lg transition-colors text-sm"
+                      >
+                        <Send size={16} />
+                        Assign
+                      </button>
+                    )}
+                    {selectedAssignedCoursesCount > 0 && (
+                      <button
+                        onClick={openReactivateCoursesModal}
+                        className="flex items-center justify-center gap-1.5 bg-green-600 hover:bg-green-700 text-white py-1.5 px-3 rounded-lg transition-colors text-sm"
+                      >
+                        <Play size={16} />
+                        Convert to Active
+                      </button>
+                    )}
+                  </>
                 )}
                 
                 {/* Clear selection button for all roles */}
@@ -1210,17 +1263,33 @@ const CoursesCH = () => {
                             </button>
                           </>
                         )}
-                        {isChairOrCoc && course.status === "active" && (
-                          <button
-                            className="flex-1 bg-yellow-600 hover:bg-yellow-700 dark:bg-yellow-700 dark:hover:bg-yellow-600 text-white py-2 px-3 rounded-lg text-sm transition duration-200 flex items-center justify-center gap-1"
-                            onClick={() => {
-                              setSelectedCourses([course._id]);
-                              openActivateCoursesModal();
-                            }}
-                          >
-                            <Send size={16} />
-                            Assign
-                          </button>
+                        {isChairOrCoc && (
+                          <>
+                            {course.status === "active" && (
+                              <button
+                                className="flex-1 bg-yellow-600 hover:bg-yellow-700 dark:bg-yellow-700 dark:hover:bg-yellow-600 text-white py-2 px-3 rounded-lg text-sm transition duration-200 flex items-center justify-center gap-1"
+                                onClick={() => {
+                                  setSelectedCourses([course._id]);
+                                  openActivateCoursesModal();
+                                }}
+                              >
+                                <Send size={16} />
+                                Assign
+                              </button>
+                            )}
+                            {course.status === "assigned" && (
+                              <button
+                                className="flex-1 bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white py-2 px-3 rounded-lg text-sm transition duration-200 flex items-center justify-center gap-1"
+                                onClick={() => {
+                                  setSelectedCourses([course._id]);
+                                  openReactivateCoursesModal();
+                                }}
+                              >
+                                <Play size={16} />
+                                Make Active
+                              </button>
+                            )}
+                          </>
                         )}
                         {!isHeadOfFaculty && !isChairOrCoc && (
                           <button
@@ -1373,17 +1442,33 @@ const CoursesCH = () => {
                                     <Trash2 size={14} />
                                   </button>
                                 </>
-                              ) : isChairOrCoc && course.status === "active" ? (
-                                <button
-                                  onClick={() => {
-                                    setSelectedCourses([course._id]);
-                                    openActivateCoursesModal();
-                                  }}
-                                  className="text-yellow-600 dark:text-yellow-400 hover:text-yellow-900 dark:hover:text-yellow-300 transition-colors p-1"
-                                  title="Assign course"
-                                >
-                                  <Send size={14} />
-                                </button>
+                              ) : isChairOrCoc ? (
+                                <>
+                                  {course.status === "active" && (
+                                    <button
+                                      onClick={() => {
+                                        setSelectedCourses([course._id]);
+                                        openActivateCoursesModal();
+                                      }}
+                                      className="text-yellow-600 dark:text-yellow-400 hover:text-yellow-900 dark:hover:text-yellow-300 transition-colors p-1"
+                                      title="Assign course"
+                                    >
+                                      <Send size={14} />
+                                    </button>
+                                  )}
+                                  {course.status === "assigned" && (
+                                    <button
+                                      onClick={() => {
+                                        setSelectedCourses([course._id]);
+                                        openReactivateCoursesModal();
+                                      }}
+                                      className="text-green-600 dark:text-green-400 hover:text-green-900 dark:hover:text-green-300 transition-colors p-1"
+                                      title="Make course active"
+                                    >
+                                      <Play size={14} />
+                                    </button>
+                                  )}
+                                </>
                               ) : (
                                 <button
                                   className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300 transition-colors p-1"
@@ -2376,7 +2461,7 @@ const CoursesCH = () => {
 
                   <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
                     <p className="text-yellow-700 dark:text-yellow-300 text-sm">
-                      Assigning courses will change their status from "active" to "assigned", indicating they are ready to be instructed.
+                      Assigning courses will change their status from "active" to "assigned", indicating they are assigned to instructor.
                     </p>
                   </div>
 
@@ -2394,6 +2479,85 @@ const CoursesCH = () => {
                     >
                       {bulkActionLoading ? <Loader2 className="animate-spin" size={18} /> : <Send size={18} />}
                       Assign Courses
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+
+        {/* New: Reactivate Courses Modal (for CoC/ChairHead) */}
+        {openReactivateModal && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+              onClick={() => setOpenReactivateModal(false)}
+            />
+            <motion.div
+              variants={modalVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md z-50"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                    <Play className="text-green-600 dark:text-green-500" size={20} />
+                    Convert Courses to Active
+                  </h2>
+                  <button
+                    onClick={() => setOpenReactivateModal(false)}
+                    className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+                  >
+                    <X size={24} />
+                  </button>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
+                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+                      <BookOpen size={16} className="text-gray-500 dark:text-gray-400" />
+                      Selected Courses ({selectedCourses.length})
+                    </h3>
+                    <div className="max-h-40 overflow-y-auto space-y-1">
+                      {selectedCourses.map(courseId => {
+                        const course = coursesArray.find(c => c._id === courseId);
+                        return course ? (
+                          <div key={courseId} className="flex items-center justify-between py-1 px-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600/50 rounded">
+                            <span>{course.name}</span>
+                            <span className="text-xs bg-indigo-100 dark:bg-indigo-900/40 text-indigo-800 dark:text-indigo-300 px-1.5 py-0.5 rounded">{course.code}</span>
+                          </div>
+                        ) : null;
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg border border-green-200 dark:border-green-800">
+                    <p className="text-green-700 dark:text-green-300 text-sm">
+                      Converting courses from "assigned" to "active" status will make them available for reassignment to instructors. Any existing instructor assignments will be preserved.
+                    </p>
+                  </div>
+
+                  <div className="flex justify-end gap-3 pt-6 border-t border-gray-200 dark:border-gray-700">
+                    <button
+                      onClick={() => setOpenReactivateModal(false)}
+                      className="px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleBulkReactivate}
+                      disabled={bulkActionLoading}
+                      className="px-4 py-2.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 rounded-lg transition-colors disabled:opacity-70 flex items-center gap-2"
+                    >
+                      {bulkActionLoading ? <Loader2 className="animate-spin" size={18} /> : <Play size={18} />}
+                      Convert to Active
                     </button>
                   </div>
                 </div>
