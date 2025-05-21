@@ -24,7 +24,7 @@ import {
 const RulesHF = () => {
   const { user } = useSelector((state) => state.auth);
   const [rules, setRules] = useState([]);
-  const [newRule, setNewRule] = useState({ ruleName: "", description: "", value: "" });
+  const [newRule, setNewRule] = useState({ ruleName: "", description: "" });
   const [loading, setLoading] = useState(true);
   const [openAddModal, setOpenAddModal] = useState(false);
   const [openEditModal, setOpenEditModal] = useState(false);
@@ -67,7 +67,7 @@ const RulesHF = () => {
   };
 
   const resetForm = () => {
-    setNewRule({ ruleName: "", description: "", value: "" });
+    setNewRule({ ruleName: "", description: "" });
   };
 
   const handleAddRule = async (e) => {
@@ -120,7 +120,7 @@ const RulesHF = () => {
     setSelectedRule(rule);
     setNewRule({ 
       ruleName: rule.ruleName, 
-      description: rule.description || "", 
+      description: rule.description || "",
       value: rule.value !== undefined ? rule.value : "" 
     });
     setOpenEditModal(true);
@@ -452,7 +452,6 @@ const RulesHF = () => {
                           type="text"
                           name="ruleName"
                           id="ruleName"
-                          value={newRule.ruleName}
                           onChange={handleChange}
                           className="mt-1 block w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                           placeholder="Enter rule title"
@@ -466,7 +465,6 @@ const RulesHF = () => {
                           type="number"
                           name="value"
                           id="value"
-                          value={newRule.value}
                           onChange={handleChange}
                           step="any"
                           className="mt-1 block w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
@@ -481,7 +479,6 @@ const RulesHF = () => {
                           id="description"
                           name="description"
                           rows={6}
-                          value={newRule.description}
                           onChange={handleChange}
                           className="mt-1 block w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                           placeholder="Provide a detailed description of the rule and its application..."
@@ -541,10 +538,10 @@ const RulesHF = () => {
                           type="text"
                           name="ruleName"
                           id="edit-ruleName"
-                          value={newRule.ruleName}
                           onChange={handleChange}
                           className="mt-1 block w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                           placeholder="Enter rule title"
+                          defaultValue={selectedRule?.ruleName}
                         />
                       </div>
                       <div>
@@ -555,11 +552,11 @@ const RulesHF = () => {
                           type="number"
                           name="value"
                           id="edit-value"
-                          value={newRule.value}
                           onChange={handleChange}
                           step="any"
                           className="mt-1 block w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                           placeholder="Enter a numeric value (optional)"
+                          defaultValue={selectedRule?.value}
                         />
                       </div>
                       <div>
@@ -570,10 +567,10 @@ const RulesHF = () => {
                           id="edit-description"
                           name="description"
                           rows={6}
-                          value={newRule.description}
                           onChange={handleChange}
                           className="mt-1 block w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                           placeholder="Provide a detailed description of the rule and its application..."
+                          defaultValue={selectedRule?.description}
                         ></textarea>
                       </div>
                     </div>
