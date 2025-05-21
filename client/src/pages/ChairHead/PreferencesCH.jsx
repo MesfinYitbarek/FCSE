@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Loader2, FileText, Calendar, User, Trash2, AlertTriangle, X } from 'lucide-react';
+import { Search, Loader2, FileText, Calendar, User, AlertTriangle} from 'lucide-react';
 import api from '../../utils/api';
 import { useSelector } from 'react-redux';
 import { toast } from 'react-hot-toast';
@@ -17,10 +17,6 @@ const PreferenceCH = () => {
     chair: user?.chair || '' 
   });
   
-  // Delete functionality states
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-  const [preferenceToDelete, setPreferenceToDelete] = useState(null);
-  const [deleteLoading, setDeleteLoading] = useState(false);
   const [notification, setNotification] = useState({ show: false, message: '', type: '' });
   
   // Responsive width state
@@ -84,40 +80,9 @@ const PreferenceCH = () => {
     }));
   };
   
-  const openDeleteModal = (preference) => {
-    setPreferenceToDelete(preference);
-    setIsDeleteModalOpen(true);
-  };
+
   
-  const closeDeleteModal = () => {
-    setIsDeleteModalOpen(false);
-    setPreferenceToDelete(null);
-  };
   
-  const handleDeletePreference = async () => {
-    if (!preferenceToDelete?._id) return;
-    
-    try {
-      setDeleteLoading(true);
-      await api.delete(`/preferences/${preferenceToDelete._id}`);
-      
-      // Remove the deleted preference from state
-      setPreferences(prev => {
-        return {
-          ...prev,
-          preferences: prev.preferences.filter(p => p._id !== preferenceToDelete._id)
-        };
-      });
-      
-      toast.success('Preference deleted successfully');
-      closeDeleteModal();
-    } catch (err) {
-      console.error('Delete error:', err);
-      toast.error(err.response?.data?.message || 'Failed to delete preference');
-    } finally {
-      setDeleteLoading(false);
-    }
-  };
 
   return (
     <div className="max-w-6xl mx-auto bg-white dark:bg-slate-900 rounded-xl shadow-sm overflow-hidden">
@@ -238,9 +203,7 @@ const PreferenceCH = () => {
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Submitted
                     </th>
-                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Actions
-                    </th>
+                    
                   </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-slate-900 divide-y divide-gray-200 dark:divide-gray-800">
@@ -270,16 +233,7 @@ const PreferenceCH = () => {
                           day: 'numeric'
                         })}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right">
-                        <button 
-                          onClick={() => openDeleteModal(pref)}
-                          className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 focus:outline-none"
-                          title="Delete preference"
-                          aria-label="Delete preference"
-                        >
-                          <Trash2 className="w-5 h-5" />
-                        </button>
-                      </td>
+                  
                     </tr>
                   ))}
                 </tbody>
@@ -302,14 +256,7 @@ const PreferenceCH = () => {
                       })}
                     </div>
                   </div>
-                  <button 
-                    onClick={() => openDeleteModal(pref)}
-                    className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 focus:outline-none p-1"
-                    title="Delete preference"
-                    aria-label="Delete preference"
-                  >
-                    <Trash2 className="w-5 h-5" />
-                  </button>
+                  
                 </div>
                 <div>
                   <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase mb-2">Preferences (Ranked)</h4>
@@ -344,55 +291,6 @@ const PreferenceCH = () => {
         </div>
       )}
       
-      {/* Delete Confirmation Modal */}
-      {isDeleteModalOpen && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 dark:bg-opacity-70 flex items-center justify-center p-4 z-50">
-          <div className="bg-white dark:bg-slate-900 rounded-lg shadow-xl max-w-md w-full">
-            <div className="p-5 border-b border-gray-200 dark:border-gray-700 flex items-center">
-              <AlertTriangle className="w-6 h-6 text-red-500 mr-2" />
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white">Confirm Deletion</h3>
-            </div>
-            
-            <div className="p-5">
-              <p className="text-gray-700 dark:text-gray-300 mb-4">
-                Are you sure you want to delete the preference submission from{' '}
-                <span className="font-semibold">
-                  {preferenceToDelete?.instructorId?.fullName}
-                </span>?
-              </p>
-              <p className="text-sm text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-slate-800 p-3 rounded-md border border-gray-200 dark:border-gray-700">
-                This action cannot be undone and will permanently remove the preference submission.
-              </p>
-            </div>
-            
-            <div className="p-4 bg-gray-50 dark:bg-slate-800/50 border-t border-gray-200 dark:border-gray-700 flex justify-end space-x-3 rounded-b-lg">
-              <button
-                onClick={closeDeleteModal}
-                className="px-4 py-2 bg-white dark:bg-slate-700 border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-600 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-slate-800 focus:ring-indigo-500"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDeletePreference}
-                disabled={deleteLoading}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 dark:focus:ring-offset-slate-800 focus:ring-red-500 disabled:bg-red-400 disabled:cursor-not-allowed flex items-center"
-              >
-                {deleteLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Deleting...
-                  </>
-                ) : (
-                  <>
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Delete
-                  </>
-                )}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 };

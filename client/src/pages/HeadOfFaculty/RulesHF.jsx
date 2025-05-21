@@ -17,7 +17,8 @@ import {
   ScrollText,
   Book,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  AlertTriangle
 } from "lucide-react";
 
 const RulesHF = () => {

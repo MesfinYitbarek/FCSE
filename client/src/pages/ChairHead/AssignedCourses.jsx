@@ -170,12 +170,6 @@ const AssignedCourses = ({ fetchAssignments, assignments, currentFilters }) => {
               Showing all assigned courses for the selected academic period
             </p>
           </div>
-          <button 
-            onClick={fetchAssignments}
-            className="bg-white text-indigo-600 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg font-medium hover:bg-indigo-50 transition-colors text-xs sm:text-sm w-full sm:w-auto"
-          >
-            Refresh Data
-          </button>
         </div>
         
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-4">

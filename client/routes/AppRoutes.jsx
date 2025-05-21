@@ -82,6 +82,7 @@ const AppRoutes = () => {
             {/* HeadOfFaculty Protected Routes */}
             <Route element={<ProtectedRoute allowedRoles={["HeadOfFaculty"]} />}>
               <Route path="/users" element={<UsersHF />} />
+              <Route path="/coursesHF" element={<CoursesCH />} />
               <Route path="/chairs" element={<ChairsHF />} />
               <Route path="/positions" element={<PositionsHF />} />
               <Route path="/rules" element={<RulesHF />} />

@@ -26,14 +26,27 @@ import {
   Code,
   Database,
   Server,
-  Monitor
+  Monitor,
+  Send,
+  Users,
+  User,
+  MoreHorizontal,
+  Shield,
+  Unlink,
+  Info,
+  Archive,
+  Play,
+  File
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 
 const CoursesCH = () => {
   const { user } = useSelector((state) => state.auth);
   const [courses, setCourses] = useState([]);
+  const [rawResponse, setRawResponse] = useState(null); // For debugging
   const getChairValue = () => (user.role === "COC" ? user.role : user.chair);
+  const isHeadOfFaculty = user.role === "HeadOfFaculty";
+  const isChairOrCoc = user.role === "ChairHead" || user.role === "COC";
 
   const [form, setForm] = useState({
     name: "",
@@ -46,27 +59,40 @@ const CoursesCH = () => {
     lecture: 2,
     lab: 1,
     tutorial: 0,
-    chair: getChairValue(),
+    chair: "",
     likeness: "",
     location: "",
+    status: "draft" // Default status for new courses
   });
   const [loading, setLoading] = useState(false);
   const [openAddModal, setOpenAddModal] = useState(false);
   const [openEditModal, setOpenEditModal] = useState(false);
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
+  const [openAssignModal, setOpenAssignModal] = useState(false);
+  const [openUnassignModal, setOpenUnassignModal] = useState(false);
+  const [openDebugModal, setOpenDebugModal] = useState(false); // For debugging
+  const [openActivateModal, setOpenActivateModal] = useState(false); // New modal for bulk activation
+  const [openArchiveModal, setOpenArchiveModal] = useState(false); // New modal for bulk archiving
+  const [openDraftModal, setOpenDraftModal] = useState(false); // New modal for bulk draft conversion
   const [selectedCourse, setSelectedCourse] = useState(null);
+  const [selectedCourses, setSelectedCourses] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+  // Modified default filter - ensure we start with showing all courses
   const [filters, setFilters] = useState({
     year: "all",
     semester: "all",
-    department: "all"
+    department: "all",
+    status: "all" // Changed default to "all" to show all courses initially
   });
   const [showFilters, setShowFilters] = useState(false);
   const [error, setError] = useState(null);
   const [activeTab, setActiveTab] = useState("all");
+  const [chairHeads, setChairHeads] = useState([]);
+  const [selectedChair, setSelectedChair] = useState("");
+  const [bulkActionLoading, setBulkActionLoading] = useState(false);
 
   // Track window width for responsive design
   useEffect(() => {
@@ -87,54 +113,118 @@ const CoursesCH = () => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Fetch courses assigned to this Chair Head
+  // Fetch courses based on role
   useEffect(() => {
     fetchCourses();
-  }, []);
+    if (isHeadOfFaculty) {
+      fetchChairHeads();
+    }
+  }, [user.role]);
+
+  const fetchChairHeads = async () => {
+    try {
+      const response = await api.get("/chairs");
+      setChairHeads(response.data);
+    } catch (err) {
+      console.error("Error fetching chair :", err);
+      toast.error("Failed to fetch chair ");
+    }
+  };
 
   const fetchCourses = async () => {
     setLoading(true);
     setError(null);
-  
+
     try {
       let response;
-      
-      if (user.role === "ChairHead") {
-        // Fetch courses based on chair
-        response = await api.get(`/courses/${user.chair}`);
+
+      if (isHeadOfFaculty) {
+        // Fetch all courses for Head of Faculty
+        response = await api.get("/courses");
+      } else if (user.role === "ChairHead") {
+        // Fetch only assigned courses for Chair Head
+        response = await api.get(`/courses/assigned/${user.chair}`);
+      } else if (user.role === "COC") {
+        // Fetch only assigned courses for COC
+        response = await api.get(`/courses/assigned/COC`);
       } else {
-        // Fetch all courses
+        // Fallback
         response = await api.get("/courses");
       }
-  
-      setCourses(response.data);
+
+      // Store the raw response for debugging
+      setRawResponse(response.data);
+
+      // Log the response structure
+      console.log("API Response:", JSON.stringify(response.data));
+
+      // Check if response.data is an array or if it has a nested property that contains the array
+      let coursesData;
+      if (Array.isArray(response.data)) {
+        coursesData = response.data;
+      } else if (response.data && typeof response.data === 'object') {
+        // Try to find an array in the response
+        const possibleArrays = Object.values(response.data).filter(val => Array.isArray(val));
+        coursesData = possibleArrays.length > 0 ? possibleArrays[0] : [];
+        
+        // If we found a nested array, log it
+        if (possibleArrays.length > 0) {
+          console.log("Found courses in nested property:", possibleArrays[0]);
+        }
+      } else {
+        coursesData = [];
+      }
+
+      // Ensure each course has required properties
+      const validCoursesData = coursesData.map(course => ({
+        ...course,
+        _id: course._id || course.id || `temp-${Math.random()}`,
+        name: course.name || "Unnamed Course",
+        code: course.code || "No Code",
+        department: course.department || "Uncategorized",
+        category: course.category || "",
+        year: course.year || 1,
+        semester: course.semester || 1,
+        status: course.status || "draft"
+      }));
+
+      console.log("Processed courses:", validCoursesData.length);
+      setCourses(validCoursesData);
     } catch (err) {
       console.error("Error fetching courses:", err);
       setError("Failed to load courses. Please try again.");
       toast.error("Failed to fetch courses");
+      setCourses([]); // Set to empty array in case of error
     } finally {
       setLoading(false);
     }
   };
-  
 
-  // Categorize courses based on department
+  // Categorize courses based on department - with safety checks
+  const coursesArray = Array.isArray(courses) ? courses : [];
+  console.log("Courses array length:", coursesArray.length);
+
   const categorizedCourses = {
-    "Software Engineering": courses.filter(course =>
-      course.department.toLowerCase().includes("software") ||
-      course.department.toLowerCase().includes("swe") ||
-      course.department.toLowerCase().includes("se")),
+    "Software Engineering": coursesArray.filter(course =>
+      course.department?.toLowerCase?.().includes("software") ||
+      course.department?.toLowerCase?.().includes("swe") ||
+      course.department?.toLowerCase?.().includes("se")),
 
-    "Computer Science": courses.filter(course =>
-      course.department.toLowerCase().includes("computer science") ||
-      course.department.toLowerCase().includes("cs") ||
-      course.department.toLowerCase().includes("computing")),
+    "Computer Science": coursesArray.filter(course =>
+      course.department?.toLowerCase?.().includes("computer science") ||
+      course.department?.toLowerCase?.().includes("cs") ||
+      course.department?.toLowerCase?.().includes("computing")),
 
-    "Information Technology": courses.filter(course =>
-      course.department.toLowerCase().includes("information") ||
-      course.department.toLowerCase().includes("it") ||
-      course.department.toLowerCase().includes("tech"))
+    "Information Technology": coursesArray.filter(course =>
+      course.department?.toLowerCase?.().includes("information") ||
+      course.department?.toLowerCase?.().includes("it") ||
+      course.department?.toLowerCase?.().includes("tech"))
   };
+
+  // Count of categorized courses for debugging
+  console.log("SE courses:", categorizedCourses["Software Engineering"].length);
+  console.log("CS courses:", categorizedCourses["Computer Science"].length);
+  console.log("IT courses:", categorizedCourses["Information Technology"].length);
 
   // Handle form input change
   const handleChange = (e) => {
@@ -159,13 +249,14 @@ const CoursesCH = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-  
+
     const formData = {
       ...form,
       likeness: form.likeness ? form.likeness.split(',').map(item => item.trim()) : [],
-      chair: getChairValue(),
+      status: form.status || "draft", // Ensure status is set
+      createdBy: user._id // Track who created the course
     };
-  
+
     try {
       if (selectedCourse) {
         await api.put(`/courses/${selectedCourse._id}`, formData);
@@ -187,6 +278,165 @@ const CoursesCH = () => {
     }
   };
 
+  // Handle bulk activation of courses (now assigns them)
+  const handleBulkActivate = async () => {
+    if (selectedCourses.length === 0) {
+      toast.error("Please select at least one course to assign");
+      return;
+    }
+
+    setBulkActionLoading(true);
+    try {
+      await api.post("/courses/bulk-update", {
+        courseIds: selectedCourses,
+        updates: {
+          status: "assigned"
+        },
+        actionBy: user._id
+      });
+
+      toast.success(`Successfully assigned ${selectedCourses.length} courses`);
+      setSelectedCourses([]);
+      setOpenActivateModal(false);
+      fetchCourses();
+    } catch (err) {
+      console.error("Error assigning courses:", err);
+      toast.error("Failed to assign courses");
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
+  // Handle bulk archival of courses
+  const handleBulkArchive = async () => {
+    if (selectedCourses.length === 0) {
+      toast.error("Please select at least one course to archive");
+      return;
+    }
+
+    setBulkActionLoading(true);
+    try {
+      await api.post("/courses/bulk-update", {
+        courseIds: selectedCourses,
+        updates: {
+          status: "archived",
+          assignedTo: null // Remove assignment
+        },
+        actionBy: user._id
+      });
+
+      toast.success(`Successfully archived ${selectedCourses.length} courses`);
+      setSelectedCourses([]);
+      setOpenArchiveModal(false);
+      fetchCourses();
+    } catch (err) {
+      console.error("Error archiving courses:", err);
+      toast.error("Failed to archive courses");
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
+  // Handle bulk conversion to draft status
+  const handleBulkDraft = async () => {
+    if (selectedCourses.length === 0) {
+      toast.error("Please select at least one course to convert to draft");
+      return;
+    }
+
+    setBulkActionLoading(true);
+    try {
+      await api.post("/courses/bulk-update", {
+        courseIds: selectedCourses,
+        updates: {
+          status: "draft",
+          assignedTo: null // Remove assignment
+        },
+        actionBy: user._id
+      });
+
+      toast.success(`Successfully converted ${selectedCourses.length} courses to draft status`);
+      setSelectedCourses([]);
+      setOpenDraftModal(false);
+      fetchCourses();
+    } catch (err) {
+      console.error("Error converting courses to draft:", err);
+      toast.error("Failed to convert courses to draft status");
+    } finally {
+      setBulkActionLoading(false);
+    }
+  };
+
+  // Handle course assignment (now activates them)
+  const handleAssignCourses = async () => {
+    if (selectedCourses.length === 0) {
+      toast.error("Please select at least one course to activate");
+      return;
+    }
+
+    if (!selectedChair) {
+      toast.error("Please select a chair to activate courses for");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await api.post("/courses/assign", {
+        courseIds: selectedCourses,
+        assignedTo: selectedChair,
+        assignedBy: user._id,
+        status: "active"
+      });
+
+      toast.success(`Successfully activated ${selectedCourses.length} courses for ${selectedChair}`);
+      setSelectedCourses([]);
+      setSelectedChair("");
+      setOpenAssignModal(false);
+      fetchCourses();
+    } catch (err) {
+      console.error("Error activating courses:", err);
+      toast.error("Failed to activate courses");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle course unassignment
+  const handleUnassignCourses = async () => {
+    if (selectedCourses.length === 0) {
+      toast.error("Please select at least one course to unassign");
+      return;
+    }
+
+    setLoading(true);
+    try {
+      await api.post("/courses/unassign", {
+        courseIds: selectedCourses,
+        unassignedBy: user._id,
+        status: "draft" // Reset to draft after unassigned
+      });
+
+      toast.success(`Successfully unassigned ${selectedCourses.length} courses`);
+      setSelectedCourses([]);
+      setOpenUnassignModal(false);
+      fetchCourses();
+    } catch (err) {
+      console.error("Error unassigning courses:", err);
+      toast.error("Failed to unassign courses");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Toggle course selection for assignment
+  const toggleCourseSelection = (courseId) => {
+    if (selectedCourses.includes(courseId)) {
+      setSelectedCourses(selectedCourses.filter(id => id !== courseId));
+    } else {
+      setSelectedCourses([...selectedCourses, courseId]);
+    }
+  };
+
   // Reset form to initial state
   const resetForm = () => {
     setForm({
@@ -200,9 +450,10 @@ const CoursesCH = () => {
       lecture: 2,
       lab: 1,
       tutorial: 0,
-      chair: getChairValue(),
+      chair: "",
       likeness: "",
       location: "",
+      status: "draft"
     });
   };
 
@@ -222,6 +473,7 @@ const CoursesCH = () => {
       tutorial: course.tutorial,
       likeness: course.likeness ? course.likeness.join(", ") : "",
       location: course.location || "",
+      status: course.status || "draft"
     });
     setOpenEditModal(true);
   };
@@ -230,6 +482,51 @@ const CoursesCH = () => {
   const openDeleteCourseModal = (course) => {
     setSelectedCourse(course);
     setOpenDeleteModal(true);
+  };
+
+  // Open assign courses modal (now activate courses modal)
+  const openAssignCoursesModal = () => {
+    if (selectedCourses.length === 0) {
+      toast.error("Please select at least one course to activate");
+      return;
+    }
+    setOpenAssignModal(true);
+  };
+
+  // Open unassign courses modal
+  const openUnassignCoursesModal = () => {
+    if (selectedCourses.length === 0) {
+      toast.error("Please select at least one course to unassign");
+      return;
+    }
+    setOpenUnassignModal(true);
+  };
+
+  // Open activate courses modal (now assign courses modal)
+  const openActivateCoursesModal = () => {
+    if (selectedCourses.length === 0) {
+      toast.error("Please select at least one course to assign");
+      return;
+    }
+    setOpenActivateModal(true);
+  };
+
+  // Open archive courses modal
+  const openArchiveCoursesModal = () => {
+    if (selectedCourses.length === 0) {
+      toast.error("Please select at least one course to archive");
+      return;
+    }
+    setOpenArchiveModal(true);
+  };
+
+  // Open draft courses modal
+  const openDraftCoursesModal = () => {
+    if (selectedCourses.length === 0) {
+      toast.error("Please select at least one course to convert to draft");
+      return;
+    }
+    setOpenDraftModal(true);
   };
 
   // Handle deleting a course
@@ -253,7 +550,7 @@ const CoursesCH = () => {
     let activeCourses = [];
 
     if (activeTab === "all") {
-      activeCourses = courses;
+      activeCourses = coursesArray;
     } else {
       activeCourses = categorizedCourses[activeTab] || [];
     }
@@ -262,23 +559,41 @@ const CoursesCH = () => {
   };
 
   // Filter courses based on search term, filters, and active tab
-  const filteredCourses = getActiveCourses().filter((course) => {
-    const matchesSearchTerm =
-      course.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      course.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      course.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      course.category.toLowerCase().includes(searchTerm.toLowerCase());
+  const activeCourses = getActiveCourses();
+  console.log("Active courses (pre-filter):", activeCourses.length);
 
-    const matchesYear = filters.year === "all" || course.year.toString() === filters.year;
-    const matchesSemester = filters.semester === "all" || course.semester.toString() === filters.semester;
+  const filteredCourses = activeCourses.filter((course) => {
+    // Search term filter
+    const matchesSearchTerm = searchTerm === "" || (
+      (course.name && course.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (course.code && course.code.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (course.department && course.department.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (course.category && course.category.toLowerCase().includes(searchTerm.toLowerCase()))
+    );
 
-    return matchesSearchTerm && matchesYear && matchesSemester;
+    // Year filter
+    const matchesYear = filters.year === "all" || 
+      (course.year !== undefined && course.year.toString() === filters.year);
+    
+    // Semester filter
+    const matchesSemester = filters.semester === "all" || 
+      (course.semester !== undefined && course.semester.toString() === filters.semester);
+    
+    // Status filter
+    const matchesStatus = filters.status === "all" || 
+      (course.status !== undefined && course.status === filters.status);
+
+    return matchesSearchTerm && matchesYear && matchesSemester && matchesStatus;
   });
+
+  console.log("Filtered courses:", filteredCourses.length);
+  console.log("Filter state:", filters);
 
   // Pagination logic
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredCourses.slice(indexOfFirstItem, indexOfLastItem);
+  console.log("Current page items:", currentItems.length);
 
   const totalPages = Math.ceil(filteredCourses.length / itemsPerPage);
 
@@ -290,8 +605,18 @@ const CoursesCH = () => {
   }, [searchTerm, filters, activeTab]);
 
   // Get unique years and semesters for filter dropdowns
-  const uniqueYears = [...new Set(courses.map(course => course.year))].sort();
-  const uniqueSemesters = [...new Set(courses.map(course => course.semester))].sort();
+  const uniqueYears = [...new Set(coursesArray.filter(course => course.year !== undefined).map(course => course.year))].sort();
+  const uniqueSemesters = [...new Set(coursesArray.filter(course => course.semester !== undefined).map(course => course.semester))].sort();
+
+  // Status options for filter dropdown
+  const statusOptions = [
+    { value: "all", label: "All Statuses" },
+    { value: "draft", label: "Draft" },
+    { value: "assigned", label: "Assigned" },
+    { value: "active", label: "Active" },
+    { value: "completed", label: "Completed" },
+    { value: "archived", label: "Archived" }
+  ];
 
   // Modal animation variants
   const modalVariants = {
@@ -302,6 +627,8 @@ const CoursesCH = () => {
 
   // Get department icon
   const getDepartmentIcon = (department) => {
+    if (!department) return <BookOpen className="text-indigo-500 dark:text-indigo-400" size={20} />;
+    
     if (department === "Software Engineering") {
       return <Code className="text-blue-500 dark:text-blue-400" size={20} />;
     } else if (department === "Computer Science") {
@@ -315,6 +642,8 @@ const CoursesCH = () => {
 
   // Get department badge color
   const getDepartmentBadgeClass = (department) => {
+    if (!department) return "bg-gray-100 dark:bg-gray-900/40 text-gray-800 dark:text-gray-300";
+    
     if (department.toLowerCase().includes("software") ||
       department.toLowerCase().includes("swe") ||
       department.toLowerCase().includes("se")) {
@@ -332,6 +661,39 @@ const CoursesCH = () => {
     }
   };
 
+  // Get status badge color
+  const getStatusBadgeClass = (status) => {
+    switch (status) {
+      case "draft":
+        return "bg-gray-100 dark:bg-gray-900/40 text-gray-800 dark:text-gray-300";
+      case "assigned":
+        return "bg-yellow-100 dark:bg-yellow-900/40 text-yellow-800 dark:text-yellow-300";
+      case "active":
+        return "bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300";
+      case "completed":
+        return "bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300";
+      case "archived":
+        return "bg-purple-100 dark:bg-purple-900/40 text-purple-800 dark:text-purple-300";
+      default:
+        return "bg-gray-100 dark:bg-gray-900/40 text-gray-800 dark:text-gray-300";
+    }
+  };
+
+  // Count courses by status
+  const assignedCoursesCount = coursesArray.filter(course => course.status === "assigned").length;
+  const draftCoursesCount = coursesArray.filter(course => course.status === "draft").length;
+  const activeCoursesCount = coursesArray.filter(course => course.status === "active").length;
+  const archivedCoursesCount = coursesArray.filter(course => course.status === "archived").length;
+
+  // Check if selected courses contain courses with specific status
+  const selectedAssignedCoursesCount = selectedCourses.filter(id => 
+    coursesArray.find(course => course._id === id && course.status === "assigned")
+  ).length;
+
+  const selectedActiveCoursesCount = selectedCourses.filter(id => 
+    coursesArray.find(course => course._id === id && course.status === "active")
+  ).length;
+
   return (
     <div className="h-full flex flex-col overflow-hidden">
       {/* Main content area with scrolling */}
@@ -341,20 +703,146 @@ const CoursesCH = () => {
           <div>
             <h1 className="text-2xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
               <BookOpen className="text-indigo-600" size={24} />
-              Course Management
+              {isHeadOfFaculty ? "Faculty Course Management" : "Course Management"}
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-              Manage all courses under your chair
+              {isHeadOfFaculty
+                ? "Create and activate courses to department chairs"
+                : "Manage courses assigned to your chair"}
             </p>
           </div>
-          <button
-            onClick={() => setOpenAddModal(true)}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded-lg transition-colors shadow-sm"
-          >
-            <Plus size={18} />
-            Add New Course
-          </button>
+          <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+            {isHeadOfFaculty && (
+              <button
+                onClick={() => setOpenAddModal(true)}
+                className="w-full sm:w-auto flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded-lg transition-colors shadow-sm"
+              >
+                <Plus size={18} />
+                Add New Course
+              </button>
+            )}
+
+          </div>
         </div>
+
+        {/* Course status summary */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center gap-2">
+              <div className="p-2 bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 rounded-lg">
+                <File className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-gray-500 dark:text-gray-400 text-xs">Draft</p>
+                <p className="font-semibold text-lg text-gray-800 dark:text-white">{draftCoursesCount}</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center gap-2">
+              <div className="p-2 bg-yellow-100 dark:bg-yellow-900/40 text-yellow-600 dark:text-yellow-300 rounded-lg">
+                <Send className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-gray-500 dark:text-gray-400 text-xs">Assigned</p>
+                <p className="font-semibold text-lg text-gray-800 dark:text-white">{assignedCoursesCount}</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center gap-2">
+              <div className="p-2 bg-green-100 dark:bg-green-900/40 text-green-600 dark:text-green-300 rounded-lg">
+                <Play className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-gray-500 dark:text-gray-400 text-xs">Active</p>
+                <p className="font-semibold text-lg text-gray-800 dark:text-white">{activeCoursesCount}</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center gap-2">
+              <div className="p-2 bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-300 rounded-lg">
+                <Archive className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-gray-500 dark:text-gray-400 text-xs">Archived</p>
+                <p className="font-semibold text-lg text-gray-800 dark:text-white">{archivedCoursesCount}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Bulk Action Buttons */}
+        {selectedCourses.length > 0 && (
+          <div className="mb-6 bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                {selectedCourses.length} courses selected
+              </span>
+              <div className="flex-1"></div>
+              
+              {/* Conditional buttons based on user role */}
+              <div className="flex flex-wrap gap-2">
+                {/* For HeadOfFaculty */}
+                {isHeadOfFaculty && (
+                  <>
+                    <button
+                      onClick={openAssignCoursesModal}
+                      className="flex items-center justify-center gap-1.5 bg-green-600 hover:bg-green-700 text-white py-1.5 px-3 rounded-lg transition-colors text-sm"
+                    >
+                      <Play size={16} />
+                      Activate
+                    </button>
+                    {selectedActiveCoursesCount > 0 && (
+                      <button
+                        onClick={openUnassignCoursesModal}
+                        className="flex items-center justify-center gap-1.5 bg-amber-600 hover:bg-amber-700 text-white py-1.5 px-3 rounded-lg transition-colors text-sm"
+                      >
+                        <Unlink size={16} />
+                        Unassign
+                      </button>
+                    )}
+                    <button
+                      onClick={openArchiveCoursesModal}
+                      className="flex items-center justify-center gap-1.5 bg-purple-600 hover:bg-purple-700 text-white py-1.5 px-3 rounded-lg transition-colors text-sm"
+                    >
+                      <Archive size={16} />
+                      Archive
+                    </button>
+                    <button
+                      onClick={openDraftCoursesModal}
+                      className="flex items-center justify-center gap-1.5 bg-gray-600 hover:bg-gray-700 text-white py-1.5 px-3 rounded-lg transition-colors text-sm"
+                    >
+                      <File size={16} />
+                      Make Draft
+                    </button>
+                  </>
+                )}
+                
+                {/* For ChairHead or COC */}
+                {isChairOrCoc && selectedActiveCoursesCount > 0 && (
+                  <button
+                    onClick={openActivateCoursesModal}
+                    className="flex items-center justify-center gap-1.5 bg-yellow-600 hover:bg-yellow-700 text-white py-1.5 px-3 rounded-lg transition-colors text-sm"
+                  >
+                    <Send size={16} />
+                    Assign
+                  </button>
+                )}
+                
+                {/* Clear selection button for all roles */}
+                <button
+                  onClick={() => setSelectedCourses([])}
+                  className="flex items-center justify-center gap-1.5 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 py-1.5 px-3 rounded-lg transition-colors text-sm"
+                >
+                  <X size={16} />
+                  Clear Selection
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Search and Filter Section */}
         <div className="mb-6 bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
@@ -388,7 +876,7 @@ const CoursesCH = () => {
                 exit={{ height: 0, opacity: 0 }}
                 className="overflow-hidden"
               >
-                <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                <div className="mt-4 grid grid-cols-1 sm:grid-cols-4 gap-4 pt-4 border-t border-gray-200 dark:border-gray-700">
                   <div>
                     <label htmlFor="year" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-2">
                       <Calendar size={16} className="text-gray-500 dark:text-gray-400" />
@@ -425,6 +913,41 @@ const CoursesCH = () => {
                       ))}
                     </select>
                   </div>
+                  <div>
+                    <label htmlFor="department" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-2">
+                      <Building size={16} className="text-gray-500 dark:text-gray-400" />
+                      Department
+                    </label>
+                    <select
+                      id="department"
+                      name="department"
+                      value={filters.department}
+                      onChange={handleFilterChange}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600 focus:border-indigo-500 dark:focus:border-indigo-600 outline-none transition dark:bg-gray-700 dark:text-white text-base"
+                    >
+                      <option value="all">All Departments</option>
+                      <option value="Software Engineering">Software Engineering</option>
+                      <option value="Computer Science">Computer Science</option>
+                      <option value="Information Technology">Information Technology</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="status" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-2">
+                      <Shield size={16} className="text-gray-500 dark:text-gray-400" />
+                      Status
+                    </label>
+                    <select
+                      id="status"
+                      name="status"
+                      value={filters.status}
+                      onChange={handleFilterChange}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600 focus:border-indigo-500 dark:focus:border-indigo-600 outline-none transition dark:bg-gray-700 dark:text-white text-base"
+                    >
+                      {statusOptions.map(option => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               </motion.div>
             )}
@@ -442,7 +965,7 @@ const CoursesCH = () => {
                 } transition-colors`}
             >
               <Monitor size={16} />
-              All Courses ({courses.length})
+              All Courses ({coursesArray.length})
             </button>
             <button
               onClick={() => setActiveTab("Software Engineering")}
@@ -492,7 +1015,7 @@ const CoursesCH = () => {
         )}
 
         {/* Filter indicator badges */}
-        {(filters.year !== "all" || filters.semester !== "all") && (
+        {(filters.year !== "all" || filters.semester !== "all" || filters.department !== "all" || filters.status !== "all") && (
           <div className="mb-4 flex flex-wrap gap-2">
             {filters.year !== "all" && (
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300">
@@ -516,9 +1039,31 @@ const CoursesCH = () => {
                 </button>
               </span>
             )}
+            {filters.department !== "all" && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900/50 text-indigo-800 dark:text-indigo-300">
+                Department: {filters.department}
+                <button
+                  className="ml-1 text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300"
+                  onClick={() => setFilters({ ...filters, department: "all" })}
+                >
+                  <X size={14} />
+                </button>
+              </span>
+            )}
+            {filters.status !== "all" && (
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-300">
+                Status: {filters.status}
+                <button
+                  className="ml-1 text-yellow-600 dark:text-yellow-400 hover:text-yellow-800 dark:hover:text-yellow-300"
+                  onClick={() => setFilters({ ...filters, status: "all" })}
+                >
+                  <X size={14} />
+                </button>
+              </span>
+            )}
             <button
               className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 flex items-center"
-              onClick={() => setFilters({ year: "all", semester: "all" })}
+              onClick={() => setFilters({ year: "all", semester: "all", department: "all", status: "all" })}
             >
               Clear all filters
             </button>
@@ -554,20 +1099,22 @@ const CoursesCH = () => {
                 <BookOpen className="mx-auto h-12 w-12 text-gray-400 dark:text-gray-500" />
                 <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">No courses found</h3>
                 <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                  {searchTerm || filters.year !== "all" || filters.semester !== "all"
+                  {searchTerm || filters.year !== "all" || filters.semester !== "all" || filters.department !== "all" || filters.status !== "all"
                     ? 'Try adjusting your search or filters'
-                    : 'Get started by adding a new course'}
+                    : isHeadOfFaculty ? 'Get started by adding a new course' : 'No courses have been assigned to you yet'}
                 </p>
-                <div className="mt-6">
-                  <button
-                    type="button"
-                    onClick={() => setOpenAddModal(true)}
-                    className="inline-flex items-center px-4 py-2 shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-700 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
-                  >
-                    <Plus className="-ml-1 mr-2 h-5 w-5" />
-                    Add Course
-                  </button>
-                </div>
+                {isHeadOfFaculty && (
+                  <div className="mt-6">
+                    <button
+                      type="button"
+                      onClick={() => setOpenAddModal(true)}
+                      className="inline-flex items-center px-4 py-2 shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-700 dark:hover:bg-indigo-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
+                    >
+                      <Plus className="-ml-1 mr-2 h-5 w-5" />
+                      Add Course
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
               <>
@@ -576,18 +1123,30 @@ const CoursesCH = () => {
                   {currentItems.map((course) => (
                     <div
                       key={course._id}
-                      className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow bg-white dark:bg-gray-800"
+                      className={`border ${selectedCourses.includes(course._id) ? 'border-indigo-500 dark:border-indigo-400 shadow-md' : 'border-gray-200 dark:border-gray-700'} rounded-lg p-4 hover:shadow-md transition-shadow bg-white dark:bg-gray-800`}
                     >
                       <div className="flex justify-between items-start mb-2">
+                        <div className="mr-2">
+                          <input
+                            type="checkbox"
+                            id={`select-${course._id}`}
+                            checked={selectedCourses.includes(course._id)}
+                            onChange={() => toggleCourseSelection(course._id)}
+                            className="h-4 w-4 rounded text-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-400"
+                          />
+                        </div>
                         <h3 className="font-bold text-lg text-gray-800 dark:text-white">{course.name}</h3>
                         <span className="bg-indigo-100 dark:bg-indigo-900/40 text-indigo-800 dark:text-indigo-300 text-xs font-semibold px-2.5 py-0.5 rounded">
                           {course.code}
                         </span>
                       </div>
 
-                      <div className="mb-2">
+                      <div className="flex flex-wrap gap-2 mb-2">
                         <span className={`inline-block px-2.5 py-0.5 rounded-md text-xs font-semibold ${getDepartmentBadgeClass(course.department)}`}>
                           {course.department}
+                        </span>
+                        <span className={`inline-block px-2.5 py-0.5 rounded-md text-xs font-semibold ${getStatusBadgeClass(course.status || 'draft')}`}>
+                          {course.status || 'Draft'}
                         </span>
                       </div>
 
@@ -612,126 +1171,227 @@ const CoursesCH = () => {
                           <span className="text-gray-500 dark:text-gray-400">Hours:</span>
                           <p className="font-medium text-gray-700 dark:text-gray-300">Lecture:{course.lecture} | Lab:{course.lab} | Tutorial:{course.tutorial}</p>
                         </div>
+                        {course.assignedTo && (
+                          <div className="col-span-2">
+                            <span className="text-gray-500 dark:text-gray-400">Assigned To:</span>
+                            <p className="font-medium text-gray-700 dark:text-gray-300">{course.assignedTo}</p>
+                          </div>
+                        )}
                       </div>
 
                       <div className="flex gap-2 mt-3">
-                        <button
-                          className="flex-1 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-700 dark:hover:bg-indigo-600 text-white py-2 px-3 rounded-lg text-sm transition duration-200 flex items-center justify-center gap-1"
-                          onClick={() => openEditCourseModal(course)}
-                        >
-                          <Edit size={16} />
-                          Edit
-                        </button>
-                        <button
-                          className="flex-1 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 text-white py-2 px-3 rounded-lg text-sm transition duration-200 flex items-center justify-center gap-1"
-                          onClick={() => openDeleteCourseModal(course)}
-                        >
-                          <Trash2 size={16} />
-                          Delete
-                        </button>
+                        {isHeadOfFaculty && (
+                          <>
+                            <button
+                              className="flex-1 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-700 dark:hover:bg-indigo-600 text-white py-2 px-3 rounded-lg text-sm transition duration-200 flex items-center justify-center gap-1"
+                              onClick={() => openEditCourseModal(course)}
+                            >
+                              <Edit size={16} />
+                              Edit
+                            </button>
+                            {course.status === "active" && (
+                              <button
+                                className="flex-1 bg-amber-600 hover:bg-amber-700 dark:bg-amber-700 dark:hover:bg-amber-600 text-white py-2 px-3 rounded-lg text-sm transition duration-200 flex items-center justify-center gap-1"
+                                onClick={() => {
+                                  setSelectedCourses([course._id]);
+                                  openUnassignCoursesModal();
+                                }}
+                              >
+                                <Unlink size={16} />
+                                Unassign
+                              </button>
+                            )}
+                            <button
+                              className="flex-1 bg-red-600 hover:bg-red-700 dark:bg-red-700 dark:hover:bg-red-600 text-white py-2 px-3 rounded-lg text-sm transition duration-200 flex items-center justify-center gap-1"
+                              onClick={() => openDeleteCourseModal(course)}
+                            >
+                              <Trash2 size={16} />
+                              Delete
+                            </button>
+                          </>
+                        )}
+                        {isChairOrCoc && course.status === "active" && (
+                          <button
+                            className="flex-1 bg-yellow-600 hover:bg-yellow-700 dark:bg-yellow-700 dark:hover:bg-yellow-600 text-white py-2 px-3 rounded-lg text-sm transition duration-200 flex items-center justify-center gap-1"
+                            onClick={() => {
+                              setSelectedCourses([course._id]);
+                              openActivateCoursesModal();
+                            }}
+                          >
+                            <Send size={16} />
+                            Assign
+                          </button>
+                        )}
+                        {!isHeadOfFaculty && !isChairOrCoc && (
+                          <button
+                            className="flex-1 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-700 dark:hover:bg-indigo-600 text-white py-2 px-3 rounded-lg text-sm transition duration-200 flex items-center justify-center gap-1"
+                            onClick={() => {/* View course details */ }}
+                          >
+                            <BookOpen size={16} />
+                            View Details
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))}
                 </div>
 
                 {/* Desktop view - table */}
-                <div className="overflow-x-auto -mx-4 sm:mx-0">
-                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 table-fixed">
+                <div className="hidden sm:block overflow-x-auto -mx-4 sm:mx-0">
+                  <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                     <thead className="bg-gray-50 dark:bg-gray-700">
                       <tr>
-                        <th scope="col" className="px-2 sm:px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-1/4">
-                          Course Name
+                        <th scope="col" className="px-1 py-1.5 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-8">
+                          <input
+                            type="checkbox"
+                            checked={currentItems.length > 0 && currentItems.every(course => selectedCourses.includes(course._id))}
+                            onChange={() => {
+                              if (currentItems.every(course => selectedCourses.includes(course._id))) {
+                                setSelectedCourses(selectedCourses.filter(id => !currentItems.some(course => course._id === id)));
+                              } else {
+                                const currentIds = currentItems.map(course => course._id);
+                                const newSelected = [...new Set([...selectedCourses, ...currentIds])];
+                                setSelectedCourses(newSelected);
+                              }
+                            }}
+                            className="h-3.5 w-3.5 rounded text-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-400"
+                          />
                         </th>
-                        <th scope="col" className="px-2 sm:px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-1/12">
-                          Code
+                        <th scope="col" className="px-2 py-1.5 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                          Course
                         </th>
-                        <th scope="col" className="px-2 sm:px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-1/6">
+                        <th scope="col" className="px-2 py-1.5 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                           Department
                         </th>
-                        <th scope="col" className="px-2 sm:px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-1/12">
-                          Year/Sem
+                        <th scope="col" className="px-2 py-1.5 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider whitespace-nowrap">
+                          Year/Sem/Credits
                         </th>
-                        <th scope="col" className="px-2 sm:px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-1/12">
-                          Hours
+                        <th scope="col" className="px-2 py-1.5 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                          Status/Assigned
                         </th>
-                        <th scope="col" className="px-2 sm:px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-1/12">
-                          Credit
-                        </th>
-                        <th scope="col" className="px-2 sm:px-3 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider w-1/6">
+                        <th scope="col" className="px-2 py-1.5 text-right text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                           Actions
                         </th>
                       </tr>
                     </thead>
                     <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
                       {currentItems.map((course) => (
-                        <tr key={course._id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
-                          <td className="px-2 sm:px-3 py-2 whitespace-nowrap">
-                            <div className="flex items-center">
-                              <div className="flex-shrink-0 h-7 w-7 sm:h-8 sm:w-8 bg-indigo-100 dark:bg-indigo-900/40 rounded-md flex items-center justify-center">
-                                {course.department.toLowerCase().includes("software") ||
-                                  course.department.toLowerCase().includes("swe") ||
-                                  course.department.toLowerCase().includes("se") ? (
-                                  <Code className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                                ) : course.department.toLowerCase().includes("computer science") ||
-                                  course.department.toLowerCase().includes("cs") ||
-                                  course.department.toLowerCase().includes("computing") ? (
-                                  <Database className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                                ) : course.department.toLowerCase().includes("information") ||
-                                  course.department.toLowerCase().includes("it") ||
-                                  course.department.toLowerCase().includes("tech") ? (
-                                  <Server className="h-4 w-4 text-green-600 dark:text-green-400" />
+                        <tr
+                          key={course._id}
+                          className={`${selectedCourses.includes(course._id) ? 'bg-indigo-50 dark:bg-indigo-900/20' : 'hover:bg-gray-50 dark:hover:bg-gray-700'} transition-colors`}
+                        >
+                          <td className="px-1 py-1.5 whitespace-nowrap align-top">
+                            <input
+                              type="checkbox"
+                              checked={selectedCourses.includes(course._id)}
+                              onChange={() => toggleCourseSelection(course._id)}
+                              className="h-3.5 w-3.5 rounded text-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-400"
+                            />
+                          </td>
+                          <td className="px-2 py-1.5 whitespace-nowrap align-top">
+                            <div className="flex items-start">
+                              <div className="flex-shrink-0 h-6 w-6 bg-indigo-100 dark:bg-indigo-900/40 rounded-md flex items-center justify-center mr-2">
+                                {course.department?.toLowerCase().includes("software") || course.department?.toLowerCase().includes("swe") ? (
+                                  <Code className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
+                                ) : course.department?.toLowerCase().includes("computer science") || course.department?.toLowerCase().includes("cs") ? (
+                                  <Database className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
+                                ) : course.department?.toLowerCase().includes("information") || course.department?.toLowerCase().includes("it") ? (
+                                  <Server className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
                                 ) : (
-                                  <BookOpen className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
+                                  <BookOpen className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
                                 )}
                               </div>
-                              <div className="ml-2 sm:ml-3">
-                                <div className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white truncate max-w-[120px] sm:max-w-[200px] md:max-w-xs">
+                              <div>
+                                <div className="text-xs font-medium text-gray-900 dark:text-white truncate max-w-[120px] sm:max-w-[150px] md:max-w-[200px] lg:max-w-xs">
                                   {course.name}
                                 </div>
-                                <div className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[120px] sm:max-w-[200px] md:max-w-xs">
-                                  {course.category}
+                                <div className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[120px] sm:max-w-[150px] md:max-w-[200px] lg:max-w-xs">
+                                  <span className="px-1.5 py-0.5 inline-flex text-xs leading-4 font-semibold rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-800 dark:text-indigo-300 mr-1">
+                                    {course.code}
+                                  </span>
+                                  <span className="text-xs">{course.category}</span>
                                 </div>
                               </div>
                             </div>
                           </td>
-                          <td className="px-2 sm:px-3 py-2 whitespace-nowrap">
-                            <span className="px-1.5 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-800 dark:text-indigo-300">
-                              {course.code}
-                            </span>
-                          </td>
-                          <td className="px-2 sm:px-3 py-2 whitespace-nowrap">
+                          <td className="px-2 py-1.5 whitespace-nowrap align-top">
                             <span className={`px-1.5 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-md ${getDepartmentBadgeClass(course.department)}`}>
                               {course.department}
                             </span>
                           </td>
-                          <td className="px-2 sm:px-3 py-2 whitespace-nowrap">
-                            <div className="text-xs text-gray-900 dark:text-white leading-tight">Y: {course.year}</div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400 leading-tight">S: {course.semester}</div>
+                          <td className="px-2 py-1.5 whitespace-nowrap align-top">
+                            <div className="flex flex-col space-y-0.5">
+                              <div className="text-xs text-gray-900 dark:text-white">
+                                <span className="font-medium">Y{course.year}</span> / <span className="font-medium">S{course.semester}</span>
+                              </div>
+                              <div className="text-xs text-gray-500 dark:text-gray-400">
+                                <span className="font-medium">{course.creditHour} CR</span> ({course.lecture}L-{course.lab}Lab-{course.tutorial}T)
+                              </div>
+                            </div>
                           </td>
-                          <td className="px-2 sm:px-3 py-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
-                            <div className="leading-tight">L: {course.lecture}</div>
-                            <div className="leading-tight">Lab: {course.lab}</div>
-                            <div className="leading-tight">T: {course.tutorial}</div>
+                          <td className="px-2 py-1.5 whitespace-nowrap align-top">
+                            <div className="flex flex-col space-y-1">
+                              <span className={`px-1.5 py-0.5 inline-flex text-xs leading-4 font-semibold rounded-md ${getStatusBadgeClass(course.status || 'draft')}`}>
+                                {course.status || 'Draft'}
+                              </span>
+                              {course.assignedTo && (
+                                <div className="flex items-center text-xs text-gray-700 dark:text-gray-300">
+                                  <User size={12} className="mr-1 text-gray-500" />
+                                  {course.assignedTo}
+                                </div>
+                              )}
+                            </div>
                           </td>
-                          <td className="px-2 sm:px-3 py-2 whitespace-nowrap text-xs text-gray-500 dark:text-gray-400">
-                            {course.creditHour} CH
-                          </td>
-                          <td className="px-2 sm:px-3 py-2 whitespace-nowrap text-right text-xs font-medium">
-                            <div className="flex justify-end space-x-1 sm:space-x-2">
-                              <button
-                                onClick={() => openEditCourseModal(course)}
-                                className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300 transition-colors flex items-center gap-0.5 sm:gap-1 p-1"
-                              >
-                                <Edit size={14} />
-                                <span className="hidden sm:inline">Edit</span>
-                              </button>
-                              <button
-                                onClick={() => openDeleteCourseModal(course)}
-                                className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 transition-colors flex items-center gap-0.5 sm:gap-1 p-1"
-                              >
-                                <Trash2 size={14} />
-                                <span className="hidden sm:inline">Delete</span>
-                              </button>
+                          <td className="px-2 py-1.5 whitespace-nowrap text-right align-top">
+                            <div className="flex justify-end items-center space-x-0.5">
+                              {isHeadOfFaculty ? (
+                                <>
+                                  <button
+                                    onClick={() => openEditCourseModal(course)}
+                                    className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300 transition-colors p-1"
+                                    title="Edit course"
+                                  >
+                                    <Edit size={14} />
+                                  </button>
+                                  {course.status === "active" && (
+                                    <button
+                                      onClick={() => {
+                                        setSelectedCourses([course._id]);
+                                        openUnassignCoursesModal();
+                                      }}
+                                      className="text-amber-600 dark:text-amber-400 hover:text-amber-800 dark:hover:text-amber-300 transition-colors p-1"
+                                      title="Unassign course"
+                                    >
+                                      <Unlink size={14} />
+                                    </button>
+                                  )}
+                                  <button
+                                    onClick={() => openDeleteCourseModal(course)}
+                                    className="text-red-600 dark:text-red-400 hover:text-red-900 dark:hover:text-red-300 transition-colors p-1"
+                                    title="Delete course"
+                                  >
+                                    <Trash2 size={14} />
+                                  </button>
+                                </>
+                              ) : isChairOrCoc && course.status === "active" ? (
+                                <button
+                                  onClick={() => {
+                                    setSelectedCourses([course._id]);
+                                    openActivateCoursesModal();
+                                  }}
+                                  className="text-yellow-600 dark:text-yellow-400 hover:text-yellow-900 dark:hover:text-yellow-300 transition-colors p-1"
+                                  title="Assign course"
+                                >
+                                  <Send size={14} />
+                                </button>
+                              ) : (
+                                <button
+                                  className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-900 dark:hover:text-indigo-300 transition-colors p-1"
+                                  title="View course details"
+                                >
+                                  <BookOpen size={14} />
+                                </button>
+                              )}
                             </div>
                           </td>
                         </tr>
@@ -845,6 +1505,29 @@ const CoursesCH = () => {
 
       {/* Modals */}
       <AnimatePresence>
+        {/* Debug Modal */}
+        {openDebugModal && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+              onClick={() => setOpenDebugModal(false)}
+            />
+            <motion.div
+              variants={modalVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-3xl max-h-[80vh] overflow-y-auto z-50"
+              onClick={(e) => e.stopPropagation()}
+            >
+
+            </motion.div>
+          </>
+        )}
+
         {/* Add Course Modal */}
         {openAddModal && (
           <>
@@ -964,6 +1647,7 @@ const CoursesCH = () => {
                             id="year"
                             name="year"
                             min="1"
+                            max="5"
                             value={form.year}
                             onChange={handleChange}
                             required
@@ -980,6 +1664,7 @@ const CoursesCH = () => {
                             id="semester"
                             name="semester"
                             min="1"
+                            max="3"
                             value={form.semester}
                             onChange={handleChange}
                             required
@@ -1050,7 +1735,7 @@ const CoursesCH = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label htmlFor="likeness" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Likeness 
+                        Likeness (comma-separated)
                       </label>
                       <input
                         type="text"
@@ -1059,7 +1744,7 @@ const CoursesCH = () => {
                         value={form.likeness}
                         onChange={handleChange}
                         className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600 focus:border-indigo-500 dark:focus:border-indigo-600 outline-none transition dark:bg-gray-700 dark:text-white text-base"
-                        placeholder=""
+                        placeholder="Similar courses, separated by commas"
                       />
                     </div>
 
@@ -1074,9 +1759,28 @@ const CoursesCH = () => {
                         value={form.location}
                         onChange={handleChange}
                         className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600 focus:border-indigo-500 dark:focus:border-indigo-600 outline-none transition dark:bg-gray-700 dark:text-white text-base"
-                        placeholder="campus"
+                        placeholder="Campus"
                       />
                     </div>
+                  </div>
+
+                  <div>
+                    <label htmlFor="status" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-2">
+                      <Shield size={16} className="text-gray-500 dark:text-gray-400" />
+                      Status
+                    </label>
+                    <select
+                      id="status"
+                      name="status"
+                      value={form.status || 'draft'}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600 focus:border-indigo-500 dark:focus:border-indigo-600 outline-none transition dark:bg-gray-700 dark:text-white text-base"
+                    >
+                      <option value="draft">Draft</option>
+                      <option value="active">Active</option>
+                      <option value="assigned">Assigned</option>
+                      <option value="archived">Archived</option>
+                    </select>
                   </div>
 
                   <div className="flex justify-end gap-3 pt-6 border-t border-gray-200 dark:border-gray-700">
@@ -1221,6 +1925,7 @@ const CoursesCH = () => {
                             id="year"
                             name="year"
                             min="1"
+                            max="5"
                             value={form.year}
                             onChange={handleChange}
                             required
@@ -1237,6 +1942,7 @@ const CoursesCH = () => {
                             id="semester"
                             name="semester"
                             min="1"
+                            max="3"
                             value={form.semester}
                             onChange={handleChange}
                             required
@@ -1334,6 +2040,25 @@ const CoursesCH = () => {
                     </div>
                   </div>
 
+                  <div>
+                    <label htmlFor="status" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-2">
+                      <Shield size={16} className="text-gray-500 dark:text-gray-400" />
+                      Status
+                    </label>
+                    <select
+                      id="status"
+                      name="status"
+                      value={form.status || 'draft'}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600 focus:border-indigo-500 dark:focus:border-indigo-600 outline-none transition dark:bg-gray-700 dark:text-white text-base"
+                    >
+                      <option value="draft">Draft</option>
+                      <option value="active">Active</option>
+                      <option value="assigned">Assigned</option>
+                      <option value="archived">Archived</option>
+                    </select>
+                  </div>
+
                   <div className="flex justify-end gap-3 pt-6 border-t border-gray-200 dark:border-gray-700">
                     <button
                       type="button"
@@ -1411,6 +2136,424 @@ const CoursesCH = () => {
                     >
                       {loading ? <Loader2 className="animate-spin" size={18} /> : <Trash2 size={18} />}
                       Delete Course
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+
+        {/* Assign Courses Modal (now Activate Courses Modal) */}
+        {openAssignModal && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+              onClick={() => setOpenAssignModal(false)}
+            />
+            <motion.div
+              variants={modalVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md z-50"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                    <Play className="text-green-600 dark:text-green-500" size={20} />
+                    Activate Selected Courses
+                  </h2>
+                  <button
+                    onClick={() => setOpenAssignModal(false)}
+                    className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+                  >
+                    <X size={24} />
+                  </button>
+                </div>
+
+                <div className="space-y-6">
+                  <div>
+                    <label htmlFor="assignTo" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+                      <Users size={16} className="text-gray-500 dark:text-gray-400" />
+                      Activate For
+                    </label>
+                    <select
+                      id="assignTo"
+                      value={selectedChair}
+                      onChange={(e) => setSelectedChair(e.target.value)}
+                      required
+                      className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600 focus:border-indigo-500 dark:focus:border-indigo-600 outline-none transition dark:bg-gray-700 dark:text-white text-base"
+                    >
+                      <option value="">Select Chair or CoC</option>
+                      <option value="COC">COC</option>
+                      {chairHeads.map(chair => (
+                        <option key={chair._id} value={chair.name}>{chair.head?.fullName || "Unknown"} - {chair.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
+                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+                      <BookOpen size={16} className="text-gray-500 dark:text-gray-400" />
+                      Selected Courses ({selectedCourses.length})
+                    </h3>
+                    <div className="max-h-40 overflow-y-auto space-y-1">
+                      {selectedCourses.map(courseId => {
+                        const course = coursesArray.find(c => c._id === courseId);
+                        return course ? (
+                          <div key={courseId} className="flex items-center justify-between py-1 px-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600/50 rounded">
+                            <span>{course.name}</span>
+                            <span className="text-xs bg-indigo-100 dark:bg-indigo-900/40 text-indigo-800 dark:text-indigo-300 px-1.5 py-0.5 rounded">{course.code}</span>
+                          </div>
+                        ) : null;
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="flex justify-end gap-3 pt-6 border-t border-gray-200 dark:border-gray-700">
+                    <button
+                      onClick={() => setOpenAssignModal(false)}
+                      className="px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleAssignCourses}
+                      disabled={loading || !selectedChair}
+                      className="px-4 py-2.5 text-sm font-medium text-white bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 rounded-lg transition-colors disabled:opacity-70 flex items-center gap-2"
+                    >
+                      {loading ? <Loader2 className="animate-spin" size={18} /> : <Play size={18} />}
+                      Activate Courses
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+
+        {/* Unassign Courses Modal */}
+        {openUnassignModal && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+              onClick={() => setOpenUnassignModal(false)}
+            />
+            <motion.div
+              variants={modalVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md z-50"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                    <Unlink className="text-amber-600 dark:text-amber-500" size={20} />
+                    Unassign Selected Courses
+                  </h2>
+                  <button
+                    onClick={() => setOpenUnassignModal(false)}
+                    className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+                  >
+                    <X size={24} />
+                  </button>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
+                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+                      <BookOpen size={16} className="text-gray-500 dark:text-gray-400" />
+                      Selected Courses to Unassign ({selectedCourses.length})
+                    </h3>
+                    <div className="max-h-40 overflow-y-auto space-y-1">
+                      {selectedCourses.map(courseId => {
+                        const course = coursesArray.find(c => c._id === courseId);
+                        return course ? (
+                          <div key={courseId} className="flex items-center justify-between py-1 px-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600/50 rounded">
+                            <span>{course.name}</span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs bg-indigo-100 dark:bg-indigo-900/40 text-indigo-800 dark:text-indigo-300 px-1.5 py-0.5 rounded">{course.code}</span>
+                              {course.assignedTo && (
+                                <span className="text-xs bg-yellow-100 dark:bg-yellow-900/40 text-yellow-800 dark:text-yellow-300 px-1.5 py-0.5 rounded">
+                                  {course.assignedTo}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ) : null;
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                    <p className="text-amber-700 dark:text-amber-300 text-sm">
+                      Unassigning courses will return them to "Draft" status and remove them from the assigned chair or COC.
+                    </p>
+                  </div>
+
+                  <div className="flex justify-end gap-3 pt-6 border-t border-gray-200 dark:border-gray-700">
+                    <button
+                      onClick={() => setOpenUnassignModal(false)}
+                      className="px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleUnassignCourses}
+                      disabled={loading}
+                      className="px-4 py-2.5 text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 dark:bg-amber-700 dark:hover:bg-amber-600 rounded-lg transition-colors disabled:opacity-70 flex items-center gap-2"
+                    >
+                      {loading ? <Loader2 className="animate-spin" size={18} /> : <Unlink size={18} />}
+                      Unassign Courses
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+
+        {/* Activate Courses Modal (now Assign Courses Modal) */}
+        {openActivateModal && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+              onClick={() => setOpenActivateModal(false)}
+            />
+            <motion.div
+              variants={modalVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md z-50"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                    <Send className="text-yellow-600 dark:text-yellow-500" size={20} />
+                    Assign Selected Courses
+                  </h2>
+                  <button
+                    onClick={() => setOpenActivateModal(false)}
+                    className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+                  >
+                    <X size={24} />
+                  </button>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
+                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+                      <BookOpen size={16} className="text-gray-500 dark:text-gray-400" />
+                      Selected Courses to Assign ({selectedCourses.length})
+                    </h3>
+                    <div className="max-h-40 overflow-y-auto space-y-1">
+                      {selectedCourses.map(courseId => {
+                        const course = coursesArray.find(c => c._id === courseId);
+                        return course ? (
+                          <div key={courseId} className="flex items-center justify-between py-1 px-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600/50 rounded">
+                            <span>{course.name}</span>
+                            <span className="text-xs bg-indigo-100 dark:bg-indigo-900/40 text-indigo-800 dark:text-indigo-300 px-1.5 py-0.5 rounded">{course.code}</span>
+                          </div>
+                        ) : null;
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                    <p className="text-yellow-700 dark:text-yellow-300 text-sm">
+                      Assigning courses will change their status from "active" to "assigned", indicating they are ready to be instructed.
+                    </p>
+                  </div>
+
+                  <div className="flex justify-end gap-3 pt-6 border-t border-gray-200 dark:border-gray-700">
+                    <button
+                      onClick={() => setOpenActivateModal(false)}
+                      className="px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleBulkActivate}
+                      disabled={bulkActionLoading}
+                      className="px-4 py-2.5 text-sm font-medium text-white bg-yellow-600 hover:bg-yellow-700 dark:bg-yellow-700 dark:hover:bg-yellow-600 rounded-lg transition-colors disabled:opacity-70 flex items-center gap-2"
+                    >
+                      {bulkActionLoading ? <Loader2 className="animate-spin" size={18} /> : <Send size={18} />}
+                      Assign Courses
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+
+        {/* Archive Courses Modal (for HeadOfFaculty) */}
+        {openArchiveModal && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+              onClick={() => setOpenArchiveModal(false)}
+            />
+            <motion.div
+              variants={modalVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md z-50"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                    <Archive className="text-purple-600 dark:text-purple-500" size={20} />
+                    Archive Selected Courses
+                  </h2>
+                  <button
+                    onClick={() => setOpenArchiveModal(false)}
+                    className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+                  >
+                    <X size={24} />
+                  </button>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
+                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+                      <BookOpen size={16} className="text-gray-500 dark:text-gray-400" />
+                      Selected Courses to Archive ({selectedCourses.length})
+                    </h3>
+                    <div className="max-h-40 overflow-y-auto space-y-1">
+                      {selectedCourses.map(courseId => {
+                        const course = coursesArray.find(c => c._id === courseId);
+                        return course ? (
+                          <div key={courseId} className="flex items-center justify-between py-1 px-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600/50 rounded">
+                            <span>{course.name}</span>
+                            <span className="text-xs bg-indigo-100 dark:bg-indigo-900/40 text-indigo-800 dark:text-indigo-300 px-1.5 py-0.5 rounded">{course.code}</span>
+                          </div>
+                        ) : null;
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                    <p className="text-purple-700 dark:text-purple-300 text-sm">
+                      Archiving courses will change their status to "archived" and remove any chair/COC assignments. 
+                      Archived courses can still be viewed but are typically not actively managed.
+                    </p>
+                  </div>
+
+                  <div className="flex justify-end gap-3 pt-6 border-t border-gray-200 dark:border-gray-700">
+                    <button
+                      onClick={() => setOpenArchiveModal(false)}
+                      className="px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleBulkArchive}
+                      disabled={bulkActionLoading}
+                      className="px-4 py-2.5 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-600 rounded-lg transition-colors disabled:opacity-70 flex items-center gap-2"
+                    >
+                      {bulkActionLoading ? <Loader2 className="animate-spin" size={18} /> : <Archive size={18} />}
+                      Archive Courses
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+
+        {/* Make Draft Courses Modal (for HeadOfFaculty) */}
+        {openDraftModal && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center p-4 z-50"
+              onClick={() => setOpenDraftModal(false)}
+            />
+            <motion.div
+              variants={modalVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-md z-50"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="p-6">
+                <div className="flex justify-between items-center mb-4">
+                  <h2 className="text-xl font-bold text-gray-800 dark:text-white flex items-center gap-2">
+                    <File className="text-gray-600 dark:text-gray-500" size={20} />
+                    Convert to Draft
+                  </h2>
+                  <button
+                    onClick={() => setOpenDraftModal(false)}
+                    className="text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+                  >
+                    <X size={24} />
+                  </button>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="bg-gray-50 dark:bg-gray-700/50 p-3 rounded-lg">
+                    <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center gap-2">
+                      <BookOpen size={16} className="text-gray-500 dark:text-gray-400" />
+                      Selected Courses to Convert ({selectedCourses.length})
+                    </h3>
+                    <div className="max-h-40 overflow-y-auto space-y-1">
+                      {selectedCourses.map(courseId => {
+                        const course = coursesArray.find(c => c._id === courseId);
+                        return course ? (
+                          <div key={courseId} className="flex items-center justify-between py-1 px-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-600/50 rounded">
+                            <span>{course.name}</span>
+                            <span className="text-xs bg-indigo-100 dark:bg-indigo-900/40 text-indigo-800 dark:text-indigo-300 px-1.5 py-0.5 rounded">{course.code}</span>
+                          </div>
+                        ) : null;
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-gray-50 dark:bg-gray-700/20 rounded-lg border border-gray-200 dark:border-gray-700">
+                    <p className="text-gray-700 dark:text-gray-300 text-sm">
+                      Converting courses to draft status will remove any chair/COC assignments and reset them to the initial draft state. 
+                      You can then reassign them to chairs or make other changes.
+                    </p>
+                  </div>
+
+                  <div className="flex justify-end gap-3 pt-6 border-t border-gray-200 dark:border-gray-700">
+                    <button
+                      onClick={() => setOpenDraftModal(false)}
+                      className="px-4 py-2.5 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg transition-colors"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={handleBulkDraft}
+                      disabled={bulkActionLoading}
+                      className="px-4 py-2.5 text-sm font-medium text-white bg-gray-600 hover:bg-gray-700 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-70 flex items-center gap-2"
+                    >
+                      {bulkActionLoading ? <Loader2 className="animate-spin" size={18} /> : <File size={18} />}
+                      Convert to Draft
                     </button>
                   </div>
                 </div>

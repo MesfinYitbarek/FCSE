@@ -20,7 +20,8 @@ import {
   Loader2,
   ChevronDown,
   ChevronRight,
-  Building
+  Building,
+  AlertTriangle
 } from "lucide-react";
 
 const PreferencesInst = () => {
@@ -43,6 +44,8 @@ const PreferencesInst = () => {
   const [errorMessage, setErrorMessage] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
   const [expandedCourse, setExpandedCourse] = useState(null);
+  const [showRequirementWarning, setShowRequirementWarning] = useState(false);
+  const [previousPreferences, setPreviousPreferences] = useState([]);
 
   useEffect(() => {
     if (user?.role === "Instructor") {
@@ -72,10 +75,8 @@ const PreferencesInst = () => {
         
         setCourses(extractedCourses);
 
-        const currentDate = new Date();
-        const start = new Date(data.submissionStart);
-        const end = new Date(data.submissionEnd);
-        setSubmissionAllowed(currentDate >= start && currentDate <= end);
+        // Use submissionAllowed directly from the backend response
+        setSubmissionAllowed(data.submissionAllowed);
 
         // Check if the instructor is eligible for this form
         const isInstructorEligible = data.allInstructors || 
@@ -83,6 +84,9 @@ const PreferencesInst = () => {
             instructor => instructor._id === user._id
           ));
         setIsEligible(isInstructorEligible);
+        
+        // Show requirement warning
+        setShowRequirementWarning(true);
       } else {
         setPreferenceForm(null);
         setCourses([]);
@@ -115,7 +119,6 @@ const PreferencesInst = () => {
     setLoading(prev => ({ ...prev, form: false }));
   };
     
-
   const fetchPreferences = async () => {
     try {
       const { data } = await api.get(`/preferences/${user._id}`, {
@@ -128,14 +131,17 @@ const PreferencesInst = () => {
 
       if (data.preferences && data.preferences.length > 0) {
         setPreferences(data.preferences);
+        setPreviousPreferences(data.preferences);
         setHasSubmitted(true);
       } else {
         setPreferences([]);
+        setPreviousPreferences([]);
         setHasSubmitted(false);
       }
     } catch (error) {
       console.error("Error fetching preferences:", error);
       setPreferences([]);
+      setPreviousPreferences([]);
       setHasSubmitted(false);
     }
   };
@@ -146,37 +152,114 @@ const PreferencesInst = () => {
     fetchPreferences();
   };
 
-  const handlePreferenceChange = (courseId, rank) => {
-    let updatedPreferences = preferences.filter((p) => p.courseId !== courseId);
-
-    // Check if any other course already has this rank
-    const existingCourseWithRank = preferences.find(p => p.rank === rank && p.courseId !== courseId);
-
-    if (rank > 0) {
-      if (existingCourseWithRank) {
-        // Swap the ranks
-        updatedPreferences = updatedPreferences.map(p =>
-          p.courseId === existingCourseWithRank.courseId ? { ...p, rank: 0 } : p
+  const handlePreferenceChange = (courseId, newRank) => {
+    // If the new rank is 0, simply remove this course from preferences
+    if (newRank === 0) {
+      setPreferences(preferences.filter((p) => p.courseId !== courseId));
+      setShowRequirementWarning(true);
+      return;
+    }
+    
+    // Get the current rank of this course, if any
+    const currentPref = preferences.find(p => p.courseId === courseId);
+    const currentRank = currentPref ? currentPref.rank : 0;
+    
+    // Check if another course already has the new rank
+    const existingCourseWithRank = preferences.find(p => p.rank === newRank && p.courseId !== courseId);
+    
+    // Make a copy of current preferences, removing the current course
+    let updatedPreferences = preferences.filter(p => p.courseId !== courseId);
+    
+    // If another course has the new rank, we need to handle it
+    if (existingCourseWithRank) {
+      if (currentRank === 0) {
+        // If we're assigning a new course and all slots are filled, 
+        // remove the course with the conflict rank
+        updatedPreferences = updatedPreferences.filter(p => p.courseId !== existingCourseWithRank.courseId);
+      } else {
+        // If we're changing the rank of an already selected course,
+        // swap ranks with the conflicting course
+        updatedPreferences = updatedPreferences.map(p => 
+          p.courseId === existingCourseWithRank.courseId ? { ...p, rank: currentRank } : p
         );
       }
-      updatedPreferences.push({ courseId, rank });
-      updatedPreferences.sort((a, b) => a.rank - b.rank);
     }
+    
+    // Add the course with the new rank to the preferences
+    updatedPreferences.push({ courseId, rank: newRank });
+    
+    // Sort preferences by rank
+    updatedPreferences.sort((a, b) => a.rank - b.rank);
+    
     setPreferences(updatedPreferences);
+    
+    // Update the warning state
+    if (updatedPreferences.length === preferenceForm.maxPreferences) {
+      const ranks = updatedPreferences.map(p => p.rank).sort((a, b) => a - b);
+      let isComplete = true;
+      for (let i = 0; i < ranks.length; i++) {
+        if (ranks[i] !== i + 1) {
+          isComplete = false;
+          break;
+        }
+      }
+      
+      if (isComplete) {
+        setShowRequirementWarning(false);
+      } else {
+        setShowRequirementWarning(true);
+      }
+    } else {
+      setShowRequirementWarning(true);
+    }
+    
+    // Clear any error messages when a valid change is made
+    setErrorMessage("");
   };
 
   const handleUpdate = () => {
+    // When switching to update mode, reset all current preferences to 0
+    setPreferences([]);
     setIsUpdating(true);
+    setShowRequirementWarning(true);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validation checks
+    
+    // 1. Check if any preferences are selected
     if (preferences.length === 0) {
       setErrorMessage("Please select at least one course preference.");
       return;
     }
+    
+    // 2. Ensure exactly the required number of preferences are selected
+    if (preferences.length !== preferenceForm.maxPreferences) {
+      setErrorMessage(`You must select exactly ${preferenceForm.maxPreferences} courses. Currently selected: ${preferences.length}.`);
+      return;
+    }
+    
+    // 3. Ensure no gaps in preference ranking (1,2,3... up to maxPreferences)
+    const ranks = preferences.map(p => p.rank).sort((a, b) => a - b);
+    for (let i = 0; i < ranks.length; i++) {
+      if (ranks[i] !== i + 1) {
+        setErrorMessage(`Your preference ranking must be sequential (1,2,3...). Please check your selections.`);
+        return;
+      }
+    }
+    
+    // 4. Check for duplicate course selections
+    const courseIds = preferences.map(p => p.courseId);
+    if (new Set(courseIds).size !== courseIds.length) {
+      setErrorMessage("Each course can only be selected once. Please check your selections.");
+      return;
+    }
+    
     setLoading(prev => ({ ...prev, submission: true }));
     setErrorMessage("");
+    
     try {
       // Use isUpdating or hasSubmitted to determine the method
       const method = isUpdating || hasSubmitted ? "put" : "post";
@@ -194,6 +277,7 @@ const PreferencesInst = () => {
       setHasSubmitted(true);
       setIsUpdating(false); // Reset update mode after successful submission
       setSubmitSuccess(true);
+      setShowRequirementWarning(false);
       
       // Refresh preferences to ensure we display the correct data
       await fetchPreferences();
@@ -207,6 +291,46 @@ const PreferencesInst = () => {
       );
     }
     setLoading(prev => ({ ...prev, submission: false }));
+  };
+
+  const handleCancelUpdate = () => {
+    // Restore previous preferences and exit update mode
+    setPreferences(previousPreferences);
+    setIsUpdating(false);
+    setShowRequirementWarning(false);
+  };
+  
+  // Helper function to check if all preferences are selected correctly
+  const areAllPreferencesSelected = () => {
+    if (!preferenceForm) return true;
+    
+    // Check if we have exactly the right number of preferences
+    if (preferences.length !== preferenceForm.maxPreferences) return false;
+    
+    // Check if the ranks are sequential (1,2,3...)
+    const ranks = preferences.map(p => p.rank).sort((a, b) => a - b);
+    for (let i = 0; i < ranks.length; i++) {
+      if (ranks[i] !== i + 1) return false;
+    }
+    
+    // Check for duplicate course selections
+    const courseIds = preferences.map(p => p.courseId);
+    if (new Set(courseIds).size !== courseIds.length) return false;
+    
+    return true;
+  };
+
+  // Get the current preference rank for a course
+  const getCurrentRank = (courseId) => {
+    // If we're in update mode and we haven't selected this course yet, return 0
+    if (isUpdating) {
+      const pref = preferences.find(p => p.courseId === courseId);
+      return pref ? pref.rank : 0;
+    }
+    
+    // Otherwise, get the preference rank from the preferences array
+    const pref = preferences.find(p => p.courseId === courseId);
+    return pref ? pref.rank : 0;
   };
 
   // Filter courses based on search query and chair
@@ -236,6 +360,12 @@ const PreferencesInst = () => {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0, transition: { duration: 0.3 } },
     exit: { opacity: 0, y: -20, transition: { duration: 0.2 } }
+  };
+
+  // Get dropdown option text based on rank
+  const getDropdownLabel = (rank) => {
+    if (rank === 0) return "Not Selected";
+    return `${rank}`;
   };
 
   if (user?.role !== "Instructor") {
@@ -311,6 +441,25 @@ const PreferencesInst = () => {
               </button>
             </motion.div>
           )}
+          
+          {showRequirementWarning && preferenceForm && ((!hasSubmitted || isUpdating)) && (
+            <motion.div 
+              variants={fadeVariants}
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              className="mb-6 p-4 rounded-lg bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 text-yellow-700 dark:text-yellow-300 flex items-center"
+            >
+              <AlertTriangle className="h-5 w-5 mr-2 flex-shrink-0" />
+              <span>You must rank <strong>all {preferenceForm.maxPreferences} preference slots</strong> before submission. Currently selected: {preferences.length}/{preferenceForm.maxPreferences}.</span>
+              <button 
+                onClick={() => setShowRequirementWarning(false)}
+                className="ml-auto text-yellow-700 dark:text-yellow-300 hover:text-yellow-900 dark:hover:text-yellow-100"
+              >
+                &times;
+              </button>
+            </motion.div>
+          )}
         </AnimatePresence>
 
         {/* Search Form */}
@@ -346,8 +495,6 @@ const PreferencesInst = () => {
               >
                 <option value="Regular 1">Regular 1</option>
                 <option value="Regular 2">Regular 2</option>
-                <option value="Summer">Summer</option>
-                <option value="Extension">Extension</option>
               </select>
             </div>
 
@@ -396,8 +543,9 @@ const PreferencesInst = () => {
                     </h2>
                     <p className="text-sm mt-1 text-indigo-100 dark:text-indigo-200">Chair: {preferenceForm.chair}</p>
                   </div>
-                  <div className="text-sm bg-indigo-700 dark:bg-indigo-800 px-3 py-1.5 rounded-full shadow-sm">
-                    Max Preferences: {preferenceForm.maxPreferences}
+                  <div className="text-sm bg-indigo-700 dark:bg-indigo-800 px-3 py-1.5 rounded-full shadow-sm flex items-center">
+                    <span className="font-bold">Required Preferences:</span>
+                    <span className="ml-1">{preferenceForm.maxPreferences}</span>
                   </div>
                 </div>
 
@@ -565,6 +713,38 @@ const PreferencesInst = () => {
                     </div>
                   ) : (
                     <form onSubmit={handleSubmit}>
+                      {/* Preference instructions */}
+                      <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-md text-blue-800 dark:text-blue-300">
+                        <h3 className="font-medium flex items-center gap-2">
+                          <Info className="h-5 w-5" />
+                          Important Instructions
+                        </h3>
+                        <ul className="mt-2 ml-6 list-disc text-sm">
+                          <li>You <strong>must rank all {preferenceForm.maxPreferences} preference slots</strong> to submit your preferences</li>
+                          <li>Rank 1 is your highest preference, {preferenceForm.maxPreferences} is your lowest</li>
+                          <li>Each course must have a unique ranking</li>
+                          <li>Each course can only be selected once</li>
+                        </ul>
+                      </div>
+                      
+                      {isUpdating && (
+                        <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-md">
+                          <div className="flex justify-between items-center">
+                            <div className="text-blue-800 dark:text-blue-300 flex items-center">
+                              <AlertCircle className="h-5 w-5 mr-2" />
+                              <span className="font-medium">Update Mode: Please re-select all your course preferences</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={handleCancelUpdate}
+                              className="text-blue-700 dark:text-blue-300 hover:text-blue-900 dark:hover:text-blue-100 font-medium text-sm"
+                            >
+                              Cancel Update
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                      
                       {/* Course selection table/cards */}
                       
                       {/* Desktop view */}
@@ -587,48 +767,60 @@ const PreferencesInst = () => {
                                 <td colSpan="7" className="p-4 text-center text-gray-500 dark:text-gray-400">No courses match your search criteria</td>
                               </tr>
                             ) : (
-                              filteredCourses.map((course) => (
-                                <tr key={course._id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
-                                  <td className="p-3 border-b border-gray-200 dark:border-gray-700 text-gray-800 dark:text-white">
-                                    {course.name}
-                                  </td>
-                                  <td className="p-3 border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400">
-                                    <div className="flex items-center">
-                                      <Code className="h-4 w-4 mr-1 text-gray-400 dark:text-gray-500" />
-                                      {course.code}
-                                    </div>
-                                  </td>
-                                  <td className="p-3 border-b border-gray-200 dark:border-gray-700 text-gray-800 dark:text-white">
-                                    {course.section}
-                                  </td>
-                                  <td className="p-3 border-b border-gray-200 dark:border-gray-700 text-gray-800 dark:text-white">
-                                    {course.NoOfSections}
-                                  </td>
-                                  <td className="p-3 border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400">
-                                    {course.chair}
-                                  </td>
-                                  <td className="p-3 border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400">
-                                    <div className="flex items-center text-xs">
-                                      <Layers className="h-4 w-4 mr-1" />
-                                      {getLabDivisionText(course.labDivision)}
-                                    </div>
-                                  </td>
-                                  <td className="p-3 border-b border-gray-200 dark:border-gray-700">
-                                    <select
-                                      value={preferences.find((p) => p.courseId === course._id)?.rank || 0}
-                                      onChange={(e) => handlePreferenceChange(course._id, parseInt(e.target.value))}
-                                      className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600 focus:border-indigo-500 dark:focus:border-indigo-600 transition dark:bg-gray-700 dark:text-white text-base"
-                                    >
-                                      <option value="0">Not Selected</option>
-                                      {[...Array(preferenceForm.maxPreferences).keys()].map((i) => (
-                                        <option key={i + 1} value={i + 1}>
-                                          {i + 1}
-                                        </option>
-                                      ))}
-                                    </select>
-                                  </td>
-                                </tr>
-                              ))
+                              filteredCourses.map((course) => {
+                                // Get the current rank for this course
+                                const currentRank = getCurrentRank(course._id);
+                                
+                                return (
+                                  <tr key={course._id} className="hover:bg-gray-50 dark:hover:bg-gray-700">
+                                    <td className="p-3 border-b border-gray-200 dark:border-gray-700 text-gray-800 dark:text-white">
+                                      {course.name}
+                                    </td>
+                                    <td className="p-3 border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400">
+                                      <div className="flex items-center">
+                                        <Code className="h-4 w-4 mr-1 text-gray-400 dark:text-gray-500" />
+                                        {course.code}
+                                      </div>
+                                    </td>
+                                    <td className="p-3 border-b border-gray-200 dark:border-gray-700 text-gray-800 dark:text-white">
+                                      {course.section}
+                                    </td>
+                                    <td className="p-3 border-b border-gray-200 dark:border-gray-700 text-gray-800 dark:text-white">
+                                      {course.NoOfSections}
+                                    </td>
+                                    <td className="p-3 border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400">
+                                      {course.chair}
+                                    </td>
+                                    <td className="p-3 border-b border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400">
+                                      <div className="flex items-center text-xs">
+                                        <Layers className="h-4 w-4 mr-1" />
+                                        {getLabDivisionText(course.labDivision)}
+                                      </div>
+                                    </td>
+                                    <td className="p-3 border-b border-gray-200 dark:border-gray-700">
+                                      <select
+                                        value={currentRank}
+                                        onChange={(e) => handlePreferenceChange(course._id, parseInt(e.target.value))}
+                                        className={`px-3 py-2 border rounded-lg focus:ring-2 focus:border-indigo-500 dark:focus:border-indigo-600 transition dark:bg-gray-700 dark:text-white text-base ${
+                                          currentRank > 0
+                                            ? "border-indigo-300 dark:border-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 focus:ring-indigo-500 dark:focus:ring-indigo-600"
+                                            : "border-gray-300 dark:border-gray-600 focus:ring-indigo-500 dark:focus:ring-indigo-600"
+                                        }`}
+                                      >
+                                        <option value="0">{getDropdownLabel(0)}</option>
+                                        {[...Array(preferenceForm.maxPreferences).keys()].map((i) => (
+                                          <option 
+                                            key={i + 1} 
+                                            value={i + 1}
+                                          >
+                                            {getDropdownLabel(i + 1)}
+                                          </option>
+                                        ))}
+                                      </select>
+                                    </td>
+                                  </tr>
+                                )
+                              })
                             )}
                           </tbody>
                         </table>
@@ -641,101 +833,136 @@ const PreferencesInst = () => {
                             No courses match your search criteria
                           </div>
                         ) : (
-                          filteredCourses.map((course) => (
-                            <div 
-                              key={course._id} 
-                              className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden"
-                            >
+                          filteredCourses.map((course) => {
+                            // Get the current rank for this course
+                            const currentRank = getCurrentRank(course._id);
+                            
+                            return (
                               <div 
-                                className="p-4 flex justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
-                                onClick={() => setExpandedCourse(expandedCourse === course._id ? null : course._id)}
+                                key={course._id} 
+                                className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden"
                               >
-                                <div>
-                                  <h4 className="font-medium text-gray-800 dark:text-white">{course.name}</h4>
-                                  <div className="flex items-center text-gray-500 dark:text-gray-400 text-sm mt-1">
-                                    <Code className="h-4 w-4 mr-1 text-gray-400 dark:text-gray-500" />
-                                    {course.code}
-                                  </div>
-                                  <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                                    Section {course.section}
-                                  </div>
-                                  <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                                    No of Sections: {course.NoOfSections}
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <select
-                                    value={preferences.find((p) => p.courseId === course._id)?.rank || 0}
-                                    onChange={(e) => handlePreferenceChange(course._id, parseInt(e.target.value))}
-                                    className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600 focus:border-indigo-500 dark:focus:border-indigo-600 transition dark:bg-gray-700 dark:text-white text-base"
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    <option value="0">Not Selected</option>
-                                    {[...Array(preferenceForm.maxPreferences).keys()].map((i) => (
-                                      <option key={i + 1} value={i + 1}>
-                                        {i + 1}
-                                      </option>
-                                    ))}
-                                  </select>
-                                  {expandedCourse === course._id ? 
-                                    <ChevronDown className="h-5 w-5 text-gray-500 dark:text-gray-400" /> : 
-                                    <ChevronRight className="h-5 w-5 text-gray-500 dark:text-gray-400" />
-                                  }
-                                </div>
-                              </div>
-                              
-                              <AnimatePresence>
-                                {expandedCourse === course._id && (
-                                  <motion.div 
-                                    initial={{ height: 0, opacity: 0 }}
-                                    animate={{ height: "auto", opacity: 1 }}
-                                    exit={{ height: 0, opacity: 0 }}
-                                    transition={{ duration: 0.2 }}
-                                    className="overflow-hidden"
-                                  >
-                                    <div className="p-4 pt-0 bg-gray-50 dark:bg-gray-700 text-sm">
-                                      <div className="pt-3 border-t border-gray-200 dark:border-gray-600 mt-3">
-                                        <p className="flex items-center">
-                                          <Building className="h-4 w-4 mr-1 text-gray-400 dark:text-gray-500" />
-                                          <span className="text-gray-800 dark:text-white font-medium">Chair:</span>
-                                          <span className="ml-1 text-gray-500 dark:text-gray-400">{course.chair}</span>
-                                        </p>
-                                        <p className="mt-2 flex items-start">
-                                          <Layers className="h-4 w-4 mr-1 mt-0.5 text-gray-400 dark:text-gray-500" />
-                                          <span className="text-gray-500 dark:text-gray-400">{getLabDivisionText(course.labDivision)}</span>
-                                        </p>
-                                      </div>
+                                <div 
+                                  className="p-4 flex justify-between cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700"
+                                  onClick={() => setExpandedCourse(expandedCourse === course._id ? null : course._id)}
+                                >
+                                  <div>
+                                    <h4 className="font-medium text-gray-800 dark:text-white">{course.name}</h4>
+                                    <div className="flex items-center text-gray-500 dark:text-gray-400 text-sm mt-1">
+                                      <Code className="h-4 w-4 mr-1 text-gray-400 dark:text-gray-500" />
+                                      {course.code}
                                     </div>
-                                  </motion.div>
-                                )}
-                              </AnimatePresence>
-                            </div>
-                          ))
+                                    <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                      Section {course.section}
+                                    </div>
+                                    <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                                      No of Sections: {course.NoOfSections}
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                    <select
+                                      value={currentRank}
+                                      onChange={(e) => handlePreferenceChange(course._id, parseInt(e.target.value))}
+                                      className={`px-3 py-2 border rounded-lg focus:ring-2 focus:border-indigo-500 dark:focus:border-indigo-600 transition dark:bg-gray-700 dark:text-white text-base ${
+                                        currentRank > 0
+                                          ? "border-indigo-300 dark:border-indigo-600 bg-indigo-50 dark:bg-indigo-900/30 focus:ring-indigo-500 dark:focus:ring-indigo-600"
+                                          : "border-gray-300 dark:border-gray-600 focus:ring-indigo-500 dark:focus:ring-indigo-600"
+                                      }`}
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <option value="0">{getDropdownLabel(0)}</option>
+                                      {[...Array(preferenceForm.maxPreferences).keys()].map((i) => (
+                                        <option 
+                                          key={i + 1} 
+                                          value={i + 1}
+                                        >
+                                          {getDropdownLabel(i + 1)}
+                                        </option>
+                                      ))}
+                                    </select>
+                                    {expandedCourse === course._id ? 
+                                      <ChevronDown className="h-5 w-5 text-gray-500 dark:text-gray-400" /> : 
+                                      <ChevronRight className="h-5 w-5 text-gray-500 dark:text-gray-400" />
+                                    }
+                                  </div>
+                                </div>
+                                
+                                <AnimatePresence>
+                                  {expandedCourse === course._id && (
+                                    <motion.div 
+                                      initial={{ height: 0, opacity: 0 }}
+                                      animate={{ height: "auto", opacity: 1 }}
+                                      exit={{ height: 0, opacity: 0 }}
+                                      transition={{ duration: 0.2 }}
+                                      className="overflow-hidden"
+                                    >
+                                      <div className="p-4 pt-0 bg-gray-50 dark:bg-gray-700 text-sm">
+                                        <div className="pt-3 border-t border-gray-200 dark:border-gray-600 mt-3">
+                                          <p className="flex items-center">
+                                            <Building className="h-4 w-4 mr-1 text-gray-400 dark:text-gray-500" />
+                                            <span className="text-gray-800 dark:text-white font-medium">Chair:</span>
+                                            <span className="ml-1 text-gray-500 dark:text-gray-400">{course.chair}</span>
+                                          </p>
+                                          <p className="mt-2 flex items-start">
+                                            <Layers className="h-4 w-4 mr-1 mt-0.5 text-gray-400 dark:text-gray-500" />
+                                            <span className="text-gray-500 dark:text-gray-400">{getLabDivisionText(course.labDivision)}</span>
+                                          </p>
+                                        </div>
+                                      </div>
+                                    </motion.div>
+                                  )}
+                                </AnimatePresence>
+                              </div>
+                            )
+                          })
                         )}
                       </div>
                       
                       <div className="mt-6 flex flex-col sm:flex-row justify-between items-center gap-4">
-                        <div className="text-sm flex items-center bg-indigo-50 dark:bg-indigo-900/20 px-3 py-2 rounded-md text-gray-700 dark:text-gray-300 border border-indigo-100 dark:border-indigo-800">
-                          <Award className="h-4 w-4 mr-2 text-indigo-600 dark:text-indigo-400" />
+                        <div className={`text-sm flex items-center px-3 py-2 rounded-md border ${
+                          areAllPreferencesSelected() 
+                            ? "bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 border-green-100 dark:border-green-800"
+                            : "bg-indigo-50 dark:bg-indigo-900/20 text-gray-700 dark:text-gray-300 border-indigo-100 dark:border-indigo-800"
+                        }`}>
+                          <Award className={`h-4 w-4 mr-2 ${
+                            areAllPreferencesSelected() 
+                              ? "text-green-600 dark:text-green-400"
+                              : "text-indigo-600 dark:text-indigo-400"
+                          }`} />
                           <span>Selected preferences: <span className="font-semibold">{preferences.length}/{preferenceForm.maxPreferences}</span></span>
                         </div>
-                        <button
-                          type="submit"
-                          disabled={loading.submission}
-                          className="w-full sm:w-auto inline-flex items-center justify-center bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-700 dark:hover:bg-indigo-600 text-white px-6 py-2.5 rounded-lg transition shadow-sm disabled:bg-gray-400 dark:disabled:bg-gray-600"
-                        >
-                          {loading.submission ? (
-                            <>
-                              <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                              {isUpdating ? "Updating..." : "Submitting..."}
-                            </>
-                          ) : (
-                            <>
-                              <Send className="h-5 w-5 mr-2" />
-                              {isUpdating ? "Update Preferences" : "Submit Preferences"}
-                            </>
+                        <div className="w-full sm:w-auto flex space-x-2">
+                          {isUpdating && (
+                            <button
+                              type="button"
+                              onClick={handleCancelUpdate}
+                              className="w-full sm:w-auto px-4 py-2.5 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition"
+                            >
+                              Cancel
+                            </button>
                           )}
-                        </button>
+                          <button
+                            type="submit"
+                            disabled={loading.submission || !areAllPreferencesSelected()}
+                            className={`w-full sm:w-auto inline-flex items-center justify-center text-white px-6 py-2.5 rounded-lg transition shadow-sm ${
+                              loading.submission || !areAllPreferencesSelected()
+                                ? "bg-gray-400 dark:bg-gray-600 cursor-not-allowed"
+                                : "bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-700 dark:hover:bg-indigo-600"
+                            }`}
+                          >
+                            {loading.submission ? (
+                              <>
+                                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                                {isUpdating ? "Updating..." : "Submitting..."}
+                              </>
+                            ) : (
+                              <>
+                                <Send className="h-5 w-5 mr-2" />
+                                {isUpdating ? "Update Preferences" : "Submit Preferences"}
+                              </>
+                            )}
+                          </button>
+                        </div>
                       </div>
                     </form>
                   )}

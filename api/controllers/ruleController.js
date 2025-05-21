@@ -3,8 +3,8 @@ import Rule from "../models/Rule.js";
 // Create a new rule
 export const createRule = async (req, res) => {
   try {
-    const { ruleName, description, value } = req.body;
-    const newRule = new Rule({ ruleName, description, value });
+    const { ruleName, description } = req.body;
+    const newRule = new Rule({ ruleName, description });
     await newRule.save();
     res.status(201).json({ message: "Rule created successfully", rule: newRule });
   } catch (error) {
@@ -26,11 +26,11 @@ export const getRules = async (req, res) => {
 export const updateRule = async (req, res) => {
   try {
     const { id } = req.params;
-    const { ruleName, description, value } = req.body;
+    const { ruleName, description } = req.body;
     
     const updatedRule = await Rule.findByIdAndUpdate(
       id, 
-      { ruleName, description, value },
+      { ruleName, description },
       { new: true, runValidators: true }
     );
     

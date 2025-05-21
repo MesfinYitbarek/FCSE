@@ -161,8 +161,23 @@ export const getActivePreferenceForm = async (req, res) => {
       return res.status(404).json({ message: "No preference forms found." });
     }
 
-    // Return the first matching preference form
-    res.json(forms[0]); // Return the first matching form
+    // Get the first matching form
+    const form = forms[0];
+    
+    // Check if the current date is within the submission period
+    const currentDate = new Date();
+    const start = new Date(form.submissionStart);
+    const end = new Date(form.submissionEnd);
+    const submissionAllowed = currentDate >= start && currentDate <= end;
+
+    // Add the submissionAllowed field to the response
+    const formWithAllowance = {
+      ...form.toObject(),
+      submissionAllowed
+    };
+
+    // Return the preference form with the submissionAllowed field
+    res.json(formWithAllowance);
   } catch (error) {
     // Handle any errors that occur during the query
     res.status(500).json({ message: "Error fetching preference forms", error });

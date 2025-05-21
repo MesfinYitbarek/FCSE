@@ -134,13 +134,27 @@ const PreferenceForm = () => {
     }
   };
 
+    // Fetch available  courses
   const fetchCourses = async () => {
     try {
-      const { data } = await api.get(`/courses/${filterChair || user.chair}`);
-      setCourses(data);
-      setFilteredCourses(data);
+      setLoading(true);
+      const { data } = await api.get(`/courses/assigned/${user.chair}`);
+      console.log("Fetched courses:", data); // Log the fetched data
+
+      if (Array.isArray(data)) {
+        setCourses(data);
+      } else if (data && Array.isArray(data.courses)) {
+        // In case the API returns the courses in a nested property
+        setCourses(data.courses);
+      } else {
+        setCourses([]);
+        console.warn("Courses data is not in expected format:", data);
+      }
     } catch (error) {
       console.error("Error fetching courses:", error);
+      setCourses([]);
+    } finally {
+      setLoading(false);
     }
   };
 

@@ -96,6 +96,33 @@ const SummerCoursesCOC = () => {
     setCurrentPage(1);
   }, [tableFilters]);
 
+  // Safe filter function that checks if courses is an array first
+  const getFilteredCourses = () => {
+    if (!Array.isArray(courses)) return [];
+    
+    return courses.filter(course => {
+      // Filter by department
+      if (courseFilters.department && course.department !== courseFilters.department) {
+        return false;
+      }
+      
+      // Filter by chair
+      if (courseFilters.chair && course.chair !== courseFilters.chair) {
+        return false;
+      }
+      
+      // Filter by search text
+      if (courseFilters.search) {
+        const searchTerm = courseFilters.search.toLowerCase();
+        const nameMatch = course.name && course.name.toLowerCase().includes(searchTerm);
+        const codeMatch = course.code && course.code.toLowerCase().includes(searchTerm);
+        return nameMatch || codeMatch;
+      }
+      
+      return true;
+    });
+  };
+
   // Pagination functions
   const totalPages = Math.ceil(
     filteredAssignments.reduce((acc, item) => acc + item.assignments.length, 0) / itemsPerPage
@@ -223,22 +250,40 @@ const SummerCoursesCOC = () => {
   // Fetch available summer courses
   const fetchCourses = async () => {
     try {
-      const { data } = await api.get("/courses?program=Summer");
-      setCourses(data);
+      setLoading(true);
+      const { data } = await api.get(`/courses/assigned/COC`);
+      console.log("Fetched courses:", data); // Log the fetched data
+      
+      if (Array.isArray(data)) {
+        setCourses(data);
+      } else if (data && Array.isArray(data.courses)) {
+        // In case the API returns the courses in a nested property
+        setCourses(data.courses);
+      } else {
+        setCourses([]);
+        console.warn("Courses data is not in expected format:", data);
+      }
     } catch (error) {
       console.error("Error fetching courses:", error);
       setError("Failed to load courses.");
+      setCourses([]);
+    } finally {
+      setLoading(false);
     }
   };
 
   // Fetch available instructors
   const fetchInstructors = async () => {
     try {
+      setLoading(true);
       const { data } = await api.get(`/users/role/${"Instructor"}`);
-      setInstructors(data);
+      setInstructors(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error("Error fetching instructors:", error);
       setError("Failed to load instructors.");
+      setInstructors([]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -255,10 +300,11 @@ const SummerCoursesCOC = () => {
       
       const { data } = await api.get(`/assignments/automatic?${queryParams}`);
       console.log("Fetched assignments:", data.assignments);
-      setAssignments(data.assignments);
+      setAssignments(Array.isArray(data.assignments) ? data.assignments : []);
     } catch (error) {
       console.error("Error fetching assignments:", error);
       setError("Failed to load assignments.");
+      setAssignments([]);
     } finally {
       setLoading(false);
     }
@@ -428,6 +474,8 @@ const SummerCoursesCOC = () => {
 
   // Select all instructors
   const selectAllInstructors = () => {
+    if (!Array.isArray(instructors)) return;
+    
     if (selectedInstructors.length === instructors.length) {
       // If all are selected, deselect all
       setSelectedInstructors([]);
@@ -450,6 +498,8 @@ const SummerCoursesCOC = () => {
 
   // Select all courses
   const selectAllCourses = () => {
+    if (!Array.isArray(courses)) return;
+    
     if (selectedCourses.length === courses.length) {
       // If all are selected, deselect all
       setSelectedCourses([]);
@@ -868,7 +918,7 @@ const SummerCoursesCOC = () => {
                                 className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent text-base text-gray-900 dark:text-white"
                               >
                                 <option value="">Select Instructor</option>
-                                {instructors.map((inst) => (
+                                {Array.isArray(instructors) && instructors.map((inst) => (
                                   <option key={inst._id} value={inst._id}>
                                     {inst.fullName} - {inst.location}
                                   </option>
@@ -884,7 +934,7 @@ const SummerCoursesCOC = () => {
                                 className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent text-base text-gray-900 dark:text-white"
                               >
                                 <option value="">Select Course</option>
-                                {courses.map((course) => (
+                                {Array.isArray(courses) && courses.map((course) => (
                                   <option key={course._id} value={course._id}>
                                     {course.name} ({course.code})
                                   </option>
@@ -998,7 +1048,7 @@ const SummerCoursesCOC = () => {
                                     className="w-full px-3 py-1.5 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent text-sm text-gray-900 dark:text-white"
                                   >
                                     <option value="">Select Instructor</option>
-                                    {instructors.map((inst) => (
+                                    {Array.isArray(instructors) && instructors.map((inst) => (
                                       <option key={inst._id} value={inst._id}>
                                         {inst.fullName} - {inst.location}
                                       </option>
@@ -1021,7 +1071,7 @@ const SummerCoursesCOC = () => {
                                     className="w-full px-3 py-1.5 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent text-sm text-gray-900 dark:text-white"
                                   >
                                     <option value="">Select Course</option>
-                                    {courses.map((course) => (
+                                    {Array.isArray(courses) && courses.map((course) => (
                                       <option key={course._id} value={course._id}>
                                         {course.name} ({course.code})
                                       </option>
@@ -1148,7 +1198,7 @@ const SummerCoursesCOC = () => {
                               onClick={selectAllInstructors}
                               className="text-xs px-2 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-md hover:bg-indigo-100 dark:hover:bg-indigo-800/40"
                             >
-                              {selectedInstructors.length === instructors.length ? "Deselect All" : "Select All"}
+                              {Array.isArray(instructors) && selectedInstructors.length === instructors.length ? "Deselect All" : "Select All"}
                             </button>
                           </div>
                           
@@ -1170,7 +1220,7 @@ const SummerCoursesCOC = () => {
                             {showInstructorDropdown && (
                               <div className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-64 overflow-y-auto">
                                 <div className="p-1">
-                                  {instructors.map((instructor) => (
+                                  {Array.isArray(instructors) && instructors.map((instructor) => (
                                     <div
                                       key={instructor._id}
                                       onClick={() => toggleInstructorSelection(instructor._id)}
@@ -1209,7 +1259,7 @@ const SummerCoursesCOC = () => {
                               onClick={selectAllCourses}
                               className="text-xs px-2 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-md hover:bg-indigo-100 dark:hover:bg-indigo-800/40"
                             >
-                              {selectedCourses.length === courses.length ? "Deselect All" : "Select All"}
+                              {Array.isArray(courses) && selectedCourses.length === courses.length ? "Deselect All" : "Select All"}
                             </button>
                           </div>
                           
@@ -1309,87 +1359,55 @@ const SummerCoursesCOC = () => {
 
                           {/* Filtered Course Grid */}
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                            {courses
-                              .filter(course => {
-                                // Filter by department
-                                if (courseFilters.department && course.department !== courseFilters.department) {
-                                  return false;
-                                }
-                                
-                                // Filter by chair
-                                if (courseFilters.chair && course.chair !== courseFilters.chair) {
-                                  return false;
-                                }
-                                
-                                // Filter by search text
-                                if (courseFilters.search) {
-                                  const searchTerm = courseFilters.search.toLowerCase();
-                                  const nameMatch = course.name && course.name.toLowerCase().includes(searchTerm);
-                                  const codeMatch = course.code && course.code.toLowerCase().includes(searchTerm);
-                                  return nameMatch || codeMatch;
-                                }
-                                
-                                return true;
-                              })
-                              .map((course) => (
-                                <div key={course._id} className="p-3 border border-gray-300 dark:border-gray-600 rounded-lg">
-                                  <div className="flex items-center space-x-3">
-                                    <input
-                                      type="checkbox"
-                                      value={course._id}
-                                      onChange={(e) => handleCourseSelection(e, course)}
-                                      checked={selectedCourses.some((c) => c.courseId === course._id)}
-                                      className="w-4 h-4 text-indigo-600 dark:text-indigo-400 border-gray-300 dark:border-gray-600 rounded focus:ring-indigo-500 dark:focus:ring-indigo-400"
-                                    />
-                                    <div>
-                                      <span className="text-sm text-gray-900 dark:text-white font-medium block">{course.name} ({course.code})</span>
-                                      <span className="text-xs text-gray-500 dark:text-gray-400">
-                                        {course.department} • {course.chair}
-                                      </span>
-                                    </div>
+                            {Array.isArray(courses) && getFilteredCourses().map((course) => (
+                              <div key={course._id} className="p-3 border border-gray-300 dark:border-gray-600 rounded-lg">
+                                <div className="flex items-center space-x-3">
+                                  <input
+                                    type="checkbox"
+                                    value={course._id}
+                                    onChange={(e) => handleCourseSelection(e, course)}
+                                    checked={selectedCourses.some((c) => c.courseId === course._id)}
+                                    className="w-4 h-4 text-indigo-600 dark:text-indigo-400 border-gray-300 dark:border-gray-600 rounded focus:ring-indigo-500 dark:focus:ring-indigo-400"
+                                  />
+                                  <div>
+                                    <span className="text-sm text-gray-900 dark:text-white font-medium block">{course.name} ({course.code})</span>
+                                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                                      {course.department} • {course.chair}
+                                    </span>
                                   </div>
-
-                                  {selectedCourses.some((c) => c.courseId === course._id) && (
-                                    <div className="mt-2 space-y-2">
-                                      <div className="grid grid-cols-2 gap-2">
-                                        {/* Section Input */}
-                                        <input
-                                          type="text"
-                                          placeholder="Section"
-                                          value={selectedCourses.find((c) => c.courseId === course._id)?.section || ""}
-                                          onChange={(e) => handleCourseDetailChange(course._id, "section", e.target.value)}
-                                          className="px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 text-sm text-gray-900 dark:text-white"
-                                        />
-
-                                        {/* Lab Division Selection */}
-                                        <select
-                                          value={selectedCourses.find((c) => c.courseId === course._id)?.labDivision || "No"}
-                                          onChange={(e) => handleCourseDetailChange(course._id, "labDivision", e.target.value)}
-                                          className="px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 text-sm text-gray-900 dark:text-white"
-                                        >
-                                          <option value="No">No Lab</option>
-                                          <option value="Yes">With Lab</option>
-                                        </select>
-                                      </div>
-                                  
-                                    </div>
-                                  )}
                                 </div>
-                              ))}
+
+                                {selectedCourses.some((c) => c.courseId === course._id) && (
+                                  <div className="mt-2 space-y-2">
+                                    <div className="grid grid-cols-2 gap-2">
+                                      {/* Section Input */}
+                                      <input
+                                        type="text"
+                                        placeholder="Section"
+                                        value={selectedCourses.find((c) => c.courseId === course._id)?.section || ""}
+                                        onChange={(e) => handleCourseDetailChange(course._id, "section", e.target.value)}
+                                        className="px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 text-sm text-gray-900 dark:text-white"
+                                      />
+
+                                      {/* Lab Division Selection */}
+                                      <select
+                                        value={selectedCourses.find((c) => c.courseId === course._id)?.labDivision || "No"}
+                                        onChange={(e) => handleCourseDetailChange(course._id, "labDivision", e.target.value)}
+                                        className="px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 text-sm text-gray-900 dark:text-white"
+                                      >
+                                        <option value="No">No Lab</option>
+                                        <option value="Yes">With Lab</option>
+                                      </select>
+                                    </div>
+                                  
+                                  </div>
+                                )}
+                              </div>
+                            ))}
                           </div>
                           
                           {/* No courses found state */}
-                          {courses.filter(course => {
-                            if (courseFilters.department && course.department !== courseFilters.department) return false;
-                            if (courseFilters.chair && course.chair !== courseFilters.chair) return false;
-                            if (courseFilters.search) {
-                              const searchTerm = courseFilters.search.toLowerCase();
-                              const nameMatch = course.name && course.name.toLowerCase().includes(searchTerm);
-                              const codeMatch = course.code && course.code.toLowerCase().includes(searchTerm);
-                              return nameMatch || codeMatch;
-                            }
-                            return true;
-                          }).length === 0 && (
+                          {Array.isArray(courses) && getFilteredCourses().length === 0 && (
                             <div className="text-center py-8 bg-gray-50 dark:bg-gray-700 rounded-lg">
                               <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">No courses found</h3>
                               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -1402,6 +1420,15 @@ const SummerCoursesCOC = () => {
                                 <X size={14} className="mr-1.5" />
                                 Clear Filters
                               </button>
+                            </div>
+                          )}
+                          
+                          {/* Empty state when courses array is empty or not an array */}
+                          {(!Array.isArray(courses) || courses.length === 0) && (
+                            <div className="col-span-full text-center py-6 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                              <p className="text-sm text-gray-600 dark:text-gray-400">
+                                {loading ? "Loading courses..." : "No courses available"}
+                              </p>
                             </div>
                           )}
                         </div>

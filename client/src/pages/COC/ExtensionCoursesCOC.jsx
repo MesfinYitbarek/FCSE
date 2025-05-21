@@ -49,7 +49,7 @@ const ExtensionCoursesCOC = () => {
   const [selectedSemester, setSelectedSemester] = useState("");
   const [isSelectionComplete, setIsSelectionComplete] = useState(false);
   const [showAssignmentForm, setShowAssignmentForm] = useState(false);
-  
+
   // New filter states
   const [departments, setDepartments] = useState([]);
   const [chairs, setChairs] = useState([]);
@@ -59,7 +59,7 @@ const ExtensionCoursesCOC = () => {
     chair: "",
     search: ""
   });
-  
+
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
@@ -78,7 +78,7 @@ const ExtensionCoursesCOC = () => {
       defaultSemester = "Extension 2";
     }
     setSelectedSemester(defaultSemester);
-    
+
     // Sample data for departments and chairs (replace with real data)
     setDepartments(["Computer Science", "Electrical", "Mechanical", "Civil", "Software"]);
     setChairs(["Common", "CSE", "EEE", "Civil", "Software"]);
@@ -97,7 +97,7 @@ const ExtensionCoursesCOC = () => {
       filterAssignments();
     }
   }, [assignments, selectedYear, selectedSemester, filters]);
-  
+
   // Reset to first page when filters change
   useEffect(() => {
     setCurrentPage(1);
@@ -110,49 +110,76 @@ const ExtensionCoursesCOC = () => {
         assignment.year.toString() === selectedYear.toString() &&
         assignment.semester === selectedSemester
     );
-    
+
     // Apply additional filters
     if (filters.search) {
       const searchTerm = filters.search.toLowerCase();
-      filtered = filtered.filter(assignment => 
-        assignment.assignments.some(subAssignment => 
-          (subAssignment.instructorId?.fullName && 
+      filtered = filtered.filter(assignment =>
+        assignment.assignments.some(subAssignment =>
+          (subAssignment.instructorId?.fullName &&
             subAssignment.instructorId.fullName.toLowerCase().includes(searchTerm)) ||
-          (subAssignment.courseId?.name && 
+          (subAssignment.courseId?.name &&
             subAssignment.courseId.name.toLowerCase().includes(searchTerm)) ||
-          (subAssignment.courseId?.code && 
+          (subAssignment.courseId?.code &&
             subAssignment.courseId.code.toLowerCase().includes(searchTerm))
         )
       );
     }
-    
+
     if (filters.department) {
-      filtered = filtered.filter(assignment => 
-        assignment.assignments.some(subAssignment => 
+      filtered = filtered.filter(assignment =>
+        assignment.assignments.some(subAssignment =>
           subAssignment.courseId?.department === filters.department
         )
       );
     }
-    
+
     if (filters.chair) {
-      filtered = filtered.filter(assignment => 
-        assignment.assignments.some(subAssignment => 
+      filtered = filtered.filter(assignment =>
+        assignment.assignments.some(subAssignment =>
           subAssignment.courseId?.chair === filters.chair
         )
       );
     }
-    
+
     setFilteredAssignments(filtered);
+  };
+
+  // Safe filter function that checks if courses is an array first
+  const getFilteredCourses = () => {
+    if (!Array.isArray(courses)) return [];
+
+    return courses.filter(course => {
+      // Filter by department
+      if (filters.department && course.department !== filters.department) {
+        return false;
+      }
+
+      // Filter by chair
+      if (filters.chair && course.chair !== filters.chair) {
+        return false;
+      }
+
+      // Filter by search text
+      if (filters.search) {
+        const searchTerm = filters.search.toLowerCase();
+        const nameMatch = course.name && course.name.toLowerCase().includes(searchTerm);
+        const codeMatch = course.code && course.code.toLowerCase().includes(searchTerm);
+        return nameMatch || codeMatch;
+      }
+
+      return true;
+    });
   };
 
   // Pagination functions
   const totalPages = Math.ceil(
     filteredAssignments.reduce((acc, item) => acc + item.assignments.length, 0) / itemsPerPage
   );
-  
+
   const paginatedAssignments = () => {
     const flattenedAssignments = [];
-    
+
     filteredAssignments.forEach(assignment => {
       assignment.assignments.forEach(subAssignment => {
         flattenedAssignments.push({
@@ -162,11 +189,11 @@ const ExtensionCoursesCOC = () => {
         });
       });
     });
-    
+
     const startIndex = (currentPage - 1) * itemsPerPage;
     return flattenedAssignments.slice(startIndex, startIndex + itemsPerPage);
   };
-  
+
   const goToPage = (page) => {
     if (page > 0 && page <= totalPages) {
       setCurrentPage(page);
@@ -180,7 +207,7 @@ const ExtensionCoursesCOC = () => {
       [field]: value
     }));
   };
-  
+
   // Clear all filters
   const clearFilters = () => {
     setFilters({
@@ -213,11 +240,25 @@ const ExtensionCoursesCOC = () => {
   // Fetch available extension courses
   const fetchCourses = async () => {
     try {
-      const { data } = await api.get("/courses?program=Extension");
-      setCourses(data);
+      setLoading(true);
+      const { data } = await api.get(`/courses/assigned/COC`);
+      console.log("Fetched courses:", data); // Log the fetched data
+
+      if (Array.isArray(data)) {
+        setCourses(data);
+      } else if (data && Array.isArray(data.courses)) {
+        // In case the API returns the courses in a nested property
+        setCourses(data.courses);
+      } else {
+        setCourses([]);
+        console.warn("Courses data is not in expected format:", data);
+      }
     } catch (error) {
       console.error("Error fetching courses:", error);
       setError("Failed to load courses.");
+      setCourses([]);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -225,10 +266,11 @@ const ExtensionCoursesCOC = () => {
   const fetchInstructors = async () => {
     try {
       const { data } = await api.get(`/users/role/${"Instructor"}`);
-      setInstructors(data);
+      setInstructors(data || []);
     } catch (error) {
       console.error("Error fetching instructors:", error);
       setError("Failed to load instructors.");
+      setInstructors([]);
     }
   };
 
@@ -245,11 +287,12 @@ const ExtensionCoursesCOC = () => {
 
       const { data } = await api.get(`/assignments/automatic?${queryParams}`);
       console.log("Fetched assignments:", data.assignments);
-      
-      setAssignments(data.assignments);
+
+      setAssignments(data.assignments || []);
     } catch (error) {
       console.error("Error fetching assignments:", error);
       setError("Failed to load assignments.");
+      setAssignments([]);
     } finally {
       setLoading(false);
     }
@@ -257,10 +300,10 @@ const ExtensionCoursesCOC = () => {
 
   // Add assignment to local state
   const addAssignment = () => {
-    setManualAssignments([...manualAssignments, { 
-      instructorId: "", 
-      courseId: "", 
-      section: "", 
+    setManualAssignments([...manualAssignments, {
+      instructorId: "",
+      courseId: "",
+      section: "",
       labDivision: "No",
       assignmentReason: ""
     }]);
@@ -279,7 +322,7 @@ const ExtensionCoursesCOC = () => {
     updatedAssignments[index][field] = value;
     setManualAssignments(updatedAssignments);
   };
-  
+
   // Show assignment reason modal
   const viewAssignmentDetail = (subAssignment, parentAssignment) => {
     setViewAssignmentReason({
@@ -332,7 +375,7 @@ const ExtensionCoursesCOC = () => {
 
     try {
       console.log("Updating sub-assignment:", editingAssignment.subId, "in parent:", editingAssignment.parentId);
-      
+
       // Use the new custom endpoint that can handle nested assignments
       await api.put(`/assignments/sub/${editingAssignment.parentId}/${editingAssignment.subId}`, {
         instructorId: editingAssignment.instructorId,
@@ -366,7 +409,7 @@ const ExtensionCoursesCOC = () => {
 
   const handleDeleteAssignment = async () => {
     if (!deleteConfirm) return;
-    
+
     const { subId, parentId } = deleteConfirm;
     setLoading(true);
     setError(null);
@@ -374,10 +417,10 @@ const ExtensionCoursesCOC = () => {
 
     try {
       console.log("Deleting sub-assignment:", subId, "from parent:", parentId);
-      
+
       // Use the new custom endpoint that can handle nested assignments
       await api.delete(`/assignments/sub/${parentId}/${subId}`);
-      
+
       await fetchAssignments();
       setSuccess("Assignment deleted successfully!");
       setDeleteConfirm(null);
@@ -385,7 +428,7 @@ const ExtensionCoursesCOC = () => {
       console.error("Error deleting assignment:", error.response?.data || error);
       setError(error.response?.data?.message || "Failed to delete assignment. Make sure your backend supports deleting nested assignments.");
     }
-    
+
     setLoading(false);
   };
 
@@ -422,6 +465,8 @@ const ExtensionCoursesCOC = () => {
 
   // Select all instructors
   const selectAllInstructors = () => {
+    if (!Array.isArray(instructors)) return;
+
     if (selectedInstructors.length === instructors.length) {
       // If all are selected, deselect all
       setSelectedInstructors([]);
@@ -444,15 +489,17 @@ const ExtensionCoursesCOC = () => {
 
   // Select all courses
   const selectAllCourses = () => {
+    if (!Array.isArray(courses)) return;
+
     if (selectedCourses.length === courses.length) {
       // If all are selected, deselect all
       setSelectedCourses([]);
     } else {
       // Otherwise, select all with default values for section and labDivision
       setSelectedCourses(
-        courses.map(course => ({ 
-          courseId: course._id, 
-          section: "", 
+        courses.map(course => ({
+          courseId: course._id,
+          section: "",
           labDivision: "No",
           assignmentReason: "" // Include empty assignment reason
         }))
@@ -467,9 +514,9 @@ const ExtensionCoursesCOC = () => {
 
     setSelectedCourses((prevCourses) => {
       if (isChecked) {
-        return [...prevCourses, { 
-          courseId, 
-          section: "", 
+        return [...prevCourses, {
+          courseId,
+          section: "",
           labDivision: "No",
           assignmentReason: "" // Include empty assignment reason
         }];
@@ -520,7 +567,7 @@ const ExtensionCoursesCOC = () => {
 
     setLoading(false);
   };
-  
+
   // Helper to format numerical scores with consistent precision
   const formatScore = (score) => {
     if (score === undefined || score === null) return "N/A";
@@ -598,7 +645,7 @@ const ExtensionCoursesCOC = () => {
                   <X size={20} />
                 </button>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div>
                   <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Instructor</h4>
@@ -606,21 +653,21 @@ const ExtensionCoursesCOC = () => {
                     {viewAssignmentReason.instructorId?.fullName || "Unassigned"}
                   </p>
                 </div>
-                
+
                 <div>
                   <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Course</h4>
                   <p className="text-gray-900 dark:text-white">
                     {viewAssignmentReason.courseId?.name || "N/A"} ({viewAssignmentReason.courseId?.code || "N/A"})
                   </p>
                 </div>
-                
+
                 <div>
                   <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Section</h4>
                   <p className="text-gray-900 dark:text-white">
                     {viewAssignmentReason.section || "N/A"}
                   </p>
                 </div>
-                
+
                 <div>
                   <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Workload</h4>
                   <p className="text-gray-900 dark:text-white">
@@ -628,7 +675,7 @@ const ExtensionCoursesCOC = () => {
                   </p>
                 </div>
               </div>
-              
+
               {!isAssignedByCOC(viewAssignmentReason.parentData) && (
                 <div className="grid grid-cols-3 gap-4 mb-4">
                   <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg text-center">
@@ -637,25 +684,25 @@ const ExtensionCoursesCOC = () => {
                       {formatScore(viewAssignmentReason.score)}
                     </p>
                   </div>
-                  
+
                   <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg text-center">
                     <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Preference Rank</h4>
                     <p className="text-gray-900 dark:text-white font-medium">
                       {viewAssignmentReason.preferenceRank || "N/A"}
                     </p>
                   </div>
-                  
+
                   <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg text-center">
                     <h4 className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Teaching Experience</h4>
                     <p className="text-gray-900 dark:text-white font-medium">
-                      {viewAssignmentReason.experienceYears 
-                        ? `${viewAssignmentReason.experienceYears} year${viewAssignmentReason.experienceYears !== 1 ? 's' : ''}` 
+                      {viewAssignmentReason.experienceYears
+                        ? `${viewAssignmentReason.experienceYears} year${viewAssignmentReason.experienceYears !== 1 ? 's' : ''}`
                         : "None"}
                     </p>
                   </div>
                 </div>
               )}
-              
+
               <div className="mb-4">
                 <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 flex items-center">
                   <Info className="mr-1.5 text-indigo-600 dark:text-indigo-400" size={16} />
@@ -667,7 +714,7 @@ const ExtensionCoursesCOC = () => {
                   </p>
                 </div>
               </div>
-              
+
               <div className="flex justify-end space-x-3">
                 <button
                   onClick={() => setViewAssignmentReason(null)}
@@ -724,7 +771,7 @@ const ExtensionCoursesCOC = () => {
                 <Calendar className="mr-2 text-indigo-600 dark:text-indigo-400" size={20} />
                 Select Academic Period
               </h2>
-                 
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Academic Year</label>
@@ -871,7 +918,7 @@ const ExtensionCoursesCOC = () => {
                                 className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent text-base text-gray-900 dark:text-white"
                               >
                                 <option value="">Select Instructor</option>
-                                {instructors.map((inst) => (
+                                {Array.isArray(instructors) && instructors.map((inst) => (
                                   <option key={inst._id} value={inst._id}>
                                     {inst.fullName} - {inst.location}
                                   </option>
@@ -887,7 +934,7 @@ const ExtensionCoursesCOC = () => {
                                 className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent text-base text-gray-900 dark:text-white"
                               >
                                 <option value="">Select Course</option>
-                                {courses.map((course) => (
+                                {Array.isArray(courses) && courses.map((course) => (
                                   <option key={course._id} value={course._id}>
                                     {course.name} ({course.code})
                                   </option>
@@ -991,7 +1038,7 @@ const ExtensionCoursesCOC = () => {
                                     className="w-full px-3 py-1.5 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent text-sm text-gray-900 dark:text-white"
                                   >
                                     <option value="">Select Instructor</option>
-                                    {instructors.map((inst) => (
+                                    {Array.isArray(instructors) && instructors.map((inst) => (
                                       <option key={inst._id} value={inst._id}>
                                         {inst.fullName} - {inst.location}
                                       </option>
@@ -1006,7 +1053,7 @@ const ExtensionCoursesCOC = () => {
                                     className="w-full px-3 py-1.5 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent text-sm text-gray-900 dark:text-white"
                                   >
                                     <option value="">Select Course</option>
-                                    {courses.map((course) => (
+                                    {Array.isArray(courses) && courses.map((course) => (
                                       <option key={course._id} value={course._id}>
                                         {course.name} ({course.code})
                                       </option>
@@ -1044,7 +1091,7 @@ const ExtensionCoursesCOC = () => {
                                     <Trash2 size={16} />
                                   </button>
                                 </div>
-                                
+
                                 {/* Assignment Reason Field for Manual Assignment - Full width */}
                                 <div className="col-span-1 sm:col-span-2 lg:col-span-5 space-y-1">
                                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Assignment Reason</label>
@@ -1103,16 +1150,16 @@ const ExtensionCoursesCOC = () => {
                               <Users className="mr-2 text-indigo-600 dark:text-indigo-400" size={18} />
                               Select Instructors ({selectedInstructors.length} selected)
                             </label>
-                            
+
                             {/* Select All Instructors Button */}
                             <button
                               onClick={selectAllInstructors}
                               className="text-xs px-2 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-md hover:bg-indigo-100 dark:hover:bg-indigo-800/40"
                             >
-                              {selectedInstructors.length === instructors.length ? "Deselect All" : "Select All"}
+                              {Array.isArray(instructors) && selectedInstructors.length === instructors.length ? "Deselect All" : "Select All"}
                             </button>
                           </div>
-                          
+
                           <div className="relative">
                             <button
                               onClick={() => setShowInstructorDropdown(!showInstructorDropdown)}
@@ -1121,27 +1168,25 @@ const ExtensionCoursesCOC = () => {
                               <span>
                                 {selectedInstructors.length === 0
                                   ? "Select instructors"
-                                  : `${selectedInstructors.length} instructor${
-                                      selectedInstructors.length === 1 ? "" : "s"
-                                    } selected`}
+                                  : `${selectedInstructors.length} instructor${selectedInstructors.length === 1 ? "" : "s"
+                                  } selected`}
                               </span>
                               <ChevronDown size={16} className={`transition-transform ${showInstructorDropdown ? 'rotate-180' : ''}`} />
                             </button>
-                            
+
                             {showInstructorDropdown && (
                               <div className="absolute z-10 mt-1 w-full bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg max-h-64 overflow-y-auto">
                                 <div className="p-1">
-                                  {instructors.map((instructor) => (
+                                  {Array.isArray(instructors) && instructors.map((instructor) => (
                                     <div
                                       key={instructor._id}
                                       onClick={() => toggleInstructorSelection(instructor._id)}
                                       className="flex items-center px-3 py-2 hover:bg-gray-100 dark:hover:bg-gray-600 rounded cursor-pointer"
                                     >
-                                      <div className={`w-5 h-5 mr-2 flex-shrink-0 rounded border ${
-                                        selectedInstructors.includes(instructor._id)
+                                      <div className={`w-5 h-5 mr-2 flex-shrink-0 rounded border ${selectedInstructors.includes(instructor._id)
                                           ? 'bg-indigo-600 border-indigo-600 dark:bg-indigo-500 dark:border-indigo-500'
                                           : 'border-gray-300 dark:border-gray-500'
-                                      } flex items-center justify-center`}>
+                                        } flex items-center justify-center`}>
                                         {selectedInstructors.includes(instructor._id) && (
                                           <Check size={14} className="text-white" />
                                         )}
@@ -1164,16 +1209,16 @@ const ExtensionCoursesCOC = () => {
                               <BookOpen className="mr-2 text-indigo-600 dark:text-indigo-400" size={18} />
                               Select Courses and Set Section & Lab Division
                             </label>
-                            
+
                             {/* Select All Courses Button */}
                             <button
                               onClick={selectAllCourses}
                               className="text-xs px-2 py-1 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-md hover:bg-indigo-100 dark:hover:bg-indigo-800/40"
                             >
-                              {selectedCourses.length === courses.length ? "Deselect All" : "Select All"}
+                              {Array.isArray(courses) && selectedCourses.length === courses.length ? "Deselect All" : "Select All"}
                             </button>
                           </div>
-                          
+
                           {/* Course Filter Controls */}
                           <div className="mb-3 bg-gray-50 dark:bg-gray-700 p-3 rounded-lg">
                             <div className="flex items-center justify-between mb-2">
@@ -1195,7 +1240,7 @@ const ExtensionCoursesCOC = () => {
                                   ))}
                                 </select>
                               </div>
-                              
+
                               <div className="space-y-1">
                                 <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Chair</label>
                                 <select
@@ -1211,7 +1256,7 @@ const ExtensionCoursesCOC = () => {
                                   ))}
                                 </select>
                               </div>
-                              
+
                               <div className="space-y-1">
                                 <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Search</label>
                                 <div className="relative">
@@ -1226,7 +1271,7 @@ const ExtensionCoursesCOC = () => {
                                 </div>
                               </div>
                             </div>
-                            
+
                             {/* Active Filter Tags */}
                             {(filters.department || filters.chair || filters.search) && (
                               <div className="mt-2 flex flex-wrap items-center gap-2">
@@ -1237,7 +1282,7 @@ const ExtensionCoursesCOC = () => {
                                   <X size={14} className="mr-1" />
                                   Clear All
                                 </button>
-                                
+
                                 {filters.department && (
                                   <span className="inline-flex items-center px-2 py-1 bg-gray-100 dark:bg-gray-600 rounded-full text-xs">
                                     Department: {filters.department}
@@ -1246,7 +1291,7 @@ const ExtensionCoursesCOC = () => {
                                     </button>
                                   </span>
                                 )}
-                                
+
                                 {filters.chair && (
                                   <span className="inline-flex items-center px-2 py-1 bg-gray-100 dark:bg-gray-600 rounded-full text-xs">
                                     Chair: {filters.chair}
@@ -1255,7 +1300,7 @@ const ExtensionCoursesCOC = () => {
                                     </button>
                                   </span>
                                 )}
-                                
+
                                 {filters.search && (
                                   <span className="inline-flex items-center px-2 py-1 bg-gray-100 dark:bg-gray-600 rounded-full text-xs">
                                     Search: "{filters.search}"
@@ -1270,29 +1315,9 @@ const ExtensionCoursesCOC = () => {
 
                           {/* Filtered Course Grid */}
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                            {courses
-                              .filter(course => {
-                                // Filter by department
-                                if (filters.department && course.department !== filters.department) {
-                                  return false;
-                                }
-                                
-                                // Filter by chair
-                                if (filters.chair && course.chair !== filters.chair) {
-                                  return false;
-                                }
-                                
-                                // Filter by search text
-                                if (filters.search) {
-                                  const searchTerm = filters.search.toLowerCase();
-                                  const nameMatch = course.name && course.name.toLowerCase().includes(searchTerm);
-                                  const codeMatch = course.code && course.code.toLowerCase().includes(searchTerm);
-                                  return nameMatch || codeMatch;
-                                }
-                                
-                                return true;
-                              })
-                              .map((course) => (
+                            {Array.isArray(courses) && courses.length > 0 ? (
+                              // Only apply filters if there are actual courses
+                              getFilteredCourses().map((course) => (
                                 <div key={course._id} className="p-3 border border-gray-300 dark:border-gray-600 rounded-lg">
                                   <div className="flex items-center space-x-3">
                                     <input
@@ -1332,25 +1357,39 @@ const ExtensionCoursesCOC = () => {
                                           <option value="Yes">With Lab</option>
                                         </select>
                                       </div>
-                                     
                                     </div>
                                   )}
                                 </div>
-                              ))}
+                              ))
+                            ) : (
+                              // Display a loading or empty state when courses array is empty
+                              <div className="col-span-full text-center py-6 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                                <p className="text-sm text-gray-600 dark:text-gray-400">
+                                  {loading ? "Loading courses..." : "No courses available"}
+                                </p>
+                              </div>
+                            )}
                           </div>
-                          
+
+                          {/* No courses found after filtering */}
+                          {Array.isArray(courses) && courses.length > 0 && getFilteredCourses().length === 0 && (
+                            <div className="text-center py-8 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                              <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">No courses found</h3>
+                              <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                Try adjusting your filter criteria to see available courses.
+                              </p>
+                              <button
+                                onClick={clearFilters}
+                                className="mt-3 inline-flex items-center px-3 py-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg text-sm"
+                              >
+                                <X size={14} className="mr-1.5" />
+                                Clear Filters
+                              </button>
+                            </div>
+                          )}
+
                           {/* No courses found state */}
-                          {courses.filter(course => {
-                            if (filters.department && course.department !== filters.department) return false;
-                            if (filters.chair && course.chair !== filters.chair) return false;
-                            if (filters.search) {
-                              const searchTerm = filters.search.toLowerCase();
-                              const nameMatch = course.name && course.name.toLowerCase().includes(searchTerm);
-                              const codeMatch = course.code && course.code.toLowerCase().includes(searchTerm);
-                              return nameMatch || codeMatch;
-                            }
-                            return true;
-                          }).length === 0 && (
+                          {Array.isArray(courses) && getFilteredCourses().length === 0 && (
                             <div className="text-center py-8 bg-gray-50 dark:bg-gray-700 rounded-lg">
                               <h3 className="text-sm font-medium text-gray-700 dark:text-gray-300">No courses found</h3>
                               <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
@@ -1409,7 +1448,7 @@ const ExtensionCoursesCOC = () => {
                       {filterOpen ? 'Hide Filters' : 'Show Filters'}
                     </button>
                   </div>
-                  
+
                   {/* Items per page selector */}
                   <div className="flex items-center gap-2">
                     <label className="text-sm text-gray-600 dark:text-gray-400">Items per page:</label>
@@ -1425,7 +1464,7 @@ const ExtensionCoursesCOC = () => {
                     </select>
                   </div>
                 </div>
-                
+
                 <AnimatePresence>
                   {filterOpen && (
                     <motion.div
@@ -1450,7 +1489,7 @@ const ExtensionCoursesCOC = () => {
                             ))}
                           </select>
                         </div>
-                        
+
                         <div className="space-y-1">
                           <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Chair</label>
                           <select
@@ -1466,7 +1505,7 @@ const ExtensionCoursesCOC = () => {
                             ))}
                           </select>
                         </div>
-                        
+
                         <div className="space-y-1">
                           <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Search</label>
                           <div className="relative">
@@ -1481,7 +1520,7 @@ const ExtensionCoursesCOC = () => {
                           </div>
                         </div>
                       </div>
-                      
+
                       <div className="flex justify-end">
                         <button
                           onClick={clearFilters}
@@ -1494,12 +1533,12 @@ const ExtensionCoursesCOC = () => {
                     </motion.div>
                   )}
                 </AnimatePresence>
-                
+
                 {/* Filter Stats */}
                 {(filters.department || filters.chair || filters.search) && (
                   <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                     <span>Filtered results: {filteredAssignments.reduce((acc, item) => acc + item.assignments.length, 0)}</span>
-                    
+
                     {filters.department && (
                       <span className="inline-flex items-center px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-full">
                         Department: {filters.department}
@@ -1508,7 +1547,7 @@ const ExtensionCoursesCOC = () => {
                         </button>
                       </span>
                     )}
-                    
+
                     {filters.chair && (
                       <span className="inline-flex items-center px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-full">
                         Chair: {filters.chair}
@@ -1517,7 +1556,7 @@ const ExtensionCoursesCOC = () => {
                         </button>
                       </span>
                     )}
-                    
+
                     {filters.search && (
                       <span className="inline-flex items-center px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded-full">
                         Search: "{filters.search}"
@@ -1555,7 +1594,7 @@ const ExtensionCoursesCOC = () => {
                     <School className="mx-auto h-10 w-10 text-gray-400 dark:text-gray-500" />
                     <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-white">No assignments found</h3>
                     <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                      {(filters.department || filters.chair || filters.search) 
+                      {(filters.department || filters.chair || filters.search)
                         ? "Try adjusting your filter criteria to see more results."
                         : "There are no assignments for this academic period yet."}
                     </p>
@@ -1659,7 +1698,7 @@ const ExtensionCoursesCOC = () => {
                     </div>
                   </div>
                 )}
-                
+
                 {/* Pagination Controls */}
                 {!loading && filteredAssignments.length > 0 && totalPages > 1 && (
                   <div className="flex items-center justify-between border-t border-gray-200 dark:border-gray-700 px-2 py-3 mt-4">
@@ -1703,11 +1742,11 @@ const ExtensionCoursesCOC = () => {
                             <span className="sr-only">Previous</span>
                             <ChevronLeft className="h-5 w-5" aria-hidden="true" />
                           </button>
-                          
+
                           {/* Page number buttons - show limited range for better mobile UX */}
                           {Array.from({ length: totalPages }).map((_, i) => {
                             const pageNum = i + 1;
-                            
+
                             // Only show current page, first, last, and pages close to current
                             if (
                               pageNum === 1 ||
@@ -1718,17 +1757,16 @@ const ExtensionCoursesCOC = () => {
                                 <button
                                   key={pageNum}
                                   onClick={() => goToPage(pageNum)}
-                                  className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                                    currentPage === pageNum
+                                  className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${currentPage === pageNum
                                       ? "z-10 bg-indigo-50 dark:bg-indigo-900/30 border-indigo-500 dark:border-indigo-400 text-indigo-600 dark:text-indigo-400"
                                       : "bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-600"
-                                  }`}
+                                    }`}
                                 >
                                   {pageNum}
                                 </button>
                               );
-                            } 
-                            
+                            }
+
                             // Show ellipsis if there's a gap
                             if (
                               (pageNum === 2 && currentPage > 3) ||
@@ -1743,10 +1781,10 @@ const ExtensionCoursesCOC = () => {
                                 </span>
                               );
                             }
-                            
+
                             return null;
                           })}
-                          
+
                           <button
                             onClick={() => goToPage(currentPage + 1)}
                             disabled={currentPage === totalPages}

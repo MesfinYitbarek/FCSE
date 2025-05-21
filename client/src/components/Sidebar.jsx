@@ -475,6 +475,7 @@ const Layout = () => {
               onToggle={() => toggleGroup('management')}
             >
               <SubNavItem to="/users">User Management</SubNavItem>
+              <SubNavItem to="/coursesHF">Course Management</SubNavItem>
               <SubNavItem to="/chairs">Chair Management</SubNavItem>
               <SubNavItem to="/positions">Position Management</SubNavItem>
               <SubNavItem to="/rules">Rule Management</SubNavItem>
