@@ -69,7 +69,6 @@ const Layout = () => {
   const sidebarRef = useRef(null);
   const mainContentRef = useRef(null);
 
-  // Add this effect to the Layout component
   useEffect(() => {
     // Event listener for session expiration
     const handleSessionExpired = () => {

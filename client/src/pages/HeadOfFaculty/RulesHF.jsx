@@ -55,15 +55,7 @@ const RulesHF = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    // Convert value field to number if it's the value field
-    if (name === "value") {
-      setNewRule({ 
-        ...newRule, 
-        [name]: value === "" ? "" : Number(value) 
-      });
-    } else {
-      setNewRule({ ...newRule, [name]: value });
-    }
+    setNewRule({ ...newRule, [name]: value });
   };
 
   const resetForm = () => {
@@ -120,8 +112,7 @@ const RulesHF = () => {
     setSelectedRule(rule);
     setNewRule({ 
       ruleName: rule.ruleName, 
-      description: rule.description || "",
-      value: rule.value !== undefined ? rule.value : "" 
+      description: rule.description || ""
     });
     setOpenEditModal(true);
   };
@@ -323,12 +314,6 @@ const RulesHF = () => {
                                 {rule.ruleName}
                               </h3>
                               
-                              {rule.value !== undefined && rule.value !== null && rule.value !== "" && (
-                                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 dark:bg-indigo-900 dark:text-indigo-200 mt-1">
-                                  Value: {rule.value}
-                                </span>
-                              )}
-                              
                               {isMobile && expandedRule !== rule._id ? (
                                 <p className="mt-2 text-sm text-gray-600 dark:text-gray-400 line-clamp-2">
                                   {rule.description}
@@ -432,7 +417,7 @@ const RulesHF = () => {
       {openAddModal && (
         <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
           <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 bg-gray-500/75 dark:bg-gray-900 dark:bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+            <div className="fixed inset-0 bg-gray-500/75 dark:bg-gray-900/75 transition-opacity" aria-hidden="true"></div>
 
             <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
 
@@ -455,20 +440,6 @@ const RulesHF = () => {
                           onChange={handleChange}
                           className="mt-1 block w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                           placeholder="Enter rule title"
-                        />
-                      </div>
-                      <div>
-                        <label htmlFor="value" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Value (Number)
-                        </label>
-                        <input
-                          type="number"
-                          name="value"
-                          id="value"
-                          onChange={handleChange}
-                          step="any"
-                          className="mt-1 block w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                          placeholder="Enter a numeric value (optional)"
                         />
                       </div>
                       <div>
@@ -518,7 +489,7 @@ const RulesHF = () => {
       {openEditModal && (
         <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
           <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 dark:bg-gray-900 dark:bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+            <div className="fixed inset-0 bg-gray-500/75 dark:bg-gray-900/75 transition-opacity" aria-hidden="true"></div>
 
             <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
 
@@ -542,21 +513,6 @@ const RulesHF = () => {
                           className="mt-1 block w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
                           placeholder="Enter rule title"
                           defaultValue={selectedRule?.ruleName}
-                        />
-                      </div>
-                      <div>
-                        <label htmlFor="edit-value" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-                          Value (Number)
-                        </label>
-                        <input
-                          type="number"
-                          name="value"
-                          id="edit-value"
-                          onChange={handleChange}
-                          step="any"
-                          className="mt-1 block w-full p-2.5 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                          placeholder="Enter a numeric value (optional)"
-                          defaultValue={selectedRule?.value}
                         />
                       </div>
                       <div>
@@ -607,7 +563,7 @@ const RulesHF = () => {
       {openDeleteModal && (
         <div className="fixed inset-0 z-50 overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
           <div className="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 dark:bg-gray-900 dark:bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+            <div className="fixed inset-0 bg-gray-500/75 dark:bg-gray-900/75 transition-opacity" aria-hidden="true"></div>
 
             <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
 
