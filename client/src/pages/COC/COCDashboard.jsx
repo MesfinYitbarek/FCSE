@@ -210,22 +210,6 @@ const COCDashboard = () => {
               </div>
             </div>
           </div>
-
-          {/* Semester-wise complaints */}
-          {Object.keys(stats.complaints.groupedByYearSemester).length > 0 && (
-            <div className="mt-6">
-              <div className="flex items-center gap-2 mb-3">
-                <Layers size={18} className="text-gray-500 dark:text-gray-400" />
-                <h4 className="text-sm font-semibold text-gray-600 dark:text-gray-300">
-                  Complaints by Semester and Program
-                </h4>
-              </div>
-              <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 max-h-64 overflow-y-auto">
-                {formatSemesterData()}
-              </div>
-            </div>
-          )}
-
           <Link
             to="/complaintsCOC"
             className="mt-5 text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium inline-flex items-center"
