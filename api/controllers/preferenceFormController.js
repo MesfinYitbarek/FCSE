@@ -151,43 +151,67 @@ export const getActivePreferenceForm = async (req, res) => {
     const forms = await PreferenceForm.find(query).populate("courses.course instructors");
 
     if (!forms.length) {
-      return res.status(404).json({ message: "No preference form found for the specified year, semester, and chair." });
-    }
-
-    const currentDate = new Date();
-
-    // Find the first form where current date is within submissionStart and submissionEnd
-    const activeForm = forms.find((form) => {
-      const start = new Date(form.submissionStart);
-      const end = new Date(form.submissionEnd);
-      return currentDate >= start && currentDate <= end;
-    });
-
-    if (!activeForm) {
-      return res.status(400).json({
-        message:
-          "Preference form exists but the submission period is not currently active.",
-        note:
-          "Submission is allowed only between the start and end date defined by the chair.",
-        currentDate,
-        availableForms: forms.map(f => ({
-          year: f.year,
-          semester: f.semester,
-          chair: f.chair,
-          submissionStart: f.submissionStart,
-          submissionEnd: f.submissionEnd
-        }))
+      return res.status(404).json({ 
+        message: "No preference form found for the specified year, semester, and chair.",
+        status: "not_found" 
       });
     }
 
-    const response = {
-      ...activeForm.toObject(),
-      submissionAllowed: true
-    };
-
-    res.json(response);
+    const currentDate = new Date();
+    
+    // Find any form for this period (active or not)
+    const form = forms[0];
+    const start = new Date(form.submissionStart);
+    const end = new Date(form.submissionEnd);
+    
+    // Check if the form is active (current date within submission period)
+    if (currentDate >= start && currentDate <= end) {
+      // Form is active and available for submission
+      const response = {
+        ...form.toObject(),
+        submissionAllowed: true,
+        status: "active"
+      };
+      return res.json(response);
+    } else if (currentDate < start) {
+      // Form exists but submission period hasn't started yet
+      return res.status(400).json({
+        message: "The submission period for this preference form has not started yet.",
+        note: "Submission will be allowed from the start date defined by the chair.",
+        status: "upcoming",
+        currentDate,
+        form: {
+          year: form.year,
+          semester: form.semester,
+          chair: form.chair,
+          submissionStart: form.submissionStart,
+          submissionEnd: form.submissionEnd,
+          _id: form._id
+        }
+      });
+    } else {
+      // Form exists but submission period has ended
+      return res.status(400).json({
+        message: "The submission period for this preference form has ended.",
+        note: "Submission was only allowed between the start and end date defined by the chair.",
+        status: "closed",
+        currentDate,
+        form: {
+          year: form.year,
+          semester: form.semester,
+          chair: form.chair,
+          submissionStart: form.submissionStart,
+          submissionEnd: form.submissionEnd,
+          _id: form._id
+        }
+      });
+    }
   } catch (error) {
-    res.status(500).json({ message: "Error fetching active preference form", error: error.message });
+    res.status(500).json({ 
+      message: "Error fetching active preference form", 
+      error: error.message,
+      status: "error"
+    });
   }
 };
 

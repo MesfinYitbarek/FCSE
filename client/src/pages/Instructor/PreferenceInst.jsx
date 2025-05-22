@@ -21,7 +21,8 @@ import {
   ChevronDown,
   ChevronRight,
   Building,
-  AlertTriangle
+  AlertTriangle,
+  Clock
 } from "lucide-react";
 
 const PreferencesInst = () => {
@@ -46,22 +47,26 @@ const PreferencesInst = () => {
   const [expandedCourse, setExpandedCourse] = useState(null);
   const [showRequirementWarning, setShowRequirementWarning] = useState(false);
   const [previousPreferences, setPreviousPreferences] = useState([]);
+  const [formStatus, setFormStatus] = useState(null); // Added to track form status: "not_found", "upcoming", "closed", "active", "error"
+  const [formDetails, setFormDetails] = useState(null); // Store form details even when not active
 
   useEffect(() => {
-    if (user?.role === "Instructor") {
-      fetchPreferences();
-      // Don't fetch preference form automatically - only fetch on search click
-    }
-  }, [user, year, semester]);
+    // Initial component setup - don't fetch any data automatically
+    // Both fetchPreferenceForm and fetchPreferences will only be called when search button is clicked
+  }, [user]);
 
   const fetchPreferenceForm = async () => {
     setLoading(prev => ({ ...prev, form: true }));
     setErrorMessage("");
+    setFormStatus(null);
+    setFormDetails(null);
+    
     try {
       // Get active preference form for the instructor's chair
       const { data } = await api.get(`/preference-forms/active?year=${year}&semester=${semester}&chair=${user.chair}`);
       if (data) {
         setPreferenceForm(data);
+        setFormStatus("active");
 
         // Extract courses from the preference form
         // Each course item in the array has course (populated), section, NoOfSections, labDivision
@@ -92,6 +97,7 @@ const PreferencesInst = () => {
         setCourses([]);
         setIsEligible(false);
         setSubmissionAllowed(false);
+        setFormStatus("not_found");
         setErrorMessage("No active preference form found for the selected period");
       }
     } catch (error) {
@@ -101,18 +107,50 @@ const PreferencesInst = () => {
       setIsEligible(false);
       setSubmissionAllowed(false);
       
-      // Improved error message
+      // Improved error message based on the status from the backend
       if (error.response) {
         if (error.response.status === 404) {
-          setErrorMessage("No active preference form found for your chair in the selected semester. Please check with your chair head if you believe this is incorrect.");
+          setFormStatus("not_found");
+          setErrorMessage("No preference form found for your chair in the selected semester. Please check with your chair head if you believe this is incorrect.");
+        } else if (error.response.status === 400) {
+          // Check the status field in the response for more specific information
+          const status = error.response.data.status;
+          const formData = error.response.data.form;
+          setFormDetails(formData);
+          
+          if (status === "upcoming") {
+            setFormStatus("upcoming");
+            const startDate = new Date(formData.submissionStart).toLocaleDateString(undefined, {
+              year: 'numeric', month: 'long', day: 'numeric'
+            });
+            const startTime = new Date(formData.submissionStart).toLocaleTimeString(undefined, {
+              hour: '2-digit', minute: '2-digit'
+            });
+            
+            setErrorMessage(`A preference form exists but the submission period has not started yet. You can submit your preferences starting from ${startDate} at ${startTime}.`);
+          } else if (status === "closed") {
+            setFormStatus("closed");
+            const endDate = new Date(formData.submissionEnd).toLocaleDateString(undefined, {
+              year: 'numeric', month: 'long', day: 'numeric'
+            });
+            
+            setErrorMessage(`The submission period for this preference form has ended on ${endDate}. Contact your chair if you need to make changes to your preferences.`);
+          } else {
+            setFormStatus("inactive");
+            setErrorMessage("The preference form exists but is not currently active for submissions. Please check with your chair for the submission schedule.");
+          }
         } else if (error.response.status >= 500) {
+          setFormStatus("error");
           setErrorMessage("We're experiencing server issues. Please try again later or contact support if the problem persists.");
         } else {
+          setFormStatus("error");
           setErrorMessage("We couldn't retrieve the preference form due to a system error. Please try again.");
         }
       } else if (error.request) {
+        setFormStatus("error");
         setErrorMessage("Unable to connect to the server. Please check your internet connection and try again.");
       } else {
+        setFormStatus("error");
         setErrorMessage("An unexpected error occurred while loading the preference form. Please try again.");
       }
     }
@@ -386,6 +424,52 @@ const PreferencesInst = () => {
     );
   }
 
+  // Generate the appropriate icon and color for the form status
+  const getFormStatusDisplay = () => {
+    switch(formStatus) {
+      case "upcoming":
+        return {
+          icon: <Clock className="h-6 w-6 mb-2 md:mb-0 md:mt-0.5 flex-shrink-0" />,
+          color: "text-blue-600 dark:text-blue-400",
+          bgColor: "bg-blue-50 dark:bg-blue-900/20",
+          borderColor: "border-blue-200 dark:border-blue-800",
+          title: "Submission Period Not Started Yet"
+        };
+      case "closed":
+        return {
+          icon: <Lock className="h-6 w-6 mb-2 md:mb-0 md:mt-0.5 flex-shrink-0" />,
+          color: "text-yellow-600 dark:text-yellow-400",
+          bgColor: "bg-yellow-50 dark:bg-yellow-900/20",
+          borderColor: "border-yellow-200 dark:border-yellow-800",
+          title: "Submission Period Ended"
+        };
+      case "not_found":
+        return {
+          icon: <AlertCircle className="h-6 w-6 mb-2 md:mb-0 md:mt-0.5 flex-shrink-0" />,
+          color: "text-gray-600 dark:text-gray-400",
+          bgColor: "bg-gray-50 dark:bg-gray-700",
+          borderColor: "border-gray-200 dark:border-gray-600",
+          title: "No Preference Form Found"
+        };
+      case "error":
+        return {
+          icon: <AlertTriangle className="h-6 w-6 mb-2 md:mb-0 md:mt-0.5 flex-shrink-0" />,
+          color: "text-red-600 dark:text-red-400",
+          bgColor: "bg-red-50 dark:bg-red-900/20",
+          borderColor: "border-red-200 dark:border-red-800",
+          title: "Error Retrieving Preference Form"
+        };
+      default:
+        return {
+          icon: <Info className="h-6 w-6 mb-2 md:mb-0 md:mt-0.5 flex-shrink-0" />,
+          color: "text-gray-500 dark:text-gray-400",
+          bgColor: "bg-gray-50 dark:bg-gray-800",
+          borderColor: "border-gray-200 dark:border-gray-700",
+          title: "Search for a Preference Form"
+        };
+    }
+  };
+
   return (
     <div className="h-full overflow-y-auto">
       <div className="max-w-6xl mx-auto pb-6">
@@ -421,27 +505,7 @@ const PreferencesInst = () => {
                 &times;
               </button>
             </motion.div>
-          )}
-
-          {errorMessage && (
-            <motion.div 
-              variants={fadeVariants}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              className="mb-6 p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 flex items-center"
-            >
-              <AlertCircle className="h-5 w-5 mr-2 flex-shrink-0" />
-              <span>{errorMessage}</span>
-              <button 
-                onClick={() => setErrorMessage("")}
-                className="ml-auto text-red-700 dark:text-red-300 hover:text-red-900 dark:hover:text-red-100"
-              >
-                &times;
-              </button>
-            </motion.div>
-          )}
-          
+          )}          
           {showRequirementWarning && preferenceForm && ((!hasSubmitted || isUpdating)) && (
             <motion.div 
               variants={fadeVariants}
@@ -991,13 +1055,77 @@ const PreferencesInst = () => {
             </div>
           )
         ) : (
-          <div className="bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 p-6 rounded-lg border border-gray-200 dark:border-gray-700 flex flex-col md:flex-row md:items-start gap-4">
-            <Info className="h-6 w-6 mb-2 md:mb-0 md:mt-0.5 flex-shrink-0 text-gray-500 dark:text-gray-400" />
-            <div>
-              <p>Please search for a preference form using the fields above.</p>
-              <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Your department's chair creates preference forms for each semester. If you can't find a form, please contact your department chair.</p>
-            </div>
-          </div>
+          <>
+            {/* Initial state - no search made yet */}
+            {!formStatus && !errorMessage && (
+              <div className="bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-300 p-6 rounded-lg border border-gray-200 dark:border-gray-700 flex flex-col md:flex-row md:items-start gap-4">
+                <Info className="h-6 w-6 mb-2 md:mb-0 md:mt-0.5 flex-shrink-0 text-gray-500 dark:text-gray-400" />
+                <div>
+                  <p>Please search for a preference form using the fields above.</p>
+                  <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">Your department's chair creates preference forms for each semester. If you can't find a form, please contact your department chair.</p>
+                </div>
+              </div>
+            )}
+            
+            {/* Form exists but is not active */}
+            {formStatus && (
+              <div className={`${getFormStatusDisplay().bgColor} ${getFormStatusDisplay().color} p-6 rounded-lg border ${getFormStatusDisplay().borderColor} flex flex-col md:flex-row md:items-start gap-4`}>
+                {getFormStatusDisplay().icon}
+                <div>
+                  <h3 className="font-semibold">{getFormStatusDisplay().title}</h3>
+                  <p>{errorMessage}</p>
+                  
+                  {/* Show additional information for upcoming or closed forms */}
+                  {formDetails && (formStatus === "upcoming" || formStatus === "closed") && (
+                    <div className="mt-4 p-3 bg-white/50 dark:bg-gray-800/50 rounded-md border border-gray-200/50 dark:border-gray-700/50">
+                      <h4 className="font-medium text-sm mb-2">Form Details:</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                        <div>
+                          <span className="font-medium">Year:</span> {formDetails.year}
+                        </div>
+                        <div>
+                          <span className="font-medium">Semester:</span> {formDetails.semester}
+                        </div>
+                        <div>
+                          <span className="font-medium">Chair:</span> {formDetails.chair}
+                        </div>
+                        <div>
+                          <span className="font-medium">Submission Period:</span> {formatDate(formDetails.submissionStart)} - {formatDate(formDetails.submissionEnd)}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {formStatus === "upcoming" && (
+                    <div className="mt-4 text-sm p-3 bg-blue-100/50 dark:bg-blue-900/30 rounded-md border border-blue-200/50 dark:border-blue-800/50">
+                      <p className="flex items-center">
+                        <Calendar className="h-4 w-4 mr-2" />
+                        <span>Remember to come back when the submission period starts to submit your preferences.</span>
+                      </p>
+                    </div>
+                  )}
+                  
+                  {formStatus === "closed" && (
+                    <div className="mt-4 text-sm p-3 bg-blue-100/50 dark:bg-blue-900/30 rounded-md border border-blue-200/50 dark:border-blue-800/50">
+                      <p className="flex items-center">
+                        <Info className="h-4 w-4 mr-2" />
+                        <span>If you need to make changes, please contact your department chair directly.</span>
+                      </p>
+                    </div>
+                  )}
+                  
+                  {formStatus === "not_found" && (
+                    <div className="mt-4 text-sm p-3 bg-blue-100/50 dark:bg-blue-900/30 rounded-md border border-blue-200/50 dark:border-blue-800/50">
+                      <p className="flex items-center">
+                        <Info className="h-4 w-4 mr-2" />
+                        <span>Try searching for a different semester or year, or contact your department chair for more information.</span>
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

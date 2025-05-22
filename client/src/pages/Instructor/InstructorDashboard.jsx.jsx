@@ -17,12 +17,12 @@ import api from "@/utils/api";
 const InstructorDashboard = () => {
   const { user } = useSelector((state) => state.auth);
   const [stats, setStats] = useState({
-    complaints: { 
-      total: 0, 
-      resolved: 0, 
-      pending: 0, 
+    complaints: {
+      total: 0,
+      resolved: 0,
+      pending: 0,
       rejected: 0,
-      groupedBySemester: {} 
+      groupedBySemester: {}
     },
     announcements: { total: 0, unread: 0 }
   });
@@ -34,21 +34,21 @@ const InstructorDashboard = () => {
     const fetchDashboardData = async () => {
       setIsLoading(true);
       setError(null);
-      
+
       try {
         // Initialize default complaints data
-        let complaintsData = { 
-          total: 0, 
-          resolved: 0, 
-          pending: 0, 
+        let complaintsData = {
+          total: 0,
+          resolved: 0,
+          pending: 0,
           rejected: 0,
-          groupedBySemester: {} 
+          groupedBySemester: {}
         };
-        
+
         try {
           const response = await api.get(`/complaints/stats/instructor/${user._id}`);
           const data = response.data;
-          
+
           if (data.message === "No complaints found for this instructor") {
             complaintsData = {
               total: 0,
@@ -70,15 +70,15 @@ const InstructorDashboard = () => {
           console.error("Error fetching complaints stats:", complaintError);
           // Keep the default zeros in complaintsData
         }
-        
+
         // Fetch announcements data
         const announcementsResponse = await api.get('/announcements');
         const announcements = announcementsResponse.data;
-        
+
         // Process announcements data
         const totalAnnouncements = announcements.length;
         const unreadAnnouncements = announcements.filter(a => !a.isRead).length;
-        
+
         setStats({
           complaints: complaintsData,
           announcements: {
@@ -86,7 +86,7 @@ const InstructorDashboard = () => {
             unread: unreadAnnouncements
           }
         });
-        
+
         setIsLoading(false);
       } catch (error) {
         console.error("Error fetching dashboard data:", error);
@@ -140,7 +140,7 @@ const InstructorDashboard = () => {
         <div className="text-center">
           <AlertTriangle size={36} className="mx-auto text-red-500 mb-4" />
           <p className="text-gray-700 dark:text-gray-300">{error}</p>
-          <button 
+          <button
             onClick={() => window.location.reload()}
             className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
           >
@@ -227,17 +227,6 @@ const InstructorDashboard = () => {
             </div>
           </div>
 
-          {/* Semester-wise complaints */}
-          {Object.keys(stats.complaints.groupedBySemester).length > 0 && (
-            <div className="mt-6">
-              <h4 className="text-sm font-semibold text-gray-600 dark:text-gray-300 mb-3">
-                Complaints by Semester
-              </h4>
-              <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-3">
-                {formatSemesterData()}
-              </div>
-            </div>
-          )}
 
           <Link
             to="/complaintsInst"
