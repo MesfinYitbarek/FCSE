@@ -29,7 +29,7 @@ router.post(
   bulkUpdateCourses
 );
 // New routes for course assignment workflow
-router.post("/assign", authenticate, authorize(["HeadOfFaculty"]), assignCourses);
+router.post("/assign", authenticate, assignCourses);
 router.get("/assigned/:chair", authenticate, getAssignedCourses);
 router.post('/unassign', authorize(["HeadOfFaculty"]), unassignCourses);
 // Chair heads endpoint (could also be in a user routes file)
