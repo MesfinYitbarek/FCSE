@@ -694,141 +694,119 @@ useEffect(() => {
         {/* Top navigation bar */}
         <header className="bg-white shadow-sm h-16 fixed top-0 right-0 z-10 w-full border-b border-gray-200">
           <div className={`flex items-center justify-between h-full px-4 md:px-6 ${windowWidth >= 1024
-            ? (isSidebarOpen ? "ml-[260px]" : "ml-[80px]") // Changed from ml-[300px]
-            : "ml-0"
-            } transition-all duration-300`}>
-            {/* Mobile menu button */}
-            {windowWidth < 1024 && (
-              <button
-                onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-                className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
-                aria-label={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
-              >
-                <Menu size={22} />
-              </button>
-            )}
+        ? (isSidebarOpen ? "ml-[260px]" : "ml-[80px]")
+        : "ml-0"
+        } transition-all duration-300`}>
+        {/* Mobile menu button */}
+        {windowWidth < 1024 && (
+          <button
+            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+            className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
+            aria-label={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
+          >
+            <Menu size={22} />
+          </button>
+        )}
 
-            {/* breadcrumbs */}
-            <div className="mb-6 mt-10 hidden md:block">
-              <nav className="flex" aria-label="Breadcrumb">
-                <ol className="inline-flex items-center space-x-1 md:space-x-2">
-                  <li className="inline-flex items-center">
-                    <NavLink to="/dashboard" className="inline-flex items-center text-sm font-medium text-gray-500 hover:text-indigo-600">
-                      <Home size={16} className="mr-2" />
-                      Dashboard
-                    </NavLink>
-                  </li>
-                  {location.pathname !== '/dashboard' && (
-                    <li>
-                      <div className="flex items-center">
-                        <ChevronRight size={16} className="text-gray-400" />
-                        <span className="ml-1 text-sm font-medium text-gray-700 md:ml-2 capitalize">
-                          {location.pathname.split('/').filter(Boolean).pop()}
-                        </span>
-                      </div>
-                    </li>
-                  )}
-                </ol>
-              </nav>
-            </div>
+        {/* Empty flex-grow to push right-side content to the end */}
+        <div className="flex-grow"></div>
 
-            {/* Right side controls */}
-            <div className="flex items-center gap-3">
-              {/* Notifications */}
-              <div className="relative" ref={notificationRef}>
-                <button
-                  onClick={() => {
-                    setIsNotificationOpen(!isNotificationOpen);
-                    if (isProfileDropdownOpen) setIsProfileDropdownOpen(false);
-                  }}
-                  className="p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors relative"
-                  aria-label="Notifications"
+        {/* Right side controls */}
+        <div className="flex items-center gap-3">
+          {/* Notifications */}
+          <div className="relative" ref={notificationRef}>
+            <button
+              onClick={() => {
+                setIsNotificationOpen(!isNotificationOpen);
+                if (isProfileDropdownOpen) setIsProfileDropdownOpen(false);
+              }}
+              className="p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-colors relative"
+              aria-label="Notifications"
+            >
+              <Bell size={20} />
+              {unreadCount > 0 && (
+                <span className="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  {unreadCount}
+                </span>
+              )}
+            </button>
+
+            <AnimatePresence>
+              {isNotificationOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="absolute right-0 mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-lg shadow-lg bg-white border z-30"
                 >
-                  <Bell size={20} />
-                  {unreadCount > 0 && (
-                    <span className="absolute top-0 right-0 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                      {unreadCount}
-                    </span>
-                  )}
-                </button>
-
-                <AnimatePresence>
-                  {isNotificationOpen && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      className="absolute right-0 mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-lg shadow-lg bg-white border z-30"
-                    >
-                      {renderNotifications()}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-
-              {/* User profile dropdown */}
-              <div className="relative" ref={profileRef}>
-                <button
-                  onClick={() => {
-                    setIsProfileDropdownOpen(!isProfileDropdownOpen);
-                    if (isNotificationOpen) setIsNotificationOpen(false);
-                  }}
-                  className="flex items-center space-x-2 p-1 rounded-full hover:bg-gray-100 transition-colors"
-                  aria-label="User profile"
-                >
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-center text-white font-medium">
-                    {user?.fullName ? user.fullName.charAt(0).toUpperCase() : "U"}
-                  </div>
-                  {windowWidth >= 1024 && (
-                    <ChevronDown size={16} className="text-gray-500" />
-                  )}
-                </button>
-
-                <AnimatePresence>
-                  {isProfileDropdownOpen && (
-                    <motion.div
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      className="absolute right-0 mt-2 w-56 rounded-lg shadow-lg bg-white border z-30"
-                    >
-                      <div className="p-4 border-b border-gray-100">
-                        <div className="flex items-center space-x-3">
-                          <div className="w-10 h-10 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-center text-white font-medium text-lg">
-                            {user?.fullName ? user.fullName.charAt(0).toUpperCase() : "U"}
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">{user?.fullName || "User"}</p>
-                            <p className="text-xs text-gray-500 truncate mt-0.5">{user?.email || "user@example.com"}</p>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="p-2 space-y-1">
-
-                        <button
-                          onClick={() => {
-                            setIsChangePasswordOpen(true);
-                            setIsProfileDropdownOpen(false);
-                          }}
-                          className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
-                        >
-                          <Lock size={16} />
-                          <span>Change Password</span>
-                        </button>
-                        <button
-                          onClick={handleLogout}
-                          className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                        >
-                          <LogOut size={16} />
-                          <span>Logout</span>
-                        </button>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-            </div>
+                  {renderNotifications()}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
+
+          {/* User profile dropdown */}
+          <div className="relative" ref={profileRef}>
+            <button
+              onClick={() => {
+                setIsProfileDropdownOpen(!isProfileDropdownOpen);
+                if (isNotificationOpen) setIsNotificationOpen(false);
+              }}
+              className="flex items-center space-x-2 p-1 rounded-full hover:bg-gray-100 transition-colors"
+              aria-label="User profile"
+            >
+              <div className="w-8 h-8 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-center text-white font-medium">
+                {user?.fullName ? user.fullName.charAt(0).toUpperCase() : "U"}
+              </div>
+              {windowWidth >= 1024 && (
+                <ChevronDown size={16} className="text-gray-500" />
+              )}
+            </button>
+
+            <AnimatePresence>
+              {isProfileDropdownOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="absolute right-0 mt-2 w-56 rounded-lg shadow-lg bg-white border z-30"
+                >
+                  <div className="p-4 border-b border-gray-100">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 flex items-center justify-center text-white font-medium text-lg">
+                        {user?.fullName ? user.fullName.charAt(0).toUpperCase() : "U"}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-900">{user?.fullName || "User"}</p>
+                        <p className="text-xs text-gray-500 truncate mt-0.5">{user?.email || "user@example.com"}</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="p-2 space-y-1">
+                    <button
+                      onClick={() => {
+                        setIsChangePasswordOpen(true);
+                        setIsProfileDropdownOpen(false);
+                      }}
+                      className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-md transition-colors"
+                    >
+                      <Lock size={16} />
+                      <span>Change Password</span>
+                    </button>
+                    <button
+                      onClick={handleLogout}
+                      className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                    >
+                      <LogOut size={16} />
+                      <span>Logout</span>
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        </div>
+      </div>
         </header>
 
         {/* Change Password Modal */}
