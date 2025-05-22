@@ -136,10 +136,17 @@ export const getAssignedCourses = async (req, res) => {
     }
 
     const assignedTo = req.params.chair;
-    const courses = await Course.find({ 
-      assignedTo,
+    // Create a query condition that checks for status first
+    const query = {
       status: { $in: ["active", "assigned"] }
-    }).sort({ createdAt: -1 });
+    };
+    
+    // Only add assignedTo to the query if it's not "COC"
+    if (assignedTo !== "COC") {
+      query.assignedTo = assignedTo;
+    }
+    
+    const courses = await Course.find(query).sort({ createdAt: -1 });
     
     if (!courses.length) {
       return res.status(200).json({ 

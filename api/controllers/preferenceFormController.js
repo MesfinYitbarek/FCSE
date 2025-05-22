@@ -145,44 +145,52 @@ export const getActivePreferenceForm = async (req, res) => {
   const { year, semester, chair } = req.query;
 
   try {
-    // Constructing the query based on provided parameters
     const query = { year, semester };
+    if (chair) query.chair = chair;
 
-    // Including 'chair' in the query only if it's provided
-    if (chair) {
-      query.chair = chair;
-    }
-
-    // Searching for preference forms with the provided query parameters
     const forms = await PreferenceForm.find(query).populate("courses.course instructors");
 
-    // Check if any forms are found
     if (!forms.length) {
-      return res.status(404).json({ message: "No preference forms found." });
+      return res.status(404).json({ message: "No preference form found for the specified year, semester, and chair." });
     }
 
-    // Get the first matching form
-    const form = forms[0];
-    
-    // Check if the current date is within the submission period
     const currentDate = new Date();
-    const start = new Date(form.submissionStart);
-    const end = new Date(form.submissionEnd);
-    const submissionAllowed = currentDate >= start && currentDate <= end;
 
-    // Add the submissionAllowed field to the response
-    const formWithAllowance = {
-      ...form.toObject(),
-      submissionAllowed
+    // Find the first form where current date is within submissionStart and submissionEnd
+    const activeForm = forms.find((form) => {
+      const start = new Date(form.submissionStart);
+      const end = new Date(form.submissionEnd);
+      return currentDate >= start && currentDate <= end;
+    });
+
+    if (!activeForm) {
+      return res.status(400).json({
+        message:
+          "Preference form exists but the submission period is not currently active.",
+        note:
+          "Submission is allowed only between the start and end date defined by the chair.",
+        currentDate,
+        availableForms: forms.map(f => ({
+          year: f.year,
+          semester: f.semester,
+          chair: f.chair,
+          submissionStart: f.submissionStart,
+          submissionEnd: f.submissionEnd
+        }))
+      });
+    }
+
+    const response = {
+      ...activeForm.toObject(),
+      submissionAllowed: true
     };
 
-    // Return the preference form with the submissionAllowed field
-    res.json(formWithAllowance);
+    res.json(response);
   } catch (error) {
-    // Handle any errors that occur during the query
-    res.status(500).json({ message: "Error fetching preference forms", error });
+    res.status(500).json({ message: "Error fetching active preference form", error: error.message });
   }
 };
+
 
 
 // Get the preference form created by a specific Chair Head

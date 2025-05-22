@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
 import api from "../../utils/api";
 import { useSelector } from "react-redux";
-import { 
-  Calendar, 
-  Plus, 
-  Filter, 
-  Trash2, 
-  Edit, 
-  X, 
-  RefreshCw, 
+import {
+  Calendar,
+  Plus,
+  Filter,
+  Trash2,
+  Edit,
+  X,
+  RefreshCw,
   Search,
   ChevronDown,
   Save,
@@ -41,29 +41,29 @@ const PreferenceForm = () => {
   const [fetchingData, setFetchingData] = useState(false);
   const [openModal, setOpenModal] = useState(false);
   const [selectedForm, setSelectedForm] = useState(null);
-  
+
   // Course filtering states
   const [courseFilterDept, setCourseFilterDept] = useState("");
   const [courseFilterYear, setCourseFilterYear] = useState("");
   const [courseFilterSemester, setCourseFilterSemester] = useState("");
   const [filteredCourses, setFilteredCourses] = useState([]);
-  
+
   // Selected course details states
   const [selectedCourseDetails, setSelectedCourseDetails] = useState({});
-  
+
   // Filter states
   const [filterYear, setFilterYear] = useState(new Date().getFullYear());
   const [filterSemester, setFilterSemester] = useState("");
   const [filterChair, setFilterChair] = useState(user.chair);
   const [isFiltered, setIsFiltered] = useState(false);
   const [chairs, setChairs] = useState([]);
-  
+
   // Specific departments for filtering
   const departments = ["Computer Science", "Information Technology", "Software Engineering"];
 
   // Mobile responsiveness
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
-  
+
   // Track window width for responsive design
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
@@ -85,7 +85,7 @@ const PreferenceForm = () => {
         console.error("Error fetching chairs:", error);
       }
     };
-    
+
     fetchChairs();
   }, []);
 
@@ -99,19 +99,19 @@ const PreferenceForm = () => {
   useEffect(() => {
     if (courses.length > 0) {
       let filtered = [...courses];
-      
+
       if (courseFilterDept) {
         filtered = filtered.filter(course => course.department === courseFilterDept);
       }
-      
+
       if (courseFilterYear) {
         filtered = filtered.filter(course => course.year === parseInt(courseFilterYear));
       }
-      
+
       if (courseFilterSemester) {
-        filtered = filtered.filter(course => course.semester === courseFilterSemester);
+        filtered = filtered.filter(course => course.semester === parseInt(courseFilterSemester));
       }
-      
+
       setFilteredCourses(filtered);
     } else {
       setFilteredCourses([]);
@@ -122,7 +122,7 @@ const PreferenceForm = () => {
     setFetchingData(true);
     try {
       const { data } = await api.get(
-        `/preference-forms/filter?year=${filterYear}&semester=${filterSemester}&chair=${filterChair}`
+        `/preference-forms/filter?year=${filterYear}${filterSemester ? `&semester=${filterSemester}` : ''}&chair=${filterChair}`
       );
       setPreferenceForms(Array.isArray(data) ? data : []);
       setIsFiltered(true);
@@ -134,7 +134,7 @@ const PreferenceForm = () => {
     }
   };
 
-    // Fetch available  courses
+  // Fetch available  courses
   const fetchCourses = async () => {
     try {
       setLoading(true);
@@ -175,18 +175,18 @@ const PreferenceForm = () => {
   // Handle course selection with details
   const handleCourseSelection = (courseId) => {
     let updatedCourses = [...formData.courses];
-    
+
     // Check if course is already selected
-    const courseIndex = updatedCourses.findIndex(c => 
+    const courseIndex = updatedCourses.findIndex(c =>
       typeof c === 'object' ? c.course === courseId : c === courseId
     );
-    
+
     if (courseIndex !== -1) {
       // Remove course if already selected
       updatedCourses = updatedCourses.filter((_, index) => index !== courseIndex);
-      
+
       // Remove course details
-      const newSelectedCourseDetails = {...selectedCourseDetails};
+      const newSelectedCourseDetails = { ...selectedCourseDetails };
       delete newSelectedCourseDetails[courseId];
       setSelectedCourseDetails(newSelectedCourseDetails);
     } else {
@@ -197,7 +197,7 @@ const PreferenceForm = () => {
         NoOfSections: 1,
         labDivision: "No"
       });
-      
+
       // Initialize course details
       setSelectedCourseDetails({
         ...selectedCourseDetails,
@@ -208,7 +208,7 @@ const PreferenceForm = () => {
         }
       });
     }
-    
+
     setFormData({ ...formData, courses: updatedCourses });
   };
 
@@ -223,7 +223,7 @@ const PreferenceForm = () => {
       }
     };
     setSelectedCourseDetails(updatedDetails);
-    
+
     // Update form data courses array
     const updatedCourses = formData.courses.map(course => {
       if (typeof course === 'object' && course.course === courseId) {
@@ -234,7 +234,7 @@ const PreferenceForm = () => {
       }
       return course;
     });
-    
+
     setFormData({ ...formData, courses: updatedCourses });
   };
 
@@ -245,14 +245,14 @@ const PreferenceForm = () => {
       const updatedExcludedInstructors = formData.excludedInstructors.includes(instructorId)
         ? formData.excludedInstructors.filter(id => id !== instructorId) // Remove from exclusions (select)
         : [...formData.excludedInstructors, instructorId]; // Add to exclusions (unselect)
-      
+
       setFormData({ ...formData, excludedInstructors: updatedExcludedInstructors });
     } else {
       // Normal behavior when "Select All" is off
       const updatedInstructors = formData.instructors.includes(instructorId)
         ? formData.instructors.filter((id) => id !== instructorId)
         : [...formData.instructors, instructorId];
-      
+
       setFormData({ ...formData, instructors: updatedInstructors });
     }
   };
@@ -303,11 +303,32 @@ const PreferenceForm = () => {
     setCourseFilterSemester("");
   };
 
+  // Get current datetime in ISO format for min attribute on datetime-local inputs
+  const getCurrentDateTimeISO = () => {
+    return new Date().toISOString().slice(0, 16);
+  };
+
   // Handle creating or updating a preference form
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Validate submission dates
+    const startDate = new Date(formData.submissionStart);
+    const endDate = new Date(formData.submissionEnd);
+    const currentDate = new Date();
+
+    if (startDate < currentDate) {
+      toast.error("Submission start date cannot be earlier than the current date");
+      return;
+    }
+
+    if (endDate < startDate) {
+      toast.error("Submission end date cannot be earlier than the start date");
+      return;
+    }
+
     setLoading(true);
-    
+
     try {
       // Format courses with their details for submission
       const formattedCourses = formData.courses.map(course => {
@@ -326,7 +347,7 @@ const PreferenceForm = () => {
             NoOfSections: 1,
             labDivision: "No"
           };
-          
+
           return {
             course: courseId,
             section: details.section,
@@ -335,7 +356,7 @@ const PreferenceForm = () => {
           };
         }
       });
-      
+
       // Prepare the list of instructors based on the selection mode
       let finalInstructors;
       if (formData.allInstructors) {
@@ -347,14 +368,14 @@ const PreferenceForm = () => {
         // Use explicitly selected instructors
         finalInstructors = formData.instructors;
       }
-      
+
       const dataToSubmit = {
         ...formData,
         courses: formattedCourses,
         instructors: finalInstructors,
         chair: filterChair || user.chair
       };
-      
+
       if (selectedForm) {
         await api.put(`/preference-forms/${selectedForm._id}`, dataToSubmit);
         toast.success("Preference form updated successfully");
@@ -362,7 +383,7 @@ const PreferenceForm = () => {
         await api.post("/preference-forms", dataToSubmit);
         toast.success("Preference form created successfully");
       }
-      
+
       setOpenModal(false);
       setFormData({
         year: new Date().getFullYear(),
@@ -377,7 +398,7 @@ const PreferenceForm = () => {
       });
       setSelectedCourseDetails({});
       setSelectedForm(null);
-      
+
       // Refresh the list with current filters
       if (isFiltered) {
         fetchPreferenceForms();
@@ -386,14 +407,14 @@ const PreferenceForm = () => {
       console.error("Error saving preference form:", error);
       toast.error(error.response?.data?.message || "Failed to save preference form");
     }
-    
+
     setLoading(false);
   };
 
   // Open edit modal and pre-fill form
   const openEditFormModal = (form) => {
     setSelectedForm(form);
-    
+
     // Format courses with their details
     const coursesWithDetails = form.courses.map(course => {
       if (typeof course === 'object') {
@@ -412,7 +433,7 @@ const PreferenceForm = () => {
         };
       }
     });
-    
+
     // Prepare course details for state
     const courseDetailsMap = {};
     coursesWithDetails.forEach(course => {
@@ -424,9 +445,9 @@ const PreferenceForm = () => {
         };
       }
     });
-    
+
     setSelectedCourseDetails(courseDetailsMap);
-    
+
     // Calculate excluded instructors if allInstructors is true
     let excludedInstructorIds = [];
     if (form.allInstructors) {
@@ -436,7 +457,7 @@ const PreferenceForm = () => {
         .filter(instructor => !selectedInstructorIds.includes(instructor._id))
         .map(instructor => instructor._id);
     }
-    
+
     setFormData({
       year: form.year,
       semester: form.semester,
@@ -448,7 +469,7 @@ const PreferenceForm = () => {
       allInstructors: form.allInstructors || false,
       excludedInstructors: excludedInstructorIds
     });
-    
+
     setOpenModal(true);
   };
 
@@ -483,16 +504,11 @@ const PreferenceForm = () => {
 
   // Check if course is selected
   const isCourseSelected = (courseId) => {
-    return formData.courses.some(course => 
-      typeof course === 'object' 
-        ? course.course === courseId 
+    return formData.courses.some(course =>
+      typeof course === 'object'
+        ? course.course === courseId
         : course === courseId
     );
-  };
-
-  // Get current datetime in ISO format for min attribute on datetime-local inputs
-  const getCurrentDateTimeISO = () => {
-    return new Date().toISOString().slice(0, 16);
   };
 
   return (
@@ -501,30 +517,36 @@ const PreferenceForm = () => {
         <h1 className="text-2xl font-bold text-gray-800 dark:text-white mb-2">Course Preference Forms</h1>
         <p className="text-gray-600 dark:text-gray-300">Create and manage preference forms for instructors to submit their course preferences.</p>
       </div>
-      
+
       {/* Search and Filter Section */}
       <div className="mb-6 bg-white dark:bg-slate-900 border border-gray-200 dark:border-gray-800 border-l-4 border-l-indigo-500 rounded-lg shadow-sm">
         <div className="p-5">
           <h2 className="flex items-center gap-2 text-lg font-semibold text-gray-800 dark:text-white mb-4">
             <Filter size={18} className="text-indigo-500" /> Filter Preference Forms
           </h2>
-          
+
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <div className="space-y-1">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Academic Year</label>
               <div className="relative">
-                <select
+                <input
+                  type="text"  // or "number" if you only want numeric input
                   value={filterYear}
                   onChange={(e) => setFilterYear(e.target.value)}
-                  className="block w-full text-base bg-white dark:bg-slate-800 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 pr-8 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                >
+                  className="block w-full text-base bg-white dark:bg-slate-800 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  placeholder="Enter year"  // optional placeholder
+                  list="yearSuggestions"   // optional for autocomplete suggestions
+                />
+
+                {/* Optional datalist for suggestions (similar to dropdown) */}
+                <datalist id="yearSuggestions">
                   {availableYears.map(year => (
-                    <option key={year} value={year}>{year}</option>
+                    <option key={year} value={year} />
                   ))}
-                </select>
+                </datalist>
               </div>
             </div>
-            
+
             <div className="space-y-1">
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Semester</label>
               <div className="relative">
@@ -539,7 +561,7 @@ const PreferenceForm = () => {
                 </select>
               </div>
             </div>
-            
+
             {user.role === "admin" && (
               <div className="space-y-1">
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Department</label>
@@ -557,9 +579,9 @@ const PreferenceForm = () => {
                 </div>
               </div>
             )}
-            
+
             <div className={`${user.role === "admin" ? '' : 'sm:col-span-2'} flex items-end space-x-2`}>
-              <button 
+              <button
                 onClick={handleSearch}
                 disabled={fetchingData}
                 className="flex-1 flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white py-2 px-4 rounded-md shadow-sm text-sm font-medium transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-60 dark:disabled:opacity-40"
@@ -571,8 +593,8 @@ const PreferenceForm = () => {
                 )}
                 Search
               </button>
-              
-              <button 
+
+              <button
                 onClick={resetFilters}
                 className="flex items-center justify-center gap-2 border border-gray-300 dark:border-gray-700 bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 text-gray-700 dark:text-gray-300 py-2 px-4 rounded-md shadow-sm text-sm font-medium transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
               >
@@ -583,10 +605,10 @@ const PreferenceForm = () => {
           </div>
         </div>
       </div>
-      
+
       {/* Action buttons */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-        <button 
+        <button
           onClick={() => {
             setSelectedForm(null);
             setFormData({
@@ -607,7 +629,7 @@ const PreferenceForm = () => {
         >
           <Plus size={16} /> Create Preference Form
         </button>
-        
+
         {isFiltered && (
           <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 dark:bg-slate-800 text-gray-800 dark:text-gray-300 border border-gray-200 dark:border-gray-700">
             Found {preferenceForms.length} forms
@@ -632,7 +654,7 @@ const PreferenceForm = () => {
                   const endDate = new Date(form.submissionEnd);
                   let status = "Upcoming";
                   let statusClass = "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200";
-                  
+
                   if (now > endDate) {
                     status = "Closed";
                     statusClass = "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200";
@@ -640,7 +662,7 @@ const PreferenceForm = () => {
                     status = "Active";
                     statusClass = "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200";
                   }
-                  
+
                   return (
                     <div key={form._id} className="p-4">
                       <div className="flex justify-between items-start mb-3">
@@ -656,12 +678,12 @@ const PreferenceForm = () => {
                           {status}
                         </span>
                       </div>
-                      
+
                       <div className="flex items-center gap-1.5 text-sm text-gray-700 dark:text-gray-300 mb-3">
                         <Calendar size={14} className="text-gray-500" />
                         <span>{new Date(form.submissionStart).toLocaleDateString()} - {new Date(form.submissionEnd).toLocaleDateString()}</span>
                       </div>
-                      
+
                       <div className="flex flex-wrap gap-2 mt-4">
                         <button
                           onClick={() => openEditFormModal(form)}
@@ -682,7 +704,7 @@ const PreferenceForm = () => {
                   );
                 })}
               </div>
-              
+
               {/* Desktop View - Table */}
               <div className="hidden md:block overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
@@ -703,7 +725,7 @@ const PreferenceForm = () => {
                       const endDate = new Date(form.submissionEnd);
                       let status = "Upcoming";
                       let statusClass = "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-200";
-                      
+
                       if (now > endDate) {
                         status = "Closed";
                         statusClass = "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-200";
@@ -711,7 +733,7 @@ const PreferenceForm = () => {
                         status = "Active";
                         statusClass = "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-200";
                       }
-                      
+
                       return (
                         <tr key={form._id} className="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors">
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">{form.year}</td>
@@ -783,7 +805,7 @@ const PreferenceForm = () => {
                 <X size={20} />
               </button>
             </div>
-            
+
             {/* Content */}
             <div className="p-4 sm:p-6">
               <form onSubmit={handleSubmit}>
@@ -801,7 +823,7 @@ const PreferenceForm = () => {
                       className="block w-full text-base bg-white dark:bg-slate-800 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                     />
                   </div>
-                  
+
                   <div className="space-y-1">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Semester</label>
                     <div className="relative">
@@ -817,7 +839,7 @@ const PreferenceForm = () => {
                       </select>
                     </div>
                   </div>
-                  
+
                   <div className="space-y-1">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Max Preferences</label>
                     <input
@@ -831,7 +853,7 @@ const PreferenceForm = () => {
                       className="block w-full text-base bg-white dark:bg-slate-800 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                     />
                   </div>
-                  
+
                   <div className="space-y-1 md:col-span-3 lg:col-span-1">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Submission Start Date</label>
                     <input
@@ -844,7 +866,7 @@ const PreferenceForm = () => {
                       className="block w-full text-base bg-white dark:bg-slate-800 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                     />
                   </div>
-                  
+
                   <div className="space-y-1 md:col-span-3 lg:col-span-1">
                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">Submission End Date</label>
                     <input
@@ -852,20 +874,24 @@ const PreferenceForm = () => {
                       name="submissionEnd"
                       value={formData.submissionEnd}
                       onChange={handleChange}
+                      min={formData.submissionStart || getCurrentDateTimeISO()}
                       required
                       className="block w-full text-base bg-white dark:bg-slate-800 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                     />
+                    {formData.submissionEnd && formData.submissionStart && new Date(formData.submissionEnd) < new Date(formData.submissionStart) && (
+                      <p className="mt-1 text-sm text-red-600 dark:text-red-400">End date must be after start date</p>
+                    )}
                   </div>
                 </div>
-                
+
                 <hr className="my-6 border-gray-200 dark:border-gray-700" />
-                
+
                 {/* Course Selection with Filtering */}
                 <div className="mb-6">
                   <h4 className="flex items-center gap-2 text-base font-medium text-gray-900 dark:text-white mb-3">
                     <Book size={16} className="text-indigo-500" /> Available Courses
                   </h4>
-                  
+
                   {/* Course Filters */}
                   <div className="mb-4 p-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-md">
                     <div className="flex items-center justify-between mb-2">
@@ -880,7 +906,7 @@ const PreferenceForm = () => {
                         Reset Filters
                       </button>
                     </div>
-                    
+
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div>
                         <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Department</label>
@@ -895,7 +921,7 @@ const PreferenceForm = () => {
                           ))}
                         </select>
                       </div>
-                      
+
                       <div>
                         <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Year</label>
                         <select
@@ -911,7 +937,7 @@ const PreferenceForm = () => {
                           <option value="5">Year 5</option>
                         </select>
                       </div>
-                      
+
                       <div>
                         <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Semester</label>
                         <select
@@ -926,23 +952,21 @@ const PreferenceForm = () => {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="max-h-48 overflow-y-auto p-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-md">
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                       {filteredCourses.length > 0 ? filteredCourses.map((course) => (
-                        <div key={course._id} className={`p-2 border rounded-md ${
-                          isCourseSelected(course._id) 
-                            ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800' 
+                        <div key={course._id} className={`p-2 border rounded-md ${isCourseSelected(course._id)
+                            ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800'
                             : 'bg-white dark:bg-slate-900 border-gray-200 dark:border-gray-700'
-                        }`}>
+                          }`}>
                           <div className="flex items-center space-x-2 mb-1">
-                            <div 
+                            <div
                               onClick={() => handleCourseSelection(course._id)}
-                              className={`flex h-5 w-5 items-center justify-center border rounded cursor-pointer transition-colors ${
-                                isCourseSelected(course._id) 
-                                  ? 'bg-indigo-500 border-indigo-500' 
+                              className={`flex h-5 w-5 items-center justify-center border rounded cursor-pointer transition-colors ${isCourseSelected(course._id)
+                                  ? 'bg-indigo-500 border-indigo-500'
                                   : 'border-gray-300 dark:border-gray-600'
-                              }`}
+                                }`}
                             >
                               {isCourseSelected(course._id) && (
                                 <Check size={14} className="text-white" />
@@ -955,7 +979,7 @@ const PreferenceForm = () => {
                               {course.name}
                             </label>
                           </div>
-                          
+
                           {/* Show course details fields when selected */}
                           {isCourseSelected(course._id) && (
                             <div className="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700 grid grid-cols-2 gap-2">
@@ -968,7 +992,7 @@ const PreferenceForm = () => {
                                   className="block w-full bg-white dark:bg-slate-800 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-1 px-2 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
                                 />
                               </div>
-                              
+
                               <div>
                                 <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">No. of Sections</label>
                                 <input
@@ -979,7 +1003,7 @@ const PreferenceForm = () => {
                                   className="block w-full bg-white dark:bg-slate-800 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-1 px-2 text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500"
                                 />
                               </div>
-                              
+
                               <div className="col-span-2">
                                 <label className="block text-xs font-medium text-gray-500 dark:text-gray-400 mb-1">Lab Division</label>
                                 <select
@@ -1002,21 +1026,20 @@ const PreferenceForm = () => {
                     </div>
                   </div>
                 </div>
-                
+
                 <div>
                   <h4 className="flex items-center gap-2 text-base font-medium text-gray-900 dark:text-white mb-3">
                     <Users size={16} className="text-indigo-500" /> Available Instructors
                   </h4>
-                  
+
                   {/* "All Instructors" toggle */}
                   <div className="mb-3 p-2 bg-indigo-50 dark:bg-indigo-900/20 rounded-md border border-indigo-200 dark:border-indigo-800 flex items-center">
-                    <div 
+                    <div
                       onClick={handleAllInstructorsToggle}
-                      className={`flex h-5 w-5 items-center justify-center border rounded cursor-pointer transition-colors mr-2 ${
-                        formData.allInstructors 
-                          ? 'bg-indigo-500 border-indigo-500' 
+                      className={`flex h-5 w-5 items-center justify-center border rounded cursor-pointer transition-colors mr-2 ${formData.allInstructors
+                          ? 'bg-indigo-500 border-indigo-500'
                           : 'border-gray-300 dark:border-gray-600'
-                      }`}
+                        }`}
                     >
                       {formData.allInstructors && (
                         <Check size={14} className="text-white" />
@@ -1029,19 +1052,18 @@ const PreferenceForm = () => {
                       Select All Department Instructors
                     </label>
                   </div>
-                  
+
                   {/* Instructor selection list */}
                   <div className="max-h-48 overflow-y-auto p-3 bg-gray-50 dark:bg-slate-800 border border-gray-200 dark:border-gray-700 rounded-md">
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                       {instructors.length > 0 ? instructors.map((instructor) => (
                         <div key={instructor._id} className="flex items-center space-x-2">
-                          <div 
+                          <div
                             onClick={() => handleInstructorSelection(instructor._id)}
-                            className={`flex h-5 w-5 items-center justify-center border rounded cursor-pointer transition-colors ${
-                              isInstructorSelected(instructor._id)
-                                ? 'bg-indigo-500 border-indigo-500' 
+                            className={`flex h-5 w-5 items-center justify-center border rounded cursor-pointer transition-colors ${isInstructorSelected(instructor._id)
+                                ? 'bg-indigo-500 border-indigo-500'
                                 : 'border-gray-300 dark:border-gray-600'
-                            }`}
+                              }`}
                           >
                             {isInstructorSelected(instructor._id) && (
                               <Check size={14} className="text-white" />
@@ -1062,7 +1084,7 @@ const PreferenceForm = () => {
                     </div>
                   </div>
                 </div>
-                
+
                 {/* Footer */}
                 <div className="mt-8 flex justify-end gap-3">
                   <button
