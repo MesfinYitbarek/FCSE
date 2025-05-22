@@ -1301,25 +1301,18 @@ export const autoAssignSummerCourses = async (req, res) => {
       courses: frontendCourses,
     } = req.body;
 
-    if (
-      !year ||
-      !assignedBy ||
-      !instructorIds?.length ||
-      !frontendCourses?.length
-    ) {
+    if (!year || !assignedBy || !instructorIds?.length || !frontendCourses?.length) {
       return res.status(400).json({
         message: "Year, assignedBy, instructors, and courses are required.",
       });
     }
 
-    // Check for existing assignment document
     const existingAssignment = await Assignment.findOne({
       year: parseInt(year),
       semester: "Summer",
       program: "Summer",
     });
 
-    // Track existing assignments to avoid duplicates
     const existingCourseAssignments = new Map();
     const duplicateAssignments = [];
 
@@ -1339,10 +1332,7 @@ export const autoAssignSummerCourses = async (req, res) => {
       return res.status(400).json({ message: "No valid course IDs provided." });
     }
 
-    const instructors = await User.find({
-      _id: { $in: instructorIds },
-      role: "Instructor",
-    });
+    const instructors = await User.find({ _id: { $in: instructorIds }, role: "Instructor" });
     const courses = await Course.find({ _id: { $in: courseObjectIds } });
     if (!instructors.length)
       return res.status(404).json({ message: "No valid instructors found." });
@@ -1358,7 +1348,6 @@ export const autoAssignSummerCourses = async (req, res) => {
       const course = courses.find((c) => c._id.toString() === courseId);
       if (!course) continue;
 
-      // Check if this course-section assignment already exists for any instructor
       let isDuplicate = false;
       for (const instructor of instructors) {
         const assignmentKey = `${courseId}-${section}-${instructor._id}`;
@@ -1366,86 +1355,49 @@ export const autoAssignSummerCourses = async (req, res) => {
           duplicateAssignments.push({
             course: course.name,
             section,
-            instructor: instructor.fullName || instructor.name
+            instructor: instructor.fullName || instructor.name,
           });
           isDuplicate = true;
           break;
         }
       }
-
       if (isDuplicate) continue;
 
       for (let instructor of instructors) {
-        let instructorRecord = await Instructor.findOne({
+        let instructorRecord = await Instructor.findOne({ userId: instructor._id }) || new Instructor({
           userId: instructor._id,
+          assignedCourses: [],
+          workload: [],
         });
-        if (!instructorRecord) {
-          instructorRecord = new Instructor({
-            userId: instructor._id,
-            assignedCourses: [],
-            workload: [],
-          });
-        }
 
         let position = await Position.findOne({ name: instructor.position });
         let exemption = position ? position.exemption : 0;
         let expectedLoad = 12 - exemption;
 
-        // Calculate base credit hour
-        let creditHour =
-          course.lecture + (2 / 3) * course.lab + (2 / 3) * course.tutorial;
+        let creditHour = course.lecture + (2 / 3) * course.lab + (2 / 3) * course.tutorial;
         if (course.numberOfStudents > 25) {
-          creditHour =
-            course.lecture +
-            2 * ((2 / 3) * course.lab) +
-            2 * ((2 / 3) * course.tutorial);
+          creditHour = course.lecture + 2 * ((2 / 3) * course.lab) + 2 * ((2 / 3) * course.tutorial);
         }
-        
-        // Apply lab division and number of sections
+
         let workload = creditHour * (labDivision === "Yes" ? 2 : 1) * numSections;
 
-        let existingWorkloads = instructorRecord.workload.filter((w) =>
-          ["Regular 1", "Regular 2"].includes(w.semester)
-        );
-        let totalExistingWorkload = existingWorkloads.reduce(
-          (sum, w) => sum + w.value,
-          0
-        );
+        const regularWorkload = instructorRecord.workload.filter((w) => ["Regular 1", "Regular 2"].includes(w.semester));
+        const extensionWorkload = instructorRecord.workload.filter((w) => ["Extension 1", "Extension 2", "Summer"].includes(w.semester));
 
-        let extensionWorkloads = instructorRecord.workload.filter((w) =>
-          ["Extension 1", "Extension 2", "Summer"].includes(w.semester)
-        );
-        let totalExtensionWorkload = extensionWorkloads.reduce(
-          (sum, w) => sum + w.value,
-          0
-        );
+        const totalExistingWorkload = regularWorkload.reduce((sum, w) => sum + w.value, 0);
+        const totalExtensionWorkload = extensionWorkload.reduce((sum, w) => sum + w.value, 0);
 
-        let existingSummerWorkload = instructorRecord.workload.find(
-          (w) => w.year === year && w.program === "Summer"
-        );
-        let totalWorkload =
-          totalExistingWorkload +
-          (existingSummerWorkload
-            ? existingSummerWorkload.value + workload
-            : workload);
-        let overload = totalWorkload - expectedLoad;
-        let benefit =
-          ["Regular 1", "Regular 2"].includes(course.semester) && overload > 3
-            ? (overload - 3) * 0.942
-            : 0;
+        const existingSummerWorkload = instructorRecord.workload.find((w) => w.year === year && w.program === "Summer");
+        const totalWorkload = totalExistingWorkload + (existingSummerWorkload ? existingSummerWorkload.value + workload : workload);
+        const overload = totalWorkload - expectedLoad;
 
-        // Add extension and summer workload to benefit
-        let totalBenefit = benefit + totalExtensionWorkload;
-        let isChair = false;
-        if (course.chair === instructor._id.toString()) {
-          totalBenefit += 2; // Bonus for being chair
-          isChair = true;
-        }
+        let benefit = ["Regular 1", "Regular 2"].includes(course.semester) && overload > 3 ? (overload - 3) * 0.942 : 0;
+        benefit += totalExtensionWorkload;
 
-        // Count instructor's experience with this course
-        const experienceYears = instructorRecord.assignedCourses.filter(
-          (ac) => ac.course.toString() === course._id.toString()
-        ).length;
+        const isChair = course.chair === instructor._id.toString();
+        if (isChair) benefit += 2;
+
+        const experienceYears = instructorRecord.assignedCourses.filter(ac => ac.course.toString() === course._id.toString()).length;
 
         instructorRecord.workload.push({
           year,
@@ -1455,10 +1407,7 @@ export const autoAssignSummerCourses = async (req, res) => {
         });
         await instructorRecord.save();
 
-        // Store course-instructor pairing with the benefit value and additional information
-        if (!benefitMap.has(courseId)) {
-          benefitMap.set(courseId, []);
-        }
+        if (!benefitMap.has(courseId)) benefitMap.set(courseId, []);
         benefitMap.get(courseId).push({
           instructorId: instructor._id,
           courseId: course._id,
@@ -1466,7 +1415,7 @@ export const autoAssignSummerCourses = async (req, res) => {
           NoOfSections: numSections,
           labDivision,
           workload,
-          benefit: totalBenefit,
+          benefit,
           expectedLoad,
           totalWorkload,
           overload,
@@ -1476,83 +1425,52 @@ export const autoAssignSummerCourses = async (req, res) => {
       }
     }
 
-    // For each course, assign to the instructor with the minimum benefit
-    // If multiple instructors have the same benefit, randomly select one
     for (const [courseId, instructorList] of benefitMap.entries()) {
-      // Sort by benefit in ascending order
       instructorList.sort((a, b) => a.benefit - b.benefit);
-
-      // Get the minimum benefit value
       const minBenefit = instructorList[0].benefit;
+      const tiedInstructors = instructorList.filter(i => i.benefit === minBenefit);
 
-      // Filter all instructors who have this minimum benefit
-      const instructorsWithMinBenefit = instructorList.filter(
-        (instructor) => instructor.benefit === minBenefit
-      );
+      const selectedInstructor = tiedInstructors[Math.floor(Math.random() * tiedInstructors.length)];
 
-      // Randomly select one instructor from those with min benefit
-      const selectedIndex = Math.floor(
-        Math.random() * instructorsWithMinBenefit.length
-      );
-      const selectedInstructor = instructorsWithMinBenefit[selectedIndex];
-
-      // Check if this specific instructor assignment is a duplicate
       const assignmentKey = `${selectedInstructor.courseId}-${selectedInstructor.section}-${selectedInstructor.instructorId}`;
-      if (existingCourseAssignments.has(assignmentKey)) {
-        continue;
+      if (existingCourseAssignments.has(assignmentKey)) continue;
+
+      const assignmentReasonParts = [
+        `Reason:`,
+        `Expected workload: ${selectedInstructor.expectedLoad} hrs.`,
+        `Instructor's total workload: ${selectedInstructor.totalWorkload.toFixed(1)} hrs.`,
+        `Overload: ${selectedInstructor.overload.toFixed(1)} hrs.`,
+      ];
+
+      if (selectedInstructor.experienceYears > 0) {
+        assignmentReasonParts.push(`Instructor has ${selectedInstructor.experienceYears} year${selectedInstructor.experienceYears > 1 ? "s" : ""} of experience with this course.`);
+      } else {
+        assignmentReasonParts.push("Instructor has no prior experience with this course.");
       }
 
-      // Generate assignment reason
-      const assignmentReason =
-        `Assigned based on minimum benefit value (${selectedInstructor.benefit.toFixed(
-          2
-        )}). ` +
-        `Expected workload: ${selectedInstructor.expectedLoad} hrs. ` +
-        `Current workload: ${selectedInstructor.totalWorkload.toFixed(
-          1
-        )} hrs. ` +
-        `Overload: ${selectedInstructor.overload.toFixed(1)} hrs. ` +
-        `${
-          selectedInstructor.experienceYears > 0
-            ? `Instructor has ${selectedInstructor.experienceYears} year${
-                selectedInstructor.experienceYears !== 1 ? "s" : ""
-              } of experience teaching this course. `
-            : ""
-        }` +
-        `${
-          selectedInstructor.isChair
-            ? "Instructor is the chair of this course (additional consideration). "
-            : ""
-        }` +
-        `${
-          instructorsWithMinBenefit.length > 1
-            ? "Selected randomly from " +
-              instructorsWithMinBenefit.length +
-              " instructors with equal benefit value."
-            : ""
-        }`;
+      if (selectedInstructor.isChair) {
+        assignmentReasonParts.push("Instructor is the chair for this course's department.");
+      }
 
-      // Add the assignment reason to the selected instructor
-      selectedInstructor.assignmentReason = assignmentReason;
+      if (tiedInstructors.length > 1) {
+        assignmentReasonParts.push(`Instructor was selected randomly among ${tiedInstructors.length} candidates with equal benefit.`);
+      } else {
+        assignmentReasonParts.push("Instructor had the lowest benefit value among all candidates.");
+      }
 
-      // Add score data
-      selectedInstructor.score = -selectedInstructor.benefit; // Negative since lower benefit is better
-
+      selectedInstructor.assignmentReason = assignmentReasonParts.join(" ");
+      selectedInstructor.score = -selectedInstructor.benefit;
       assignments.push(selectedInstructor);
-
-      // Add to map to prevent duplicate assignments in the same batch
       existingCourseAssignments.set(assignmentKey, true);
     }
 
-    // If no valid assignments to add, return with message about duplicates
     if (assignments.length === 0 && duplicateAssignments.length > 0) {
       return res.status(400).json({
         message: "All assignments already exist for this year, semester, and program",
-        duplicateAssignments
+        duplicateAssignments,
       });
     }
 
-    // Save assignments - either create new document or update existing one
     if (assignments.length > 0) {
       if (existingAssignment) {
         existingAssignment.assignments.push(...assignments);
@@ -1568,13 +1486,11 @@ export const autoAssignSummerCourses = async (req, res) => {
       }
     }
 
-    // Prepare response
     const response = {
       message: "Automatic assignment completed successfully!",
       assignments,
     };
 
-    // Add warning if duplicates were found
     if (duplicateAssignments.length > 0) {
       response.warning = "Some assignments were skipped because they already exist";
       response.duplicateAssignments = duplicateAssignments;
