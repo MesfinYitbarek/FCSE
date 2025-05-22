@@ -168,7 +168,7 @@ const CoursesCH = () => {
         // Try to find an array in the response
         const possibleArrays = Object.values(response.data).filter(val => Array.isArray(val));
         coursesData = possibleArrays.length > 0 ? possibleArrays[0] : [];
-        
+
         // If we found a nested array, log it
         if (possibleArrays.length > 0) {
           console.log("Found courses in nested property:", possibleArrays[0]);
@@ -255,7 +255,7 @@ const CoursesCH = () => {
     const formData = {
       ...form,
       likeness: form.likeness ? form.likeness.split(',').map(item => item.trim()) : [],
-      status: form.status || "draft", // Ensure status is set
+      status: selectedCourse ? form.status : "draft", // Always use draft for new courses
       createdBy: user._id // Track who created the course
     };
 
@@ -612,15 +612,15 @@ const CoursesCH = () => {
     );
 
     // Year filter
-    const matchesYear = filters.year === "all" || 
+    const matchesYear = filters.year === "all" ||
       (course.year !== undefined && course.year.toString() === filters.year);
-    
+
     // Semester filter
-    const matchesSemester = filters.semester === "all" || 
+    const matchesSemester = filters.semester === "all" ||
       (course.semester !== undefined && course.semester.toString() === filters.semester);
-    
+
     // Status filter
-    const matchesStatus = filters.status === "all" || 
+    const matchesStatus = filters.status === "all" ||
       (course.status !== undefined && course.status === filters.status);
 
     return matchesSearchTerm && matchesYear && matchesSemester && matchesStatus;
@@ -668,7 +668,7 @@ const CoursesCH = () => {
   // Get department icon
   const getDepartmentIcon = (department) => {
     if (!department) return <BookOpen className="text-indigo-500 dark:text-indigo-400" size={20} />;
-    
+
     if (department === "Software Engineering") {
       return <Code className="text-blue-500 dark:text-blue-400" size={20} />;
     } else if (department === "Computer Science") {
@@ -683,7 +683,7 @@ const CoursesCH = () => {
   // Get department badge color
   const getDepartmentBadgeClass = (department) => {
     if (!department) return "bg-gray-100 dark:bg-gray-900/40 text-gray-800 dark:text-gray-300";
-    
+
     if (department.toLowerCase().includes("software") ||
       department.toLowerCase().includes("swe") ||
       department.toLowerCase().includes("se")) {
@@ -726,11 +726,11 @@ const CoursesCH = () => {
   const archivedCoursesCount = coursesArray.filter(course => course.status === "archived").length;
 
   // Check if selected courses contain courses with specific status
-  const selectedAssignedCoursesCount = selectedCourses.filter(id => 
+  const selectedAssignedCoursesCount = selectedCourses.filter(id =>
     coursesArray.find(course => course._id === id && course.status === "assigned")
   ).length;
 
-  const selectedActiveCoursesCount = selectedCourses.filter(id => 
+  const selectedActiveCoursesCount = selectedCourses.filter(id =>
     coursesArray.find(course => course._id === id && course.status === "active")
   ).length;
 
@@ -821,7 +821,7 @@ const CoursesCH = () => {
                 {selectedCourses.length} courses selected
               </span>
               <div className="flex-1"></div>
-              
+
               {/* Conditional buttons based on user role */}
               <div className="flex flex-wrap gap-2">
                 {/* For HeadOfFaculty */}
@@ -859,7 +859,7 @@ const CoursesCH = () => {
                     </button>
                   </>
                 )}
-                
+
                 {/* For ChairHead or COC */}
                 {isChairOrCoc && (
                   <>
@@ -883,7 +883,7 @@ const CoursesCH = () => {
                     )}
                   </>
                 )}
-                
+
                 {/* Clear selection button for all roles */}
                 <button
                   onClick={() => setSelectedCourses([])}
@@ -985,19 +985,21 @@ const CoursesCH = () => {
                     </select>
                   </div>
                   <div>
-                    <label htmlFor="status" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-2">
-                      <Shield size={16} className="text-gray-500 dark:text-gray-400" />
-                      Status
+                    <label htmlFor="chair" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-2">
+                      <Users size={16} className="text-gray-500 dark:text-gray-400" />
+                      Chair
                     </label>
                     <select
-                      id="status"
-                      name="status"
-                      value={filters.status}
-                      onChange={handleFilterChange}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600 focus:border-indigo-500 dark:focus:border-indigo-600 outline-none transition dark:bg-gray-700 dark:text-white text-base"
+                      id="chair"
+                      name="chair"
+                      value={form.chair}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600 focus:border-indigo-500 dark:focus:border-indigo-600 outline-none transition dark:bg-gray-700 dark:text-white text-base"
                     >
-                      {statusOptions.map(option => (
-                        <option key={option.value} value={option.value}>{option.label}</option>
+                      <option value="">Select Chair</option>
+                      <option value="COC">COC</option>
+                      {chairHeads.map(chair => (
+                        <option key={chair._id} value={chair.name}>{chair.name}</option>
                       ))}
                     </select>
                   </div>
@@ -1850,21 +1852,22 @@ const CoursesCH = () => {
                   </div>
 
                   <div>
-                    <label htmlFor="status" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-2">
-                      <Shield size={16} className="text-gray-500 dark:text-gray-400" />
-                      Status
+                    <label htmlFor="chair" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-2">
+                      <Users size={16} className="text-gray-500 dark:text-gray-400" />
+                      Chair
                     </label>
                     <select
-                      id="status"
-                      name="status"
-                      value={form.status || 'draft'}
+                      id="chair"
+                      name="chair"
+                      value={form.chair}
                       onChange={handleChange}
                       className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600 focus:border-indigo-500 dark:focus:border-indigo-600 outline-none transition dark:bg-gray-700 dark:text-white text-base"
                     >
-                      <option value="draft">Draft</option>
-                      <option value="active">Active</option>
-                      <option value="assigned">Assigned</option>
-                      <option value="archived">Archived</option>
+                      <option value="">Select Chair</option>
+                      <option value="COC">COC</option>
+                      {chairHeads.map(chair => (
+                        <option key={chair._id} value={chair.name}>{chair.name}</option>
+                      ))}
                     </select>
                   </div>
 
@@ -2126,21 +2129,22 @@ const CoursesCH = () => {
                   </div>
 
                   <div>
-                    <label htmlFor="status" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-2">
-                      <Shield size={16} className="text-gray-500 dark:text-gray-400" />
-                      Status
+                    <label htmlFor="chair" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-2">
+                      <Users size={16} className="text-gray-500 dark:text-gray-400" />
+                      Chair
                     </label>
                     <select
-                      id="status"
-                      name="status"
-                      value={form.status || 'draft'}
+                      id="chair"
+                      name="chair"
+                      value={form.chair}
                       onChange={handleChange}
                       className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600 focus:border-indigo-500 dark:focus:border-indigo-600 outline-none transition dark:bg-gray-700 dark:text-white text-base"
                     >
-                      <option value="draft">Draft</option>
-                      <option value="active">Active</option>
-                      <option value="assigned">Assigned</option>
-                      <option value="archived">Archived</option>
+                      <option value="">Select Chair</option>
+                      <option value="COC">COC</option>
+                      {chairHeads.map(chair => (
+                        <option key={chair._id} value={chair.name}>{chair.name}</option>
+                      ))}
                     </select>
                   </div>
 
@@ -2619,7 +2623,7 @@ const CoursesCH = () => {
 
                   <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border border-purple-200 dark:border-purple-800">
                     <p className="text-purple-700 dark:text-purple-300 text-sm">
-                      Archiving courses will change their status to "archived" and remove any chair/COC assignments. 
+                      Archiving courses will change their status to "archived" and remove any chair/COC assignments.
                       Archived courses can still be viewed but are typically not actively managed.
                     </p>
                   </div>
@@ -2699,7 +2703,7 @@ const CoursesCH = () => {
 
                   <div className="p-3 bg-gray-50 dark:bg-gray-700/20 rounded-lg border border-gray-200 dark:border-gray-700">
                     <p className="text-gray-700 dark:text-gray-300 text-sm">
-                      Converting courses to draft status will remove any chair/COC assignments and reset them to the initial draft state. 
+                      Converting courses to draft status will remove any chair/COC assignments and reset them to the initial draft state.
                       You can then reassign them to chairs or make other changes.
                     </p>
                   </div>
