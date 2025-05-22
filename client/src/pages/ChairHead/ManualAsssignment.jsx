@@ -8,6 +8,7 @@ import {
   ChevronDown, 
   BookOpen,
   Users,
+  Layers
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 
@@ -57,7 +58,6 @@ const ManualAssignment = ({ fetchAssignments, filters }) => {
     try {
       setLoading(true);
       const { data } = await api.get(`/courses/assigned/${user.chair}`);
-      console.log("Fetched courses:", data); // Log the fetched data
 
       if (Array.isArray(data)) {
         setCourses(data);
@@ -89,10 +89,11 @@ const ManualAssignment = ({ fetchAssignments, filters }) => {
           const { [courseId]: removed, ...rest } = updated[instructorId];
           updated[instructorId] = rest;
         } else {
-          // If checking, add default values with empty assignment reason
+          // If checking, add default values with empty assignment reason and NoOfSections = 1
           updated[instructorId][courseId] = { 
             section: "A", 
             labDivision: "No", 
+            NoOfSections: 1,
             assignmentReason: "" 
           };
         }
@@ -119,11 +120,12 @@ const ManualAssignment = ({ fetchAssignments, filters }) => {
       const bulkAssignments = [];
 
       Object.entries(selectedAssignments).forEach(([instructorId, courses]) => {
-        Object.entries(courses).forEach(([courseId, { section, labDivision, assignmentReason }]) => {
+        Object.entries(courses).forEach(([courseId, { section, NoOfSections, labDivision, assignmentReason }]) => {
           bulkAssignments.push({ 
             instructorId, 
             courseId, 
-            section, 
+            section,
+            NoOfSections: parseInt(NoOfSections) || 1,
             labDivision,
             assignmentReason 
           });
@@ -286,20 +288,40 @@ const ManualAssignment = ({ fetchAssignments, filters }) => {
 
                       {selectedAssignments[pref.instructorId._id]?.[course._id] && (
                         <div className="space-y-2">
-                          <input
-                            type="text"
-                            className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200 focus:ring-indigo-500 focus:border-indigo-500"
-                            placeholder="Section"
-                            value={selectedAssignments[pref.instructorId._id][course._id].section}
-                            onChange={(e) =>
-                              handleAssignmentSelection(
-                                pref.instructorId._id,
-                                course._id,
-                                "section",
-                                e.target.value
-                              )
-                            }
-                          />
+                          <div className="grid grid-cols-2 gap-2">
+                            <input
+                              type="text"
+                              className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200 focus:ring-indigo-500 focus:border-indigo-500"
+                              placeholder="Section"
+                              value={selectedAssignments[pref.instructorId._id][course._id].section}
+                              onChange={(e) =>
+                                handleAssignmentSelection(
+                                  pref.instructorId._id,
+                                  course._id,
+                                  "section",
+                                  e.target.value
+                                )
+                              }
+                            />
+                            <div className="relative">
+                              <input
+                                type="number"
+                                min="1"
+                                className="w-full p-2 pl-8 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200 focus:ring-indigo-500 focus:border-indigo-500"
+                                placeholder="Sections"
+                                value={selectedAssignments[pref.instructorId._id][course._id].NoOfSections}
+                                onChange={(e) =>
+                                  handleAssignmentSelection(
+                                    pref.instructorId._id,
+                                    course._id,
+                                    "NoOfSections",
+                                    e.target.value
+                                  )
+                                }
+                              />
+                              <Layers className="h-4 w-4 text-gray-400 dark:text-gray-500 absolute top-1/2 transform -translate-y-1/2 left-2" />
+                            </div>
+                          </div>
                           <select
                             className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200 focus:ring-indigo-500 focus:border-indigo-500"
                             value={selectedAssignments[pref.instructorId._id][course._id].labDivision}
@@ -316,7 +338,7 @@ const ManualAssignment = ({ fetchAssignments, filters }) => {
                             <option value="Yes">With Lab Division</option>
                           </select>
                           
-                          {/* Added Assignment Reason Field */}
+                          {/* Assignment Reason Field */}
                           <textarea
                             className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded text-sm bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200 focus:ring-indigo-500 focus:border-indigo-500"
                             placeholder="Assignment Reason (optional)"

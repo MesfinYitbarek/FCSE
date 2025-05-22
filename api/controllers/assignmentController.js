@@ -13,14 +13,10 @@ export const manualAssignment = async (req, res) => {
   try {
     const { assignments, year, semester, program, assignedBy } = req.body;
 
-    // Validate input
     if (!assignments || assignments.length === 0) {
-      return res
-        .status(400)
-        .json({ message: "At least one assignment is required" });
+      return res.status(400).json({ message: "At least one assignment is required" });
     }
 
-    // Find existing assignment document with the same year, semester, and program
     let existingAssignment = await Assignment.findOne({
       year,
       semester,
@@ -30,29 +26,28 @@ export const manualAssignment = async (req, res) => {
     const bulkAssignments = [];
     const duplicateAssignments = [];
 
-    // Process each assignment
     for (const assignment of assignments) {
-      const { instructorId, courseId, section, labDivision, assignmentReason } = assignment;
+      const {
+        instructorId,
+        courseId,
+        section,
+        labDivision,
+        NoOfSections = 1, // ✅ Default to 1 if not provided
+        assignmentReason
+      } = assignment;
 
-      // Validate courseId
       if (!mongoose.Types.ObjectId.isValid(courseId)) {
-        return res
-          .status(400)
-          .json({ message: `Invalid courseId: ${courseId}` });
+        return res.status(400).json({ message: `Invalid courseId: ${courseId}` });
       }
 
-      // Check if the course exists
       const course = await Course.findById(courseId);
       if (!course) {
-        return res
-          .status(404)
-          .json({ message: `Course not found for ID: ${courseId}` });
+        return res.status(404).json({ message: `Course not found for ID: ${courseId}` });
       }
 
-      // Check if this assignment already exists in the existing assignment document
       if (existingAssignment) {
         const isDuplicate = existingAssignment.assignments.some(
-          existing => 
+          existing =>
             existing.instructorId.toString() === instructorId &&
             existing.courseId.toString() === courseId &&
             existing.section === section
@@ -64,67 +59,60 @@ export const manualAssignment = async (req, res) => {
             section,
             instructorId
           });
-          continue; // Skip this assignment
+          continue;
         }
       }
 
-      // Calculate workload based on course attributes and lab division
+      // ✅ Calculate base workload
       let workload;
       if (labDivision === "Yes") {
         workload =
-          course.lecture +
-          2 * ((2 / 3) * course.lab) +
-          2 * ((2 / 3) * course.tutorial);
+          course.lecture + 2 * ((2 / 3) * course.lab) + 2 * ((2 / 3) * course.tutorial);
       } else {
-        workload =
-          course.lecture + (2 / 3) * course.lab + (2 / 3) * course.tutorial;
+        workload = course.lecture + (2 / 3) * course.lab + (2 / 3) * course.tutorial;
       }
-      workload = Math.round(workload * 100) / 100; // Round to 2 decimal places
 
-      // Add assignment to bulkAssignments array with assignment reason
+      workload = Math.round(workload * 100) / 100;
+
+      // ✅ Multiply by noOfSections
+      const totalWorkload = Math.round(workload * NoOfSections * 100) / 100;
+
       bulkAssignments.push({
         instructorId,
         courseId,
         section,
         labDivision,
-        workload,
-        assignmentReason: assignmentReason || "", // Include assignment reason
+        workload: totalWorkload,
+        assignmentReason: assignmentReason || "",
+        NoOfSections // optionally store this if you want to see how many sections were used
       });
 
-      // Update instructor workload
       const instructor = await Instructor.findOne({ userId: instructorId });
       if (!instructor) {
-        return res
-          .status(404)
-          .json({ message: `Instructor not found for ID: ${instructorId}` });
+        return res.status(404).json({ message: `Instructor not found for ID: ${instructorId}` });
       }
 
-      // Check if workload entry already exists for the same year, semester, and program
       const existingWorkloadIndex = instructor.workload.findIndex(
-        (entry) =>
+        entry =>
           entry.year === year &&
           entry.semester === semester &&
           entry.program === program
       );
 
       if (existingWorkloadIndex !== -1) {
-        // If entry exists, add new workload to existing workload
-        instructor.workload[existingWorkloadIndex].value += workload;
+        instructor.workload[existingWorkloadIndex].value += totalWorkload;
       } else {
-        // If entry does not exist, create a new one
         instructor.workload.push({
           year,
           semester,
           program,
-          value: workload,
+          value: totalWorkload,
         });
       }
 
-      // Save updated instructor workload
       await instructor.save();
     }
 
-    // If no valid assignments to add, return with message about duplicates
     if (bulkAssignments.length === 0) {
       return res.status(400).json({
         message: "All assignments already exist for this year, semester, and program",
@@ -132,12 +120,10 @@ export const manualAssignment = async (req, res) => {
       });
     }
 
-    // If existing assignment document found, add to it
     if (existingAssignment) {
       existingAssignment.assignments.push(...bulkAssignments);
       await existingAssignment.save();
     } else {
-      // Create a new Assignment document with all assignments
       existingAssignment = new Assignment({
         year,
         semester,
@@ -148,7 +134,6 @@ export const manualAssignment = async (req, res) => {
       await existingAssignment.save();
     }
 
-    // Send success response with info about duplicates if any
     const response = {
       message: "Courses assigned successfully",
       assignments: bulkAssignments,
@@ -165,51 +150,44 @@ export const manualAssignment = async (req, res) => {
     res.status(500).json({ message: "Error in manual assignment", error });
   }
 };
+
 
 export const commonManualAssignment = async (req, res) => {
   try {
     const { assignments, year, semester, program, assignedBy } = req.body;
 
-    // Validate input
     if (!assignments || assignments.length === 0) {
-      return res
-        .status(400)
-        .json({ message: "At least one assignment is required" });
+      return res.status(400).json({ message: "At least one assignment is required" });
     }
 
-    // Find existing assignment document with the same year, semester, and program
-    let existingAssignment = await Assignment.findOne({
-      year,
-      semester,
-      program
-    });
+    let existingAssignment = await Assignment.findOne({ year, semester, program });
 
     const bulkAssignments = [];
     const duplicateAssignments = [];
 
-    // Process each assignment
     for (const assignment of assignments) {
-      const { instructorId, courseId, section, labDivision, assignmentReason } = assignment;
+      const {
+        instructorId,
+        courseId,
+        section,
+        labDivision,
+        NoOfSections = 1, // ✅ Default to 1
+        assignmentReason
+      } = assignment;
 
-      // Validate courseId
       if (!mongoose.Types.ObjectId.isValid(courseId)) {
-        return res
-          .status(400)
-          .json({ message: `Invalid courseId: ${courseId}` });
+        return res.status(400).json({ message: `Invalid courseId: ${courseId}` });
       }
 
-      // Check if the course exists
       const course = await Course.findById(courseId);
       if (!course) {
-        return res
-          .status(404)
-          .json({ message: `Course not found for ID: ${courseId}` });
+        return res.status(404).json({ message: `Course not found for ID: ${courseId}` });
       }
 
-      // Check if this assignment already exists in the existing assignment document
+      // ✅ Check for duplicates
       if (existingAssignment) {
         const isDuplicate = existingAssignment.assignments.some(
-          existing => 
+          existing =>
             existing.instructorId.toString() === instructorId &&
             existing.courseId.toString() === courseId &&
             existing.section === section
@@ -221,42 +199,38 @@ export const commonManualAssignment = async (req, res) => {
             section,
             instructorId
           });
-          continue; // Skip this assignment
+          continue;
         }
       }
 
-      // Calculate workload based on course attributes and lab division
+      // ✅ Base workload calculation
       let workload;
       if (labDivision === "Yes") {
-        workload =
-          course.lecture +
-          2 * ((2 / 3) * course.lab) +
-          2 * ((2 / 3) * course.tutorial);
+        workload = course.lecture + 2 * ((2 / 3) * course.lab) + 2 * ((2 / 3) * course.tutorial);
       } else {
-        workload =
-          course.lecture + (2 / 3) * course.lab + (2 / 3) * course.tutorial;
+        workload = course.lecture + (2 / 3) * course.lab + (2 / 3) * course.tutorial;
       }
-      workload = Math.round(workload * 100) / 100; // Round to 2 decimal places
 
-      // Add assignment to bulkAssignments array with assignment reason
+      // ✅ Final workload = base * noOfSections
+      workload = Math.round(workload * NoOfSections * 100) / 100;
+
+      // ✅ Push to bulk assignments
       bulkAssignments.push({
         instructorId,
         courseId,
         section,
         labDivision,
         workload,
-        assignmentReason: assignmentReason || "", // Include assignment reason
+        assignmentReason: assignmentReason || "",
+        NoOfSections
       });
 
-      // Update instructor workload
+      // ✅ Update instructor workload
       const instructor = await Instructor.findOne({ userId: instructorId });
       if (!instructor) {
-        return res
-          .status(404)
-          .json({ message: `Instructor not found for ID: ${instructorId}` });
+        return res.status(404).json({ message: `Instructor not found for ID: ${instructorId}` });
       }
 
-      // Check if workload entry already exists for the same year, semester, and program
       const existingWorkloadIndex = instructor.workload.findIndex(
         (entry) =>
           entry.year === year &&
@@ -265,23 +239,19 @@ export const commonManualAssignment = async (req, res) => {
       );
 
       if (existingWorkloadIndex !== -1) {
-        // If entry exists, add new workload to existing workload
         instructor.workload[existingWorkloadIndex].value += workload;
       } else {
-        // If entry does not exist, create a new one
         instructor.workload.push({
           year,
           semester,
           program,
-          value: workload,
+          value: workload
         });
       }
 
-      // Save updated instructor workload
       await instructor.save();
     }
 
-    // If no valid assignments to add, return with message about duplicates
     if (bulkAssignments.length === 0) {
       return res.status(400).json({
         message: "All assignments already exist for this year, semester, and program",
@@ -289,26 +259,23 @@ export const commonManualAssignment = async (req, res) => {
       });
     }
 
-    // If existing assignment document found, add to it
     if (existingAssignment) {
       existingAssignment.assignments.push(...bulkAssignments);
       await existingAssignment.save();
     } else {
-      // Create a new Assignment document with all assignments
       existingAssignment = new Assignment({
         year,
         semester,
         program,
         assignedBy,
-        assignments: bulkAssignments,
+        assignments: bulkAssignments
       });
       await existingAssignment.save();
     }
 
-    // Send success response with info about duplicates if any
     const response = {
       message: "Courses assigned successfully",
-      assignments: bulkAssignments,
+      assignments: bulkAssignments
     };
 
     if (duplicateAssignments.length > 0) {
@@ -323,33 +290,21 @@ export const commonManualAssignment = async (req, res) => {
   }
 };
 
-// Update an Assignment
+
 export const updateAssignment = async (req, res) => {
   try {
     const { parentId, subId } = req.params;
-    const { instructorId, courseId, labDivision, assignmentReason } = req.body;
-    
-    console.log("Update request received:", {
-      parentId,
-      subId,
-      instructorId,
-      courseId,
-      labDivision,
-      assignmentReason
-    });
+    const { instructorId, courseId, labDivision, assignmentReason, NoOfSections } = req.body;
 
-    // Validate both IDs are valid ObjectIds
     if (!mongoose.Types.ObjectId.isValid(parentId) || !mongoose.Types.ObjectId.isValid(subId)) {
       return res.status(400).json({ message: "Invalid assignment ID" });
     }
 
-    // Step 1: Get the current assignment data
     const parentAssignment = await Assignment.findById(parentId);
     if (!parentAssignment) {
       return res.status(404).json({ message: "Parent assignment not found" });
     }
 
-    // Find the specific sub-assignment
     const subAssignmentIndex = parentAssignment.assignments.findIndex(
       (sub) => sub._id.toString() === subId
     );
@@ -358,243 +313,122 @@ export const updateAssignment = async (req, res) => {
       return res.status(404).json({ message: "Sub-assignment not found" });
     }
 
-    // Store the old values for later comparison
     const oldAssignment = parentAssignment.assignments[subAssignmentIndex];
     const oldInstructorId = oldAssignment.instructorId;
     const oldWorkload = oldAssignment.workload;
-    
-    // Convert values to strings for comparison
-    const oldLabDivision = String(oldAssignment.labDivision || 'No');
-    const newLabDivision = String(labDivision || oldLabDivision);
-    
-    console.log("Current assignment data:", {
-      oldInstructorId: oldInstructorId.toString(),
-      oldWorkload,
-      oldLabDivision
-    });
-    
-    // Check if lab division is changing
-    const isLabDivisionChanging = newLabDivision !== oldLabDivision;
-    
-    console.log("Is lab division changing?", isLabDivisionChanging, {
-      oldLabDivision,
-      newLabDivision
-    });
+    const oldLabDivision = String(oldAssignment.labDivision || "No");
+    const oldNoOfSections = oldAssignment.NoOfSections || 1;
 
-    // Step 2: Calculate the new workload if needed
+    const updatedLabDivision = labDivision !== undefined ? labDivision : oldLabDivision;
+    const updatedNoOfSections = NoOfSections !== undefined ? parseInt(NoOfSections) : oldNoOfSections;
+    const isLabChanged = updatedLabDivision !== oldLabDivision;
+    const isCourseChanged = courseId && courseId !== oldAssignment.courseId.toString();
+    const isNoOfSectionsChanged = updatedNoOfSections !== oldNoOfSections;
+
     let newWorkload = oldWorkload;
-    
-    // If course is changing or lab division is changing, recalculate workload
-    const targetCourseId = courseId || oldAssignment.courseId;
-    if (isLabDivisionChanging || (courseId && courseId !== oldAssignment.courseId.toString())) {
+
+    // Recalculate workload if necessary
+    if (isCourseChanged || isLabChanged || isNoOfSectionsChanged) {
+      const targetCourseId = courseId || oldAssignment.courseId;
       const course = await Course.findById(targetCourseId);
+
       if (!course) {
         return res.status(404).json({ message: `Course not found for ID: ${targetCourseId}` });
       }
-      
-      console.log("Course found for workload calculation:", {
-        courseId: course._id.toString(),
-        lecture: course.lecture,
-        lab: course.lab,
-        tutorial: course.tutorial
-      });
 
-      // Calculate new workload based on lab division
-      if (newLabDivision === 'Yes') {
-        newWorkload = course.lecture + 2 * ((2 / 3) * course.lab) + 2 * ((2 / 3) * course.tutorial);
+      if (updatedLabDivision === "Yes") {
+        newWorkload =
+          course.lecture + 2 * ((2 / 3) * course.lab) + 2 * ((2 / 3) * course.tutorial);
       } else {
-        newWorkload = course.lecture + (2 / 3) * course.lab + (2 / 3) * course.tutorial;
+        newWorkload =
+          course.lecture + (2 / 3) * course.lab + (2 / 3) * course.tutorial;
       }
+
+      newWorkload *= updatedNoOfSections;
       newWorkload = Math.round(newWorkload * 100) / 100;
-      
-      console.log("New workload calculated:", {
-        newWorkload,
-        oldWorkload,
-        difference: newWorkload - oldWorkload
-      });
     }
-    
-    // Step 3: Update the assignment
+
     const updatedAssignment = { ...oldAssignment.toObject() };
-    
-    // Only update fields that are provided in the request
     if (instructorId) updatedAssignment.instructorId = instructorId;
     if (courseId) updatedAssignment.courseId = courseId;
     if (labDivision !== undefined) updatedAssignment.labDivision = labDivision;
     if (assignmentReason !== undefined) updatedAssignment.assignmentReason = assignmentReason;
-    
-    // Always update the workload
+    if (NoOfSections !== undefined) updatedAssignment.NoOfSections = updatedNoOfSections;
     updatedAssignment.workload = newWorkload;
-    
-    // Keep the original ID
     updatedAssignment._id = subId;
-    
-    console.log("Updated assignment object:", updatedAssignment);
-    
-    // Apply the update to the parent document
+
     parentAssignment.assignments[subAssignmentIndex] = updatedAssignment;
-    
-    // Step 4: Determine if instructor workload needs to be updated
-    const isWorkloadChanging = newWorkload !== oldWorkload;
-    const isInstructorChanging = instructorId && oldInstructorId.toString() !== instructorId;
-    
-    console.log("Change detection:", {
-      isWorkloadChanging,
-      isInstructorChanging,
-      workloadDifference: isWorkloadChanging ? newWorkload - oldWorkload : 0
-    });
-    
-    // Save the parent assignment first
+
+    const isInstructorChanged = instructorId && oldInstructorId.toString() !== instructorId;
+    const isWorkloadChanged = newWorkload !== oldWorkload;
+
     await parentAssignment.save();
-    console.log("Parent assignment saved successfully");
-    
-    // Step 5: Handle instructor workload updates
-    if (isInstructorChanging) {
-      // Case 1: Instructor is changing - update both old and new instructor
-      console.log("Updating workload for instructor change scenario");
-      
-      // Remove workload from old instructor
+
+    // Instructor workload updates
+    if (isInstructorChanged) {
       if (oldInstructorId) {
-        try {
-          const oldInstructor = await Instructor.findById(oldInstructorId);
-          if (oldInstructor) {
-            console.log("Found old instructor:", oldInstructor._id.toString());
-            
-            const oldWorkloadIndex = oldInstructor.workload.findIndex(
-              w => 
-                w.year == parentAssignment.year && 
-                w.semester === parentAssignment.semester && 
-                w.program === parentAssignment.program
-            );
-            
-            if (oldWorkloadIndex !== -1) {
-              console.log("Old instructor current workload:", oldInstructor.workload[oldWorkloadIndex].value);
-              
-              oldInstructor.workload[oldWorkloadIndex].value -= oldWorkload;
-              if (oldInstructor.workload[oldWorkloadIndex].value < 0) {
-                oldInstructor.workload[oldWorkloadIndex].value = 0;
-              }
-              
-              console.log("Removed workload from old instructor:", {
-                removed: oldWorkload,
-                newTotal: oldInstructor.workload[oldWorkloadIndex].value
-              });
-              
-              await oldInstructor.save();
-              console.log("Old instructor workload updated successfully");
-            }
-          }
-        } catch (error) {
-          console.error("Error updating old instructor workload:", error);
-        }
-      }
-      
-      // Add workload to new instructor
-      if (instructorId) {
-        try {
-          const newInstructor = await Instructor.findById(instructorId);
-          if (newInstructor) {
-            console.log("Found new instructor:", newInstructor._id.toString());
-            
-            const newWorkloadIndex = newInstructor.workload.findIndex(
-              w => 
-                w.year == parentAssignment.year && 
-                w.semester === parentAssignment.semester && 
-                w.program === parentAssignment.program
-            );
-            
-            if (newWorkloadIndex !== -1) {
-              console.log("New instructor current workload:", newInstructor.workload[newWorkloadIndex].value);
-              
-              newInstructor.workload[newWorkloadIndex].value += newWorkload;
-              
-              console.log("Added workload to new instructor:", {
-                added: newWorkload,
-                newTotal: newInstructor.workload[newWorkloadIndex].value
-              });
-            } else {
-              console.log("Creating new workload entry for instructor");
-              
-              newInstructor.workload.push({
-                year: parentAssignment.year,
-                semester: parentAssignment.semester,
-                program: parentAssignment.program,
-                value: newWorkload
-              });
-            }
-            
-            await newInstructor.save();
-            console.log("New instructor workload updated successfully");
-          }
-        } catch (error) {
-          console.error("Error updating new instructor workload:", error);
-        }
-      }
-    } 
-    // Case 2: Same instructor but workload is changing
-    else if (isWorkloadChanging && oldInstructorId) {
-      console.log("Updating workload for same instructor scenario");
-      
-      try {
-        const instructor = await Instructor.findById(oldInstructorId);
-        if (instructor) {
-          console.log("Found instructor for workload update:", instructor._id.toString());
-          
-          const workloadIndex = instructor.workload.findIndex(
-            w => 
-              w.year == parentAssignment.year && 
-              w.semester === parentAssignment.semester && 
+        const oldInstructor = await Instructor.findById(oldInstructorId);
+        if (oldInstructor) {
+          const workloadEntry = oldInstructor.workload.find(
+            w => w.year === parentAssignment.year &&
+              w.semester === parentAssignment.semester &&
               w.program === parentAssignment.program
           );
-          
-          if (workloadIndex !== -1) {
-            console.log("Instructor current workload:", instructor.workload[workloadIndex].value);
-            
-            // Calculate the workload difference
-            const workloadDifference = newWorkload - oldWorkload;
-            
-            // Update the instructor's workload
-            instructor.workload[workloadIndex].value += workloadDifference;
-            
-            // Ensure workload doesn't go below 0
-            if (instructor.workload[workloadIndex].value < 0) {
-              instructor.workload[workloadIndex].value = 0;
-            }
-            
-            console.log("Adjusted instructor workload:", {
-              difference: workloadDifference,
-              newTotal: instructor.workload[workloadIndex].value
-            });
-            
-            // Use direct MongoDB update to ensure changes are saved
-            await Instructor.updateOne(
-              { 
-                _id: instructor._id,
-                "workload._id": instructor.workload[workloadIndex]._id
-              },
-              {
-                $set: {
-                  [`workload.$.value`]: instructor.workload[workloadIndex].value
-                }
-              }
-            );
-            
-            console.log("Instructor workload updated successfully with MongoDB update");
+          if (workloadEntry) {
+            workloadEntry.value -= oldWorkload;
+            if (workloadEntry.value < 0) workloadEntry.value = 0;
+            await oldInstructor.save();
           }
         }
-      } catch (error) {
-        console.error("Error updating instructor workload:", error);
       }
-    } else {
-      console.log("No workload or instructor changes needed");
+
+      if (instructorId) {
+        const newInstructor = await Instructor.findById(instructorId);
+        if (newInstructor) {
+          const workloadEntry = newInstructor.workload.find(
+            w => w.year === parentAssignment.year &&
+              w.semester === parentAssignment.semester &&
+              w.program === parentAssignment.program
+          );
+          if (workloadEntry) {
+            workloadEntry.value += newWorkload;
+          } else {
+            newInstructor.workload.push({
+              year: parentAssignment.year,
+              semester: parentAssignment.semester,
+              program: parentAssignment.program,
+              value: newWorkload
+            });
+          }
+          await newInstructor.save();
+        }
+      }
+    } else if (isWorkloadChanged) {
+      const instructor = await Instructor.findById(oldInstructorId);
+      if (instructor) {
+        const workloadEntry = instructor.workload.find(
+          w => w.year === parentAssignment.year &&
+            w.semester === parentAssignment.semester &&
+            w.program === parentAssignment.program
+        );
+
+        if (workloadEntry) {
+          const delta = newWorkload - oldWorkload;
+          workloadEntry.value += delta;
+          if (workloadEntry.value < 0) workloadEntry.value = 0;
+
+          await Instructor.updateOne(
+            { _id: instructor._id, "workload._id": workloadEntry._id },
+            { $set: { "workload.$.value": workloadEntry.value } }
+          );
+        }
+      }
     }
 
-    // Fetch the updated assignment with populated data
     const updatedParentAssignment = await Assignment.findById(parentId).populate(
       "assignments.instructorId assignments.courseId"
     );
-    
-    // Find the updated sub-assignment
+
     const updatedSubAssignment = updatedParentAssignment.assignments.find(
       sub => sub._id.toString() === subId
     );
@@ -602,19 +436,18 @@ export const updateAssignment = async (req, res) => {
     res.json({
       message: "Assignment updated successfully",
       assignment: updatedSubAssignment,
-      workloadChanged: isWorkloadChanging ? {
+      workloadChanged: isWorkloadChanged ? {
         old: oldWorkload,
         new: newWorkload,
         difference: newWorkload - oldWorkload
       } : null
     });
   } catch (error) {
-    console.error("Error updating sub-assignment:", error);
     res.status(500).json({ message: "Error updating sub-assignment", error: error.message });
   }
 };
 
-// Delete an Assignment
+
 export const deleteAssignment = async (req, res) => {
   try {
     const { parentId, subId } = req.params;
@@ -641,11 +474,9 @@ export const deleteAssignment = async (req, res) => {
 
     const subAssignment = parentAssignment.assignments[subAssignmentIndex];
 
-    // Extract context
     const { instructorId, workload } = subAssignment;
     const { year, semester, program } = parentAssignment;
 
-    // Remove the sub-assignment
     parentAssignment.assignments.splice(subAssignmentIndex, 1);
 
     if (parentAssignment.assignments.length === 0) {
@@ -658,7 +489,6 @@ export const deleteAssignment = async (req, res) => {
       const instructor = await Instructor.findOne({ userId: instructorId });
 
       if (instructor) {
-        // Decrease workload for the same year, semester, and program
         const index = instructor.workload.findIndex(
           (entry) =>
             entry.year === year &&
@@ -679,21 +509,17 @@ export const deleteAssignment = async (req, res) => {
 
     res.json({ message: "Assignment deleted successfully" });
   } catch (error) {
-    console.error("Error deleting sub-assignment:", error);
-    res
-      .status(500)
-      .json({ message: "Error deleting sub-assignment", error: error.message });
+    res.status(500).json({ message: "Error deleting sub-assignment", error: error.message });
   }
 };
 
-// Get All Assignments
 export const getAllAssignments = async (req, res) => {
   try {
     const assignments = await Assignment.find()
       .populate({
         path: "assignments.instructorId",
-        select: "fullName email chair", // ✅ Select correct fields
-        model: "User", // ✅ Ensure instructorId references User, not Instructor
+        select: "fullName email chair",
+        model: "User",
       })
       .populate({
         path: "assignments.courseId",
@@ -703,16 +529,12 @@ export const getAllAssignments = async (req, res) => {
 
     res.json(assignments);
   } catch (error) {
-    console.error("Error fetching assignments:", error);
     res.status(500).json({ message: "Error fetching assignments", error });
   }
 };
 
-// get assignments using filtering
 export const getAutomaticAssignments = async (req, res) => {
   try {
-    console.log("Received Query Params:", req.query);
-
     const { year, semester, program, assignedBy } = req.query;
 
     let assignedByFilter = assignedBy;
@@ -731,7 +553,7 @@ export const getAutomaticAssignments = async (req, res) => {
       .populate({
         path: "assignments.instructorId",
         select: "fullName email chair",
-        model: "User", // ✅ Ensure correct reference
+        model: "User",
       })
       .populate({
         path: "assignments.courseId",
@@ -739,26 +561,16 @@ export const getAutomaticAssignments = async (req, res) => {
         model: "Course",
       });
 
-    console.log(
-      "Fetched Assignments from DB:",
-      JSON.stringify(assignments, null, 2)
-    );
-
-    // Create plain objects and ensure every assignment has a reason (use the stored one or generate a fallback)
     const assignmentsWithReasons = assignments.map((assignment) => {
       const updatedAssignments = assignment.assignments.map((a) => {
-        // Convert to a plain object
         const assignmentObj = a.toObject ? a.toObject() : a;
 
-        // If the assignment already has a stored reason, use it
         if (assignmentObj.assignmentReason) {
           return assignmentObj;
         }
 
-        // Otherwise, generate a fallback reason based on available data
         let reasonText = "";
 
-        // Add preference reasoning
         if (a.preferenceRank) {
           if (a.preferenceRank <= 3) {
             reasonText += `This course was listed as preference #${a.preferenceRank} by the instructor. `;
@@ -767,7 +579,6 @@ export const getAutomaticAssignments = async (req, res) => {
           }
         }
 
-        // Add experience reasoning
         if (a.experienceYears > 0) {
           reasonText += `The instructor has ${a.experienceYears} year${
             a.experienceYears > 1 ? "s" : ""
@@ -776,12 +587,10 @@ export const getAutomaticAssignments = async (req, res) => {
           reasonText += `The instructor has no previous experience teaching this course. `;
         }
 
-        // Add score reasoning
         if (a.score) {
           reasonText += `Final assignment score: ${a.score.toFixed(2)}`;
         }
 
-        // If no reason information is available
         if (!reasonText) {
           reasonText = "Assignment information not available";
         }
@@ -792,7 +601,6 @@ export const getAutomaticAssignments = async (req, res) => {
         };
       });
 
-      // Create a modified assignment object
       const assignmentObj = assignment.toObject
         ? assignment.toObject()
         : assignment;
@@ -804,12 +612,10 @@ export const getAutomaticAssignments = async (req, res) => {
 
     res.status(200).json({ assignments: assignmentsWithReasons });
   } catch (error) {
-    console.error("Error fetching automatic assignments:", error);
     res.status(500).json({ message: "Error fetching automatic assignments" });
   }
 };
 
-// Get Assignment by ID
 export const getAssignmentById = async (req, res) => {
   try {
     const { id } = req.params;
@@ -824,32 +630,21 @@ export const getAssignmentById = async (req, res) => {
   }
 };
 
-// Automatic Assignment for Regular Courses
 export const runAutomaticAssignment = async (req, res) => {
   try {
     const { year, semester, program, assignedBy } = req.body;
 
     if (!year || !semester || !program || !assignedBy) {
-      console.log("Missing required parameters in request body");
       return res.status(400).json({
         message: "Year, semester, program, and assignedBy are required.",
       });
     }
 
-    console.log(
-      `Starting automatic assignment for ${year} ${semester} ${program} by ${assignedBy}`
-    );
-
-    // Check if an assignment document already exists for this year, semester, and program
     const existingAssignment = await Assignment.findOne({
       year,
       semester,
-      program
+      program,
     });
-
-    console.log(existingAssignment ? 
-      `Found existing assignment document for ${year} ${semester} ${program}` : 
-      `No existing assignment document for ${year} ${semester} ${program}`);
 
     const preferenceForm = await PreferenceForm.findOne({
       chair: assignedBy,
@@ -858,12 +653,8 @@ export const runAutomaticAssignment = async (req, res) => {
     }).populate("courses.course");
 
     if (!preferenceForm) {
-      console.log(
-        `No preference form found for chair ${assignedBy}, ${year} ${semester}`
-      );
       return res.status(404).json({
-        message:
-          "No preference form found for the specified chair, year, and semester.",
+        message: "No preference form found for the specified chair, year, and semester.",
       });
     }
 
@@ -874,14 +665,8 @@ export const runAutomaticAssignment = async (req, res) => {
       labDivision: c.labDivision,
     }));
 
-    console.log(
-      "Allowed Courses with metadata:",
-      JSON.stringify(allowedCourses, null, 2)
-    );
-
-    const getCourseMeta = (courseId) => {
-      return allowedCourses.find((c) => c.courseId === courseId.toString());
-    };
+    const getCourseMeta = (courseId) =>
+      allowedCourses.find((c) => c.courseId === courseId.toString());
 
     const preferences = await Preference.find({
       preferenceFormId: preferenceForm._id,
@@ -889,371 +674,210 @@ export const runAutomaticAssignment = async (req, res) => {
       .populate("instructorId")
       .populate("preferences.courseId");
 
-    console.log(`Found ${preferences.length} preference submissions`);
-
     const preferenceWeights = await PreferenceWeight.findOne();
     const experienceWeights = await CourseExperienceWeight.findOne();
+
     let assignedCourses = [];
     let instructorAssigned = new Set();
-    // Track which courses are already assigned in the existing assignment document
     const existingCourseAssignments = new Map();
     let duplicateAssignments = [];
 
-    // If there's an existing assignment document, map out the courses, sections, and instructors
     if (existingAssignment) {
-      existingAssignment.assignments.forEach(assignment => {
-        const key = `${assignment.courseId}-${assignment.section}-${assignment.instructorId}`;
+      existingAssignment.assignments.forEach((a) => {
+        const key = `${a.courseId}-${a.section}-${a.instructorId}`;
         existingCourseAssignments.set(key, true);
       });
-      console.log(`Found ${existingCourseAssignments.size} existing course assignments`);
     }
 
-    console.log(
-      "Preference Weights:",
-      JSON.stringify(preferenceWeights, null, 2)
-    );
-    console.log(
-      "Experience Weights:",
-      JSON.stringify(experienceWeights, null, 2)
-    );
-
-    const calculateScore = (preferenceRank, yearsExperience) => {
-      let preferenceScore =
-        preferenceWeights?.weights?.find((w) => w.rank === preferenceRank)
+    const calculateScore = (rank, yearsExperience) => {
+      const preferenceScore =
+        preferenceWeights?.weights?.find((w) => w.rank === rank)?.weight || 0;
+      const experienceScore =
+        experienceWeights?.yearsExperience?.find((y) => y.years === yearsExperience)
           ?.weight || 0;
-      let experienceScore =
-        experienceWeights?.yearsExperience?.find(
-          (y) => y.years === yearsExperience
-        )?.weight || 0;
-      const totalScore = preferenceScore + experienceScore;
-
-      console.log(`Calculating score for rank ${preferenceRank} and ${yearsExperience} years experience: 
-        Preference Score = ${preferenceScore}, 
-        Experience Score = ${experienceScore}, 
-        Total Score = ${totalScore}`);
-
-      return totalScore;
+      return preferenceScore + experienceScore;
     };
 
-    // Function to get course experience from assigned courses
-    const getInstructorCourseExperience = async (instructorId, courseId) => {
-      const instructor = await Instructor.findOne({ userId: instructorId });
+    const getInstructorCourseExperience = async (userId, courseId) => {
+      const instructor = await Instructor.findOne({ userId });
       if (!instructor) return 0;
-
-      // Count how many times this instructor has taught this course before
-      const experience = instructor.assignedCourses.filter(
+      return instructor.assignedCourses.filter(
         (c) => c.course.toString() === courseId.toString()
       ).length;
-
-      console.log(
-        `Instructor ${instructorId} has ${experience} years of experience teaching course ${courseId}`
-      );
-      return experience;
     };
 
-    let courseAssignments = {};
-    console.log("Processing instructor preferences...");
-    for (let preference of preferences) {
-      console.log(
-        `Processing preferences for instructor ${preference.instructorId.name} (${preference.instructorId._id})`
-      );
-
-      for (let { courseId, rank } of preference.preferences) {
-        if (!mongoose.Types.ObjectId.isValid(courseId)) {
-          console.log(`Skipping invalid course ID: ${courseId}`);
-          continue;
-        }
+    const courseAssignments = {};
+    for (const pref of preferences) {
+      for (let { courseId, rank } of pref.preferences) {
+        if (!mongoose.Types.ObjectId.isValid(courseId)) continue;
 
         courseId = new mongoose.Types.ObjectId(courseId);
         const meta = getCourseMeta(courseId);
-        if (!meta) {
-          console.log(
-            `Course ${courseId} not found in allowed courses, skipping`
-          );
-          continue;
-        }
+        if (!meta) continue;
+
+        const instructorId = pref.instructorId._id;
+        const experienceYears = await getInstructorCourseExperience(instructorId, courseId);
+        const score = calculateScore(rank, experienceYears);
 
         if (!courseAssignments[courseId]) courseAssignments[courseId] = [];
-        const instructorId = preference.instructorId._id;
-
-        // Get years of experience teaching this course
-        const experienceYears = await getInstructorCourseExperience(
-          instructorId,
-          courseId
-        );
-
-        let score = calculateScore(rank, experienceYears);
-
-        console.log(`Instructor ${preference.instructorId.name} (${instructorId}) for course ${courseId}:
-          - Preference Rank: ${rank}
-          - Years Experience: ${experienceYears}
-          - Calculated Score: ${score}
-          - Submitted At: ${preference.submittedAt}`);
-
         courseAssignments[courseId].push({
           instructorId,
           score,
-          submittedAt: preference.submittedAt,
-          instructorName: preference.instructorId.name,
+          submittedAt: pref.submittedAt,
+          instructorName: pref.instructorId.fullName,
           preferenceRank: rank,
           experienceYears,
         });
       }
     }
 
-    console.log("\nSorting candidates for each course...");
-    for (let courseId in courseAssignments) {
-      console.log(`\nCourse ${courseId} candidates before sorting:`);
-      console.table(courseAssignments[courseId]);
-
-      courseAssignments[courseId].sort(
-        (a, b) => b.score - a.score || a.submittedAt - b.submittedAt
+    for (const courseId in courseAssignments) {
+      courseAssignments[courseId].sort((a, b) =>
+        b.score - a.score || new Date(a.submittedAt) - new Date(b.submittedAt)
       );
-
-      console.log(`Course ${courseId} candidates after sorting:`);
-      console.table(courseAssignments[courseId]);
     }
 
-    console.log("\nAssigning courses to instructors...");
-    for (let courseId in courseAssignments) {
-      console.log(`\nProcessing assignments for course ${courseId}`);
-
-      for (let candidate of courseAssignments[courseId]) {
-        if (!instructorAssigned.has(candidate.instructorId)) {
-          console.log(
-            `Assigning course ${courseId} to ${candidate.instructorName} (score: ${candidate.score})`
-          );
-
-          assignedCourses.push({
-            instructorId: candidate.instructorId,
-            courseId,
-            instructorName: candidate.instructorName,
-            score: candidate.score,
-            preferenceRank: candidate.preferenceRank,
-            experienceYears: candidate.experienceYears,
-          });
-
-          instructorAssigned.add(candidate.instructorId);
+    for (const courseId in courseAssignments) {
+      for (const candidate of courseAssignments[courseId]) {
+        if (!instructorAssigned.has(candidate.instructorId.toString())) {
+          assignedCourses.push({ ...candidate, courseId });
+          instructorAssigned.add(candidate.instructorId.toString());
           break;
-        } else {
-          console.log(
-            `Instructor ${candidate.instructorName} already assigned to another course`
-          );
         }
       }
     }
 
-    console.log("\nHandling unassigned courses...");
-    for (let courseId in courseAssignments) {
+    for (const courseId in courseAssignments) {
       if (!assignedCourses.some((a) => a.courseId.toString() === courseId)) {
-        let selectedInstructor = courseAssignments[courseId][0]?.instructorId;
-        if (selectedInstructor) {
-          const instructor = courseAssignments[courseId][0];
-          console.log(
-            `Force assigning unassigned course ${courseId} to ${instructor.instructorName} (top candidate)`
-          );
-
-          assignedCourses.push({
-            instructorId: selectedInstructor,
-            courseId,
-            instructorName: instructor.instructorName,
-            score: instructor.score,
-            preferenceRank: instructor.preferenceRank,
-            experienceYears: instructor.experienceYears,
-          });
-        } else {
-          console.log(`No available instructors for course ${courseId}`);
-        }
+        const fallback = courseAssignments[courseId][0];
+        if (fallback) assignedCourses.push({ ...fallback, courseId });
       }
     }
 
-    console.log("\nFinal assignments before saving:");
-    console.table(
-      assignedCourses.map((a) => ({
-        course: a.courseId,
-        instructor: a.instructorName,
-        score: a.score,
-        preference: a.preferenceRank,
-        experience: a.experienceYears,
-      }))
-    );
-
-    let finalAssignments = [];
-    
-    console.log(
-      "\nProcessing workload calculations and updating instructor records..."
-    );
-    for (const assignment of assignedCourses) {
-      const { instructorId, courseId, score, preferenceRank, experienceYears } =
-        assignment;
+    const finalAssignments = [];
+    for (const a of assignedCourses) {
+      const { instructorId, courseId, score, preferenceRank, experienceYears } = a;
       const course = await Course.findById(courseId);
-      if (!course) {
-        console.log(`Course ${courseId} not found, skipping`);
-        continue;
-      }
+      if (!course) continue;
 
       const meta = getCourseMeta(courseId);
-      if (!meta) {
-        console.log(`Metadata not found for course ${courseId}, skipping`);
-        continue;
-      }
+      if (!meta) continue;
 
-      // Check if this assignment already exists in the existing assignment document
       const assignmentKey = `${courseId}-${meta.section}-${instructorId}`;
       if (existingCourseAssignments.has(assignmentKey)) {
-        console.log(`Assignment ${assignmentKey} already exists, skipping`);
         duplicateAssignments.push({
           course: course.name,
           section: meta.section,
-          instructor: assignment.instructorName
+          instructor: a.instructorName,
         });
         continue;
       }
 
-      const workload =
-        Math.round(
-          (course.lecture + (2 / 3) * course.lab + (2 / 3) * course.tutorial) *
-            100
-        ) / 100;
-
-      console.log(
-        `Calculated workload for course ${courseId}: ${workload} (lecture: ${course.lecture}, lab: ${course.lab}, tutorial: ${course.tutorial})`
-      );
-
-      // Generate human-readable assignment reason
-      // Find all candidates for this course for comparison
-      const allCandidates = courseAssignments[courseId.toString()];
-      const higherScoringCandidates = allCandidates.filter(
-        (c) =>
-          c.instructorId.toString() !== instructorId.toString() &&
-          c.score > score
-      );
-      const currentInstructor = allCandidates.find(
-        (c) => c.instructorId.toString() === instructorId.toString()
-      );
-      
-      const sameScoreEarlierSubmission = allCandidates.filter(
-        (c) =>
-          c.score === score &&
-          c.submittedAt < (currentInstructor?.submittedAt || new Date())
-      );
-      
-
-      // Start building the reason text
-      let reasonText = `Reason:`;
-
-      // Add preference explanation
-      reasonText += `\n- They listed this course as preference #${preferenceRank}.`;
-
-      // Add experience explanation
-      reasonText += `\n- They have ${experienceYears} year${
-        experienceYears !== 1 ? "s" : ""
-      } of experience teaching it.`;
-
-      // Add score explanation
-      reasonText += `\n- Their combined score was ${score.toFixed(2)}.`;
-
-      // Justify the selection over others
-      if (higherScoringCandidates.length > 0) {
-        reasonText += `\n- Although there were ${higherScoringCandidates.length} instructor(s) with a higher score, they were already assigned to other courses.`;
-      } else if (sameScoreEarlierSubmission.length > 0) {
-        reasonText += `\n- Their score was equal to others, but they submitted their preference form later.`;
-      } else {
-        reasonText += `\n- They had the highest score among available instructors for this course.`;
+      let baseWorkload =
+        course.lecture + (2 / 3) * course.lab + (2 / 3) * course.tutorial;
+      if (meta.labDivision === "Yes") {
+        baseWorkload =
+          course.lecture + 2 * ((2 / 3) * course.lab) + 2 * ((2 / 3) * course.tutorial);
       }
 
-      // Create the assignment object
-      const assignmentObject = {
+      const workload =
+        Math.round(baseWorkload * (meta.NoOfSections || 1) * 100) / 100;
+
+      const allCandidates = courseAssignments[courseId.toString()];
+      const higherScorers = allCandidates.filter(
+        (c) => c.instructorId.toString() !== instructorId.toString() && c.score > score
+      );
+      const sameScoreEarlier = allCandidates.filter(
+        (c) =>
+          c.score === score &&
+          c.submittedAt < (a.submittedAt || new Date()) &&
+          c.instructorId.toString() !== instructorId.toString()
+      );
+
+      let reason = `Reason:
+- Preference #${preferenceRank}
+- ${experienceYears} year(s) experience
+- Score: ${score.toFixed(2)}`;
+
+      if (higherScorers.length > 0) {
+        reason += `\n- ${higherScorers.length} higher scored instructor(s) already assigned to other courses.`;
+      } else if (sameScoreEarlier.length > 0) {
+        reason += `\n- Equal score, but earlier submissions were prioritized.`;
+      } else {
+        reason += `\n- Top scorer available.`;
+      }
+
+      finalAssignments.push({
         instructorId,
         courseId,
-        section: meta.section || "",
-        NoOfSections: meta.NoOfSections || 1,
+        section: meta.section,
+        NoOfSections: meta.NoOfSections,
         labDivision: meta.labDivision || "No",
         workload,
-        // Assignment reasoning data
         score,
         preferenceRank,
         experienceYears,
-        assignmentReason: reasonText,
-      };
+        assignmentReason: reason,
+      });
 
-      // Add to final assignments
-      finalAssignments.push(assignmentObject);
+      const instructor = await Instructor.findOne({ userId: instructorId });
+      if (!instructor) continue;
 
-      let instructor = await Instructor.findOne({ userId: instructorId });
-      if (!instructor) {
-        console.log(
-          `Instructor ${assignment.instructorName} (${instructorId}) not found, skipping workload update`
-        );
-        continue;
-      }
-
-      // Update instructor workload
-      const existingWorkloadIndex = instructor.workload.findIndex(
-        (entry) =>
-          entry.year === year &&
-          entry.semester === semester &&
-          entry.program === program
+      const workloadEntry = instructor.workload.find(
+        (w) =>
+          w.year === year &&
+          w.semester === semester &&
+          w.program === program
       );
 
-      if (existingWorkloadIndex !== -1) {
-        console.log(
-          `Updating existing workload entry for ${assignment.instructorName} (${year} ${semester} ${program})`
-        );
-        instructor.workload[existingWorkloadIndex].value += workload;
+      if (workloadEntry) {
+        workloadEntry.value += workload;
       } else {
-        console.log(
-          `Creating new workload entry for ${assignment.instructorName} (${year} ${semester} ${program})`
-        );
-        instructor.workload.push({ year, semester, program, value: workload });
+        instructor.workload.push({
+          year,
+          semester,
+          program,
+          value: workload,
+        });
       }
 
       await instructor.save();
-      console.log(`Instructor ${assignment.instructorName} workload updated`);
     }
 
-    // If no valid assignments to add, return with message about duplicates
     if (finalAssignments.length === 0 && duplicateAssignments.length > 0) {
       return res.status(400).json({
         message: "All assignments already exist for this year, semester, and program",
-        duplicateAssignments
+        duplicateAssignments,
       });
     }
 
-    // Save assignments - either create new document or update existing one
     let savedAssignment;
     if (existingAssignment) {
-      console.log(`Adding ${finalAssignments.length} assignments to existing document`);
       existingAssignment.assignments.push(...finalAssignments);
       savedAssignment = await existingAssignment.save();
     } else {
-      console.log(`Creating new assignment document with ${finalAssignments.length} assignments`);
       savedAssignment = await Assignment.create({
         year,
         semester,
         program,
-        assignments: finalAssignments,
         assignedBy,
+        assignments: finalAssignments,
       });
     }
 
-    console.log("\nAssignment saved successfully:", savedAssignment._id);
-
-    // Prepare response
     const response = {
       message: "Courses assigned successfully",
       assignment: {
         year,
-        semester, 
+        semester,
         program,
         assignedBy,
-        assignments: finalAssignments
-      }
+        assignments: finalAssignments,
+      },
     };
 
-    // Add warning if duplicates were found
     if (duplicateAssignments.length > 0) {
-      response.warning = "Some assignments were skipped because they already exist";
+      response.warning = "Some assignments were skipped due to duplicates";
       response.duplicateAssignments = duplicateAssignments;
     }
 
@@ -1262,12 +886,11 @@ export const runAutomaticAssignment = async (req, res) => {
     console.error("Error in automatic assignment:", error);
     res.status(500).json({ message: "Error in automatic assignment", error });
   }
-}; 
+};
 
-// Automatic Assignment for Common Courses
+
 export const autoAssignCommonCourses = async (req, res) => {
   try {
-    console.log("Starting auto assignment process...");
     const {
       year,
       semester,
@@ -1276,282 +899,136 @@ export const autoAssignCommonCourses = async (req, res) => {
       courses: frontendCourses,
     } = req.body;
 
-    if (
-      !year ||
-      !semester ||
-      !assignedBy ||
-      !instructorIds?.length ||
-      !frontendCourses?.length
-    ) {
+    if (!year || !semester || !assignedBy || !instructorIds?.length || !frontendCourses?.length) {
       return res.status(400).json({
-        message:
-          "Year, semester, assignedBy, instructors, and courses are required.",
+        message: "Year, semester, assignedBy, instructors, and courses are required.",
       });
     }
 
-    // Check for existing assignment document
-    const existingAssignment = await Assignment.findOne({
-      year: parseInt(year),
-      semester,
-      program: "Regular",
-    });
+    const courseIds = frontendCourses.map(c => c.courseId);
+    const courseObjectIds = courseIds
+      .filter(id => mongoose.Types.ObjectId.isValid(id))
+      .map(id => new mongoose.Types.ObjectId(id));
 
-    console.log(
-      existingAssignment
-        ? `Found existing assignment for ${year} ${semester} Regular`
-        : `No existing assignment found for ${year} ${semester} Regular`
-    );
+    const instructors = await User.find({ _id: { $in: instructorIds }, role: "Instructor" });
+    const courses = await Course.find({ _id: { $in: courseObjectIds } });
+    const instructorRecords = await Instructor.find({ userId: { $in: instructors.map(i => i._id) } });
 
-    // Track existing assignments to avoid duplicates
+    const existingAssignment = await Assignment.findOne({ year, semester, program: "Regular" });
     const existingCourseAssignments = new Map();
-    const duplicateAssignments = [];
-
     if (existingAssignment) {
-      existingAssignment.assignments.forEach(assignment => {
-        const key = `${assignment.courseId}-${assignment.section}-${assignment.instructorId}`;
+      existingAssignment.assignments.forEach(a => {
+        const key = `${a.courseId}-${a.section}-${a.instructorId}`;
         existingCourseAssignments.set(key, true);
       });
-      console.log(`Found ${existingCourseAssignments.size} existing course assignments`);
     }
-
-    const courseIds = frontendCourses.map((course) => course.courseId);
-    const courseObjectIds = courseIds
-      .filter((id) => mongoose.Types.ObjectId.isValid(id))
-      .map((id) => new mongoose.Types.ObjectId(id));
-
-    const instructors = await User.find({
-      _id: { $in: instructorIds },
-      role: "Instructor",
-    });
-    const courses = await Course.find({ _id: { $in: courseObjectIds } });
-
-    if (courses.length === 0) {
-      return res.status(404).json({ message: "No valid courses found." });
-    }
-    if (instructors.length === 0) {
-      return res.status(404).json({ message: "No valid instructors found." });
-    }
-
-    const instructorRecords = await Instructor.find({
-      userId: { $in: instructors.map((i) => i._id) },
-    });
 
     let assignments = [];
+    let duplicateAssignments = [];
 
     for (const frontendCourse of frontendCourses) {
-      const { courseId, section, labDivision } = frontendCourse;
-      const course = courses.find((c) => c._id.toString() === courseId);
+      const { courseId, section, labDivision = "No", NoOfSections = 1 } = frontendCourse;
+      const course = courses.find(c => c._id.toString() === courseId);
       if (!course) continue;
 
-      // Check if this course-section assignment already exists
-      for (const instructor of instructors) {
-        const assignmentKey = `${courseId}-${section}-${instructor._id}`;
-        if (existingCourseAssignments.has(assignmentKey)) {
-          console.log(`Assignment ${assignmentKey} already exists, skipping`);
-          duplicateAssignments.push({
-            course: course.name,
-            section,
-            instructor: instructor.fullName || instructor.name
-          });
-          // Don't break - we want to collect all duplicates for reporting
-        }
-      }
+      const baseWorkload = course.lecture + (2 / 3) * course.lab + (2 / 3) * course.tutorial;
+      const additionalLab = labDivision === "Yes" ? (2 / 3) * course.lab + (2 / 3) * course.tutorial : 0;
+      const totalWorkload = Math.round((baseWorkload + additionalLab) * NoOfSections * 100) / 100;
 
       const instructorWorkloads = await Promise.all(
-        instructors.map(async (instructor) => {
-          const record =
-            instructorRecords.find(
-              (r) => r.userId.toString() === instructor._id.toString()
-            ) || {};
-
-          const workloadEntry =
-            record.workload?.find(
-              (w) =>
-                w.year === parseInt(year) &&
-                w.semester === semester &&
-                w.program === "Regular"
-            ) || {};
-
+        instructors.map(async instructor => {
+          const record = instructorRecords.find(r => r.userId.toString() === instructor._id.toString());
+          const workloadEntry = record?.workload?.find(w => w.year === year && w.semester === semester && w.program === "Regular");
           return {
             instructor,
-            workload: workloadEntry.value || 0,
+            workload: workloadEntry?.value || 0,
             locationPriority: instructor.location === course.location ? -1 : 1,
             record,
           };
         })
       );
 
-      const workloadGroups = {};
-      instructorWorkloads.forEach((iw) => {
-        const workload = iw.workload;
-        if (!workloadGroups[workload]) {
-          workloadGroups[workload] = [];
-        }
-        workloadGroups[workload].push(iw);
-      });
+      instructorWorkloads.sort((a, b) =>
+        (a.workload + a.locationPriority) - (b.workload + b.locationPriority)
+      );
 
-      const sortedWorkloads = Object.keys(workloadGroups)
-        .map(Number)
-        .sort((a, b) => a - b);
+      let selected = instructorWorkloads[0];
+      if (!selected) continue;
 
-      let selectedInstructor = null;
-
-      if (sortedWorkloads.length > 0) {
-        const lowestWorkload = sortedWorkloads[0];
-        const lowestWorkloadGroup = workloadGroups[lowestWorkload];
-
-        const locationMatches = lowestWorkloadGroup.filter(
-          (iw) => iw.instructor.location === course.location
-        );
-
-        if (locationMatches.length === 1) {
-          selectedInstructor = locationMatches[0];
-        } else if (locationMatches.length > 1) {
-          selectedInstructor =
-            locationMatches[Math.floor(Math.random() * locationMatches.length)];
-        } else {
-          selectedInstructor =
-            lowestWorkloadGroup[
-              Math.floor(Math.random() * lowestWorkloadGroup.length)
-            ];
-        }
-      }
-
-      if (!selectedInstructor) continue;
-
-      const bestInstructor = selectedInstructor.instructor;
-      const assignmentKey = `${courseId}-${section}-${bestInstructor._id}`;
-
-      // Check again if this specific assignment is a duplicate
-      if (existingCourseAssignments.has(assignmentKey)) {
-        console.log(`Assignment ${assignmentKey} is a duplicate, skipping`);
+      const instructorId = selected.instructor._id;
+      const key = `${courseId}-${section}-${instructorId}`;
+      if (existingCourseAssignments.has(key)) {
+        duplicateAssignments.push({
+          course: course.name,
+          section,
+          instructor: selected.instructor.fullName,
+        });
         continue;
       }
 
-      let instructorRecord = selectedInstructor.record;
+      // Update workload record
+      const workloadRecord = selected.record;
+      const workloadIndex = workloadRecord.workload.findIndex(w => w.year === year && w.semester === semester && w.program === "Regular");
 
-      if (!instructorRecord) {
-        instructorRecord = new Instructor({
-          userId: bestInstructor._id,
-          assignedCourses: [],
-          workload: [],
-        });
-        instructorRecords.push(instructorRecord);
-      }
-
-      let workload =
-        course.lecture + (2 / 3) * course.lab + (2 / 3) * course.tutorial;
-      if (labDivision === "Yes") {
-        workload += (2 / 3) * course.lab + (2 / 3) * course.tutorial;
-      }
-
-      const existingWorkload = instructorRecord.workload.find(
-        (w) =>
-          w.year === parseInt(year) &&
-          w.semester === semester &&
-          w.program === "Regular"
-      );
-
-      if (existingWorkload) {
-        existingWorkload.value += workload;
+      if (workloadIndex !== -1) {
+        workloadRecord.workload[workloadIndex].value += totalWorkload;
       } else {
-        instructorRecord.workload.push({
-          year: parseInt(year),
-          semester,
-          program: "Regular",
-          value: workload,
-        });
+        workloadRecord.workload.push({ year, semester, program: "Regular", value: totalWorkload });
       }
 
-      instructorRecord.assignedCourses.push({
-        course: course._id,
-        year: parseInt(year),
-        semester,
-        program: "Regular",
-      });
+      await workloadRecord.save();
 
-      await instructorRecord.save();
-
-      const locationMatch = bestInstructor.location === course.location;
-      const currentWorkload = selectedInstructor.workload;
-
-      let assignmentReason;
-      if (selectedInstructor.randomlySelected) {
-        assignmentReason =
-          `Instructor selected through a random draw from equally qualified candidates. ` +
-          `Workload: ${currentWorkload.toFixed(1)} hrs. ` +
-          `${locationMatch ? "Location matched the course." : ""}`;
-      } else {
-        assignmentReason =
-          `Instructor selected based on lowest workload (${currentWorkload.toFixed(
-            1
-          )} hrs). ` +
-          `${locationMatch ? "Location matched the course." : ""}`;
-      }
+      const assignmentReason = `Instructor selected based on lowest workload (${selected.workload} hrs)${selected.instructor.location === course.location ? ", with matching location." : "."}`;
 
       assignments.push({
-        instructorId: bestInstructor._id,
+        instructorId,
         courseId: course._id,
         section,
+        NoOfSections,
         labDivision,
-        workload,
-        score: 10 - currentWorkload / 2 - (locationMatch ? 0 : 1),
+        workload: totalWorkload,
+        score: 10 - selected.workload / 2 - (selected.locationPriority > 0 ? 1 : 0),
         assignmentReason,
       });
 
-      // Add to map to prevent duplicate assignments in the same batch
-      existingCourseAssignments.set(assignmentKey, true);
+      existingCourseAssignments.set(key, true);
     }
 
-    // If no valid assignments to add, return with message about duplicates
-    if (assignments.length === 0 && duplicateAssignments.length > 0) {
+    if (!assignments.length && duplicateAssignments.length) {
       return res.status(400).json({
-        message: "All assignments already exist for this year, semester, and program",
-        duplicateAssignments
+        message: "All assignments already exist for this year, semester, and program.",
+        duplicateAssignments,
       });
     }
 
-    // Save assignments - either create new document or update existing one
-    if (assignments.length > 0) {
+    if (assignments.length) {
       if (existingAssignment) {
         existingAssignment.assignments.push(...assignments);
         await existingAssignment.save();
-        console.log(`Updated existing assignment with ${assignments.length} new assignments`);
       } else {
-        const newAssignment = new Assignment({
-          year: parseInt(year),
+        await Assignment.create({
+          year,
           semester,
           program: "Regular",
           assignedBy,
           assignments,
         });
-        await newAssignment.save();
-        console.log(`Created new assignment with ${assignments.length} assignments`);
       }
     }
 
-    // Prepare response
-    const response = {
-      message: "Automatic assignment for common courses completed successfully.",
+    res.status(201).json({
+      message: "Automatic assignment completed successfully.",
       assignments,
-    };
+      ...(duplicateAssignments.length > 0 && { warning: "Some assignments were skipped due to duplication", duplicateAssignments })
+    });
 
-    // Add warning if duplicates were found
-    if (duplicateAssignments.length > 0) {
-      response.warning = "Some assignments were skipped because they already exist";
-      response.duplicateAssignments = duplicateAssignments;
-    }
-
-    res.status(201).json(response);
   } catch (error) {
-    console.error("Error in auto assignment:", error);
-    res
-      .status(500)
-      .json({ message: "Error in auto assignment", error: error.message });
+    console.error("Auto-assignment error:", error);
+    res.status(500).json({ message: "Error in auto assignment", error: error.message });
   }
 };
 
-// Automatic Assignment for Extension Courses
+
 export const autoAssignExtensionCourses = async (req, res) => {
   try {
     const {
@@ -1575,29 +1052,20 @@ export const autoAssignExtensionCourses = async (req, res) => {
       });
     }
 
-    // Check for existing assignment document
     const existingAssignment = await Assignment.findOne({
       year: parseInt(year),
       semester,
       program: "Extension",
     });
 
-    console.log(
-      existingAssignment
-        ? `Found existing assignment for ${year} ${semester} Extension`
-        : `No existing assignment found for ${year} ${semester} Extension`
-    );
-
-    // Track existing assignments to avoid duplicates
     const existingCourseAssignments = new Map();
     const duplicateAssignments = [];
 
     if (existingAssignment) {
-      existingAssignment.assignments.forEach(assignment => {
+      existingAssignment.assignments.forEach((assignment) => {
         const key = `${assignment.courseId}-${assignment.section}-${assignment.instructorId}`;
         existingCourseAssignments.set(key, true);
       });
-      console.log(`Found ${existingCourseAssignments.size} existing course assignments`);
     }
 
     const courseIds = frontendCourses.map((course) => course.courseId);
@@ -1613,13 +1081,13 @@ export const autoAssignExtensionCourses = async (req, res) => {
       _id: { $in: instructorIds },
       role: "Instructor",
     });
+
     const courses = await Course.find({ _id: { $in: courseObjectIds } });
+
     if (!instructors.length)
       return res.status(404).json({ message: "No valid instructors found." });
     if (!courses.length)
       return res.status(404).json({ message: "No valid courses found." });
-
-    let finalAssignments = [];
 
     const equivalentSemester =
       semester === "Extension 1"
@@ -1628,29 +1096,27 @@ export const autoAssignExtensionCourses = async (req, res) => {
         ? "Regular 2"
         : semester;
 
-    console.log("\n===== STARTING AUTO ASSIGNMENT =====\n");
+    let finalAssignments = [];
 
     for (const frontendCourse of frontendCourses) {
-      const { courseId, section, labDivision } = frontendCourse;
+      const { courseId, section, labDivision, NoOfSections } = frontendCourse;
+      const numSections = NoOfSections || 1;
       const course = courses.find((c) => c._id.toString() === courseId);
       if (!course) continue;
 
-      // Check if this course-section assignment already exists for any instructor
       let isDuplicate = false;
       for (const instructor of instructors) {
         const assignmentKey = `${courseId}-${section}-${instructor._id}`;
         if (existingCourseAssignments.has(assignmentKey)) {
-          console.log(`Assignment ${assignmentKey} already exists, skipping entire course`);
           duplicateAssignments.push({
             course: course.name,
             section,
-            instructor: instructor.fullName || instructor.name
+            instructor: instructor.fullName || instructor.name,
           });
           isDuplicate = true;
           break;
         }
       }
-
       if (isDuplicate) continue;
 
       let instructorBenefits = [];
@@ -1676,7 +1142,9 @@ export const autoAssignExtensionCourses = async (req, res) => {
             2 * ((2 / 3) * course.lab) +
             2 * ((2 / 3) * course.tutorial);
         }
-        let workload = creditHour * (labDivision === "Yes" ? 2 : 1);
+
+        let workload =
+          creditHour * (labDivision === "Yes" ? 2 : 1) * numSections;
 
         let existingRegularWorkload = instructorRecord.workload.find(
           (w) => w.year === year && w.semester === equivalentSemester
@@ -1696,23 +1164,16 @@ export const autoAssignExtensionCourses = async (req, res) => {
           (overload <= 3 ? 0 : (overload - 3) * 0.942) +
           (existingExtensionWorkload?.value || 0);
 
-        // Count instructor's experience with this course
         const experienceYears = instructorRecord.assignedCourses.filter(
           (ac) => ac.course.toString() === course._id.toString()
         ).length;
 
-        console.log(
-          `Instructor: ${instructor.fullName} (ID: ${instructor._id})`
-        );
-        console.log(`  - Expected Load: ${expectedLoad}`);
-        console.log(`  - Current Workload: ${totalWorkload}`);
-        console.log(`  - Overload: ${overload}`);
-        console.log(`  - Benefit: ${benefit.toFixed(3)}\n`);
         instructorBenefits.push({
           instructorId: instructor._id,
           instructorRecord,
           courseId: course._id,
           section,
+          NoOfSections: numSections,
           labDivision,
           workload,
           benefit,
@@ -1727,21 +1188,18 @@ export const autoAssignExtensionCourses = async (req, res) => {
       const minBenefit = Math.min(
         ...instructorBenefits.map((ib) => ib.benefit)
       );
+
       const bestInstructors = instructorBenefits.filter(
         (ib) => ib.benefit === minBenefit
       );
 
-      let selectedInstructor =
+      const selectedInstructor =
         bestInstructors.length > 1
           ? bestInstructors[Math.floor(Math.random() * bestInstructors.length)]
           : bestInstructors[0];
 
-      // Check if this specific instructor assignment is a duplicate
       const assignmentKey = `${courseId}-${section}-${selectedInstructor.instructorId}`;
-      if (existingCourseAssignments.has(assignmentKey)) {
-        console.log(`Selected assignment ${assignmentKey} is a duplicate, skipping`);
-        continue;
-      }
+      if (existingCourseAssignments.has(assignmentKey)) continue;
 
       if (selectedInstructor.existingExtensionWorkload) {
         selectedInstructor.existingExtensionWorkload.value +=
@@ -1757,7 +1215,6 @@ export const autoAssignExtensionCourses = async (req, res) => {
 
       await selectedInstructor.instructorRecord.save();
 
-      // Generate assignment reason
       const assignmentReason =
         `Assigned based on minimum benefit value (${selectedInstructor.benefit.toFixed(
           2
@@ -1784,32 +1241,29 @@ export const autoAssignExtensionCourses = async (req, res) => {
         instructorId: selectedInstructor.instructorId,
         courseId: selectedInstructor.courseId,
         section: selectedInstructor.section,
+        NoOfSections: selectedInstructor.NoOfSections,
         labDivision: selectedInstructor.labDivision,
         workload: selectedInstructor.workload,
-        // Assignment reasoning data
-        score: -selectedInstructor.benefit, // Negative since lower benefit is better
+        score: -selectedInstructor.benefit,
         experienceYears: selectedInstructor.experienceYears,
         assignmentReason,
       });
 
-      // Add to map to prevent duplicate assignments in the same batch
       existingCourseAssignments.set(assignmentKey, true);
     }
 
-    // If no valid assignments to add, return with message about duplicates
     if (finalAssignments.length === 0 && duplicateAssignments.length > 0) {
       return res.status(400).json({
-        message: "All assignments already exist for this year, semester, and program",
-        duplicateAssignments
+        message:
+          "All assignments already exist for this year, semester, and program",
+        duplicateAssignments,
       });
     }
 
-    // Save assignments - either create new document or update existing one
     if (finalAssignments.length > 0) {
       if (existingAssignment) {
         existingAssignment.assignments.push(...finalAssignments);
         await existingAssignment.save();
-        console.log(`Updated existing assignment with ${finalAssignments.length} new assignments`);
       } else {
         await Assignment.create({
           year,
@@ -1818,19 +1272,14 @@ export const autoAssignExtensionCourses = async (req, res) => {
           assignedBy,
           assignments: finalAssignments,
         });
-        console.log(`Created new assignment with ${finalAssignments.length} assignments`);
       }
     }
 
-    console.log("\n===== ASSIGNMENT COMPLETED SUCCESSFULLY =====\n");
-
-    // Prepare response
     const response = {
       message: "Automatic assignment completed successfully!",
       assignments: finalAssignments,
     };
 
-    // Add warning if duplicates were found
     if (duplicateAssignments.length > 0) {
       response.warning = "Some assignments were skipped because they already exist";
       response.duplicateAssignments = duplicateAssignments;
@@ -1838,12 +1287,11 @@ export const autoAssignExtensionCourses = async (req, res) => {
 
     res.status(201).json(response);
   } catch (error) {
-    console.error("Error in auto assignment:", error);
-    res.status(500).json({ message: "Error in auto assignment", error });
+    res.status(500).json({ message: "Error in auto assignment", error: error.message });
   }
 };
 
-// Automatic Assignment for Summer Courses
+
 export const autoAssignSummerCourses = async (req, res) => {
   try {
     const {
@@ -1871,12 +1319,6 @@ export const autoAssignSummerCourses = async (req, res) => {
       program: "Summer",
     });
 
-    console.log(
-      existingAssignment
-        ? `Found existing assignment for ${year} Summer`
-        : `No existing assignment found for ${year} Summer`
-    );
-
     // Track existing assignments to avoid duplicates
     const existingCourseAssignments = new Map();
     const duplicateAssignments = [];
@@ -1886,7 +1328,6 @@ export const autoAssignSummerCourses = async (req, res) => {
         const key = `${assignment.courseId}-${assignment.section}-${assignment.instructorId}`;
         existingCourseAssignments.set(key, true);
       });
-      console.log(`Found ${existingCourseAssignments.size} existing course assignments`);
     }
 
     const courseIds = frontendCourses.map((course) => course.courseId);
@@ -1912,7 +1353,8 @@ export const autoAssignSummerCourses = async (req, res) => {
     let benefitMap = new Map();
 
     for (const frontendCourse of frontendCourses) {
-      const { courseId, section, labDivision } = frontendCourse;
+      const { courseId, section, labDivision, NoOfSections } = frontendCourse;
+      const numSections = NoOfSections || 1;
       const course = courses.find((c) => c._id.toString() === courseId);
       if (!course) continue;
 
@@ -1921,7 +1363,6 @@ export const autoAssignSummerCourses = async (req, res) => {
       for (const instructor of instructors) {
         const assignmentKey = `${courseId}-${section}-${instructor._id}`;
         if (existingCourseAssignments.has(assignmentKey)) {
-          console.log(`Assignment ${assignmentKey} already exists, skipping entire course`);
           duplicateAssignments.push({
             course: course.name,
             section,
@@ -1950,6 +1391,7 @@ export const autoAssignSummerCourses = async (req, res) => {
         let exemption = position ? position.exemption : 0;
         let expectedLoad = 12 - exemption;
 
+        // Calculate base credit hour
         let creditHour =
           course.lecture + (2 / 3) * course.lab + (2 / 3) * course.tutorial;
         if (course.numberOfStudents > 25) {
@@ -1958,7 +1400,9 @@ export const autoAssignSummerCourses = async (req, res) => {
             2 * ((2 / 3) * course.lab) +
             2 * ((2 / 3) * course.tutorial);
         }
-        let workload = creditHour * (labDivision === "Yes" ? 2 : 1);
+        
+        // Apply lab division and number of sections
+        let workload = creditHour * (labDivision === "Yes" ? 2 : 1) * numSections;
 
         let existingWorkloads = instructorRecord.workload.filter((w) =>
           ["Regular 1", "Regular 2"].includes(w.semester)
@@ -2003,14 +1447,6 @@ export const autoAssignSummerCourses = async (req, res) => {
           (ac) => ac.course.toString() === course._id.toString()
         ).length;
 
-        console.log(
-          `Instructor: ${instructor.fullName} (ID: ${instructor._id})`
-        );
-        console.log(`  - Expected Load: ${expectedLoad}`);
-        console.log(`  - Current Workload: ${totalWorkload}`);
-        console.log(`  - Overload: ${overload}`);
-        console.log(`  - Benefit: ${totalBenefit.toFixed(3)}\n`);
-
         instructorRecord.workload.push({
           year,
           semester: "Summer",
@@ -2027,6 +1463,7 @@ export const autoAssignSummerCourses = async (req, res) => {
           instructorId: instructor._id,
           courseId: course._id,
           section,
+          NoOfSections: numSections,
           labDivision,
           workload,
           benefit: totalBenefit,
@@ -2062,7 +1499,6 @@ export const autoAssignSummerCourses = async (req, res) => {
       // Check if this specific instructor assignment is a duplicate
       const assignmentKey = `${selectedInstructor.courseId}-${selectedInstructor.section}-${selectedInstructor.instructorId}`;
       if (existingCourseAssignments.has(assignmentKey)) {
-        console.log(`Selected assignment ${assignmentKey} is a duplicate, skipping`);
         continue;
       }
 
@@ -2121,7 +1557,6 @@ export const autoAssignSummerCourses = async (req, res) => {
       if (existingAssignment) {
         existingAssignment.assignments.push(...assignments);
         await existingAssignment.save();
-        console.log(`Updated existing assignment with ${assignments.length} new assignments`);
       } else {
         await Assignment.create({
           year,
@@ -2130,7 +1565,6 @@ export const autoAssignSummerCourses = async (req, res) => {
           assignedBy,
           assignments,
         });
-        console.log(`Created new assignment with ${assignments.length} assignments`);
       }
     }
 
@@ -2148,7 +1582,6 @@ export const autoAssignSummerCourses = async (req, res) => {
 
     res.status(201).json(response);
   } catch (error) {
-    console.error("Error in auto assignment:", error);
     res.status(500).json({ message: "Error in auto assignment", error });
   }
 };

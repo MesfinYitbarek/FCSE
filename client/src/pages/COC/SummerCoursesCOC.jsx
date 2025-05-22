@@ -314,7 +314,7 @@ const SummerCoursesCOC = () => {
   const addAssignment = () => {
     setManualAssignments([
       ...manualAssignments,
-      { instructorId: "", courseId: "", section: "", labDivision: "No", assignmentReason: "" },
+      { instructorId: "", courseId: "", section: "", NoOfSections: 1, labDivision: "No", assignmentReason: "" },
     ]);
   };
 
@@ -350,6 +350,7 @@ const SummerCoursesCOC = () => {
       instructorId: subAssignment.instructorId?._id || "",
       courseId: subAssignment.courseId?._id || "",
       section: subAssignment.section || "",
+      NoOfSections: subAssignment.NoOfSections || 1,
       labDivision: subAssignment.labDivision || "No",
       assignmentReason: subAssignment.assignmentReason || ""
     });
@@ -390,6 +391,7 @@ const SummerCoursesCOC = () => {
         instructorId: editingAssignment.instructorId,
         courseId: editingAssignment.courseId,
         section: editingAssignment.section,
+        NoOfSections: editingAssignment.NoOfSections,
         labDivision: editingAssignment.labDivision,
         assignmentReason: editingAssignment.assignmentReason,
         year: selectedYear,
@@ -509,6 +511,7 @@ const SummerCoursesCOC = () => {
         courses.map(course => ({ 
           courseId: course._id, 
           section: "", 
+          NoOfSections: 1,
           labDivision: "No",
           assignmentReason: ""
         }))
@@ -526,6 +529,7 @@ const SummerCoursesCOC = () => {
         return [...prevCourses, { 
           courseId, 
           section: "", 
+          NoOfSections: 1,
           labDivision: "No",
           assignmentReason: ""
         }];
@@ -564,6 +568,7 @@ const SummerCoursesCOC = () => {
         courses: selectedCourses.map((c) => ({
           courseId: c.courseId,
           section: c.section,
+          NoOfSections: c.NoOfSections,
           labDivision: c.labDivision,
           assignmentReason: c.assignmentReason
         })),
@@ -681,6 +686,13 @@ const SummerCoursesCOC = () => {
                   <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Section</h4>
                   <p className="text-gray-900 dark:text-white">
                     {viewAssignmentReason.section || "N/A"}
+                  </p>
+                </div>
+                
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Number of Sections</h4>
+                  <p className="text-gray-900 dark:text-white">
+                    {viewAssignmentReason.NoOfSections || "1"}
                   </p>
                 </div>
                 
@@ -952,6 +964,18 @@ const SummerCoursesCOC = () => {
                                 className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent text-base text-gray-900 dark:text-white"
                               />
                             </div>
+                            
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Number of Sections</label>
+                              <input
+                                type="number"
+                                min="1"
+                                placeholder="Enter number of sections"
+                                value={editingAssignment.NoOfSections}
+                                onChange={(e) => handleUpdateInputChange("NoOfSections", parseInt(e.target.value) || 1)}
+                                className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent text-base text-gray-900 dark:text-white"
+                              />
+                            </div>
 
                             <div className="space-y-2">
                               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Lab Division</label>
@@ -1091,6 +1115,26 @@ const SummerCoursesCOC = () => {
                                         index,
                                         "section",
                                         e.target.value
+                                      )
+                                    }
+                                    className="w-full px-3 py-1.5 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent text-sm text-gray-900 dark:text-white"
+                                  />
+                                </div>
+                                
+                                <div className="space-y-1">
+                                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                    Number of Sections
+                                  </label>
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    placeholder="Number of sections"
+                                    value={assignment.NoOfSections || 1}
+                                    onChange={(e) =>
+                                      handleInputChange(
+                                        index,
+                                        "NoOfSections",
+                                        parseInt(e.target.value) || 1
                                       )
                                     }
                                     className="w-full px-3 py-1.5 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent text-sm text-gray-900 dark:text-white"
@@ -1399,6 +1443,18 @@ const SummerCoursesCOC = () => {
                                         <option value="Yes">With Lab</option>
                                       </select>
                                     </div>
+                                    
+                                    {/* Number of Sections Input */}
+                                    <div className="grid grid-cols-1 gap-2">
+                                      <input
+                                        type="number"
+                                        min="1"
+                                        placeholder="Number of sections"
+                                        value={selectedCourses.find((c) => c.courseId === course._id)?.NoOfSections || 1}
+                                        onChange={(e) => handleCourseDetailChange(course._id, "NoOfSections", parseInt(e.target.value) || 1)}
+                                        className="px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 text-sm text-gray-900 dark:text-white"
+                                      />
+                                    </div>
                                   
                                   </div>
                                 )}
@@ -1657,6 +1713,9 @@ const SummerCoursesCOC = () => {
                                 Section
                               </th>
                               <th scope="col" className="sticky top-0 px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider bg-gray-50 dark:bg-gray-700 hidden sm:table-cell">
+                                # Sections
+                              </th>
+                              <th scope="col" className="sticky top-0 px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider bg-gray-50 dark:bg-gray-700 hidden sm:table-cell">
                                 Lab
                               </th>
                               <th scope="col" className="sticky top-0 px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider bg-gray-50 dark:bg-gray-700 hidden md:table-cell">
@@ -1687,6 +1746,9 @@ const SummerCoursesCOC = () => {
                                 </td>
                                 <td className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hidden sm:table-cell">
                                   {subAssignment.section || "N/A"}
+                                </td>
+                                <td className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hidden sm:table-cell">
+                                  {subAssignment.NoOfSections || 1}
                                 </td>
                                 <td className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hidden sm:table-cell">
                                   {subAssignment.labDivision}

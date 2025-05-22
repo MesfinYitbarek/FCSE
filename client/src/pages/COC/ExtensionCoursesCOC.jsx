@@ -20,7 +20,8 @@ import {
   ChevronLeft,
   ChevronRight,
   Eye,
-  Info
+  Info,
+  Layers
 } from "lucide-react";
 import api from "../../utils/api";
 
@@ -242,7 +243,6 @@ const ExtensionCoursesCOC = () => {
     try {
       setLoading(true);
       const { data } = await api.get(`/courses/assigned/COC`);
-      console.log("Fetched courses:", data); // Log the fetched data
 
       if (Array.isArray(data)) {
         setCourses(data);
@@ -286,7 +286,6 @@ const ExtensionCoursesCOC = () => {
       }).toString();
 
       const { data } = await api.get(`/assignments/automatic?${queryParams}`);
-      console.log("Fetched assignments:", data.assignments);
 
       setAssignments(data.assignments || []);
     } catch (error) {
@@ -304,6 +303,7 @@ const ExtensionCoursesCOC = () => {
       instructorId: "",
       courseId: "",
       section: "",
+      NoOfSections: 1,
       labDivision: "No",
       assignmentReason: ""
     }]);
@@ -333,7 +333,6 @@ const ExtensionCoursesCOC = () => {
 
   // Edit assignment with the correct nested structure
   const handleEditAssignment = (subAssignment, parentId) => {
-    console.log("Editing assignment:", subAssignment._id, "from parent:", parentId);
     setIsEditing(true);
     setEditingAssignment({
       parentId: parentId, // Store the parent assignment ID
@@ -341,6 +340,7 @@ const ExtensionCoursesCOC = () => {
       instructorId: subAssignment.instructorId?._id || "",
       courseId: subAssignment.courseId?._id || "",
       section: subAssignment.section || "",
+      NoOfSections: subAssignment.NoOfSections || 1,
       labDivision: subAssignment.labDivision || "No",
       assignmentReason: subAssignment.assignmentReason || "" // Include assignment reason
     });
@@ -374,13 +374,12 @@ const ExtensionCoursesCOC = () => {
     setSuccess(null);
 
     try {
-      console.log("Updating sub-assignment:", editingAssignment.subId, "in parent:", editingAssignment.parentId);
-
       // Use the new custom endpoint that can handle nested assignments
       await api.put(`/assignments/sub/${editingAssignment.parentId}/${editingAssignment.subId}`, {
         instructorId: editingAssignment.instructorId,
         courseId: editingAssignment.courseId,
         section: editingAssignment.section,
+        NoOfSections: parseInt(editingAssignment.NoOfSections) || 1,
         labDivision: editingAssignment.labDivision,
         assignmentReason: editingAssignment.assignmentReason, // Include assignment reason
         year: selectedYear,
@@ -403,7 +402,6 @@ const ExtensionCoursesCOC = () => {
 
   // Delete assignment - Modified to handle nested structure
   const confirmDeleteAssignment = (subId, parentId) => {
-    console.log("Confirming delete for sub-assignment ID:", subId, "from parent:", parentId);
     setDeleteConfirm({ subId, parentId });
   };
 
@@ -416,8 +414,6 @@ const ExtensionCoursesCOC = () => {
     setSuccess(null);
 
     try {
-      console.log("Deleting sub-assignment:", subId, "from parent:", parentId);
-
       // Use the new custom endpoint that can handle nested assignments
       await api.delete(`/assignments/sub/${parentId}/${subId}`);
 
@@ -446,7 +442,10 @@ const ExtensionCoursesCOC = () => {
 
     try {
       await api.post("/assignments/extension/manual", {
-        assignments: manualAssignments,
+        assignments: manualAssignments.map(assignment => ({
+          ...assignment,
+          NoOfSections: parseInt(assignment.NoOfSections) || 1
+        })),
         year: selectedYear,
         semester: selectedSemester,
         program: "Extension",
@@ -500,6 +499,7 @@ const ExtensionCoursesCOC = () => {
         courses.map(course => ({
           courseId: course._id,
           section: "",
+          NoOfSections: 1,
           labDivision: "No",
           assignmentReason: "" // Include empty assignment reason
         }))
@@ -517,6 +517,7 @@ const ExtensionCoursesCOC = () => {
         return [...prevCourses, {
           courseId,
           section: "",
+          NoOfSections: 1,
           labDivision: "No",
           assignmentReason: "" // Include empty assignment reason
         }];
@@ -553,6 +554,7 @@ const ExtensionCoursesCOC = () => {
         courses: selectedCourses.map((c) => ({
           courseId: c.courseId,
           section: c.section,
+          NoOfSections: parseInt(c.NoOfSections) || 1,
           labDivision: c.labDivision,
         })),
       });
@@ -665,6 +667,21 @@ const ExtensionCoursesCOC = () => {
                   <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Section</h4>
                   <p className="text-gray-900 dark:text-white">
                     {viewAssignmentReason.section || "N/A"}
+                  </p>
+                </div>
+
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Number of Sections</h4>
+                  <p className="text-gray-900 dark:text-white flex items-center">
+                    <Layers className="h-4 w-4 mr-1 text-gray-500" />
+                    {viewAssignmentReason.NoOfSections || 1}
+                  </p>
+                </div>
+
+                <div>
+                  <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Lab Division</h4>
+                  <p className="text-gray-900 dark:text-white">
+                    {viewAssignmentReason.labDivision || "No"}
                   </p>
                 </div>
 
@@ -954,6 +971,21 @@ const ExtensionCoursesCOC = () => {
                             </div>
 
                             <div className="space-y-2">
+                              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
+                                <Layers className="mr-1.5 text-gray-500 dark:text-gray-400" size={16} />
+                                Number of Sections
+                              </label>
+                              <input
+                                type="number"
+                                min="1"
+                                placeholder="Enter number of sections"
+                                value={editingAssignment.NoOfSections}
+                                onChange={(e) => handleUpdateInputChange("NoOfSections", e.target.value)}
+                                className="w-full px-3 py-2 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent text-base text-gray-900 dark:text-white"
+                              />
+                            </div>
+
+                            <div className="space-y-2">
                               <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Lab Division</label>
                               <select
                                 value={editingAssignment.labDivision}
@@ -1029,7 +1061,7 @@ const ExtensionCoursesCOC = () => {
                                 initial={{ opacity: 0, height: 0 }}
                                 animate={{ opacity: 1, height: "auto" }}
                                 exit={{ opacity: 0, height: 0 }}
-                                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg relative"
+                                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg relative"
                               >
                                 <div className="space-y-1">
                                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Instructor</label>
@@ -1072,6 +1104,21 @@ const ExtensionCoursesCOC = () => {
                                 </div>
 
                                 <div className="space-y-1">
+                                  <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
+                                    <Layers className="h-4 w-4 mr-1 text-gray-500 dark:text-gray-400" />
+                                    Sections
+                                  </label>
+                                  <input
+                                    type="number"
+                                    min="1"
+                                    placeholder="Number of sections"
+                                    value={assignment.NoOfSections}
+                                    onChange={(e) => handleInputChange(index, "NoOfSections", e.target.value)}
+                                    className="w-full px-3 py-1.5 bg-white dark:bg-gray-600 border border-gray-300 dark:border-gray-500 rounded-lg shadow-sm focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-transparent text-sm text-gray-900 dark:text-white"
+                                  />
+                                </div>
+
+                                <div className="space-y-1">
                                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Lab Division</label>
                                   <select
                                     onChange={(e) => handleInputChange(index, "labDivision", e.target.value)}
@@ -1093,7 +1140,7 @@ const ExtensionCoursesCOC = () => {
                                 </div>
 
                                 {/* Assignment Reason Field for Manual Assignment - Full width */}
-                                <div className="col-span-1 sm:col-span-2 lg:col-span-5 space-y-1">
+                                <div className="col-span-1 sm:col-span-2 lg:col-span-6 space-y-1">
                                   <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Assignment Reason</label>
                                   <textarea
                                     placeholder="Enter reason for this assignment "
@@ -1207,7 +1254,7 @@ const ExtensionCoursesCOC = () => {
                           <div className="flex items-center justify-between">
                             <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center">
                               <BookOpen className="mr-2 text-indigo-600 dark:text-indigo-400" size={18} />
-                              Select Courses and Set Section & Lab Division
+                              Select Courses and Set Parameters
                             </label>
 
                             {/* Select All Courses Button */}
@@ -1356,6 +1403,21 @@ const ExtensionCoursesCOC = () => {
                                           <option value="No">No Lab</option>
                                           <option value="Yes">With Lab</option>
                                         </select>
+                                      </div>
+
+                                      {/* Number of Sections */}
+                                      <div className="relative">
+                                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                          <Layers className="h-4 w-4 text-gray-400 dark:text-gray-500" />
+                                        </div>
+                                        <input
+                                          type="number"
+                                          min="1"
+                                          placeholder="Number of sections"
+                                          value={selectedCourses.find((c) => c.courseId === course._id)?.NoOfSections || 1}
+                                          onChange={(e) => handleCourseDetailChange(course._id, "NoOfSections", e.target.value)}
+                                          className="pl-10 w-full px-3 py-1.5 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-400 text-sm text-gray-900 dark:text-white"
+                                        />
                                       </div>
                                     </div>
                                   )}
@@ -1628,6 +1690,9 @@ const ExtensionCoursesCOC = () => {
                                 Section
                               </th>
                               <th scope="col" className="sticky top-0 px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider bg-gray-50 dark:bg-gray-700 hidden sm:table-cell">
+                                Sections
+                              </th>
+                              <th scope="col" className="sticky top-0 px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider bg-gray-50 dark:bg-gray-700 hidden sm:table-cell">
                                 Lab
                               </th>
                               <th scope="col" className="sticky top-0 px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider bg-gray-50 dark:bg-gray-700 hidden md:table-cell">
@@ -1658,6 +1723,12 @@ const ExtensionCoursesCOC = () => {
                                 </td>
                                 <td className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hidden sm:table-cell">
                                   {subAssignment.section || "N/A"}
+                                </td>
+                                <td className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hidden sm:table-cell">
+                                  <div className="flex items-center">
+                                    <Layers className="h-3 w-3 mr-1 text-gray-400" />
+                                    {subAssignment.NoOfSections || 1}
+                                  </div>
                                 </td>
                                 <td className="px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hidden sm:table-cell">
                                   {subAssignment.labDivision}

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Pencil, Trash2, Save, X, Loader2, AlertCircle, BookOpen, 
   Calendar, User, GraduationCap, BookText, Clock, FileBarChart,
-  MessageSquare, UserCheck, ChevronDown, Clock3
+  MessageSquare, UserCheck, ChevronDown, Clock3, Layers
 } from 'lucide-react';
 import api from '../../utils/api';
 import { toast } from 'react-hot-toast';
@@ -313,6 +313,9 @@ const AssignedCourses = ({ fetchAssignments, assignments, currentFilters }) => {
                         Section
                       </th>
                       <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Sections
+                      </th>
+                      <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         Lab Division
                       </th>
                       <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
@@ -372,6 +375,23 @@ const AssignedCourses = ({ fetchAssignments, assignments, currentFilters }) => {
                               />
                             ) : (
                               assignment.section || "N/A"
+                            )}
+                          </td>
+                          <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
+                            {editingData.parentId === parentAssignment._id && editingData.subId === assignment._id ? (
+                              <input
+                                type="number"
+                                name="NoOfSections"
+                                min="1"
+                                value={editingData.data.NoOfSections}
+                                onChange={handleUpdateChange}
+                                className="w-full text-xs p-1 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200"
+                              />
+                            ) : (
+                              <div className="flex items-center">
+                                <Layers className="h-3 w-3 mr-1 text-gray-400 dark:text-gray-500" />
+                                <span>{assignment.NoOfSections || 1}</span>
+                              </div>
                             )}
                           </td>
                           <td className="px-3 py-2 whitespace-nowrap">
@@ -545,7 +565,7 @@ const AssignedCourses = ({ fetchAssignments, assignments, currentFilters }) => {
                                 </select>
                               </div>
                               
-                              <div className="grid grid-cols-2 gap-1.5">
+                              <div className="grid grid-cols-3 gap-1.5">
                                 <div>
                                   <label className="block text-xs text-gray-600 dark:text-gray-400 mb-0.5">Lab Division</label>
                                   <select
@@ -564,6 +584,17 @@ const AssignedCourses = ({ fetchAssignments, assignments, currentFilters }) => {
                                     name="section"
                                     placeholder="Section"
                                     value={editingData.data.section}
+                                    onChange={handleUpdateChange}
+                                    className="w-full text-xs p-1 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="block text-xs text-gray-600 dark:text-gray-400 mb-0.5">Sections</label>
+                                  <input
+                                    type="number"
+                                    name="NoOfSections"
+                                    min="1"
+                                    value={editingData.data.NoOfSections}
                                     onChange={handleUpdateChange}
                                     className="w-full text-xs p-1 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200"
                                   />
@@ -615,6 +646,10 @@ const AssignedCourses = ({ fetchAssignments, assignments, currentFilters }) => {
                                 <div className="flex items-center">
                                   <FileBarChart className="h-3 w-3 text-gray-500 dark:text-gray-400 mr-1 flex-shrink-0" />
                                   <span className="text-gray-700 dark:text-gray-300">Section: {assignment.section || "N/A"}</span>
+                                </div>
+                                <div className="flex items-center">
+                                  <Layers className="h-3 w-3 text-gray-500 dark:text-gray-400 mr-1 flex-shrink-0" />
+                                  <span className="text-gray-700 dark:text-gray-300">Sections: {assignment.NoOfSections || 1}</span>
                                 </div>
                                 <div className="flex items-center">
                                   <BookOpen className="h-3 w-3 text-gray-500 dark:text-gray-400 mr-1 flex-shrink-0" />
