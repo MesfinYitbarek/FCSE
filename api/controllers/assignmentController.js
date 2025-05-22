@@ -327,22 +327,29 @@ export const commonManualAssignment = async (req, res) => {
 export const updateAssignment = async (req, res) => {
   try {
     const { parentId, subId } = req.params;
+    const { instructorId, courseId, labDivision, assignmentReason } = req.body;
+    
+    console.log("Update request received:", {
+      parentId,
+      subId,
+      instructorId,
+      courseId,
+      labDivision,
+      assignmentReason
+    });
 
     // Validate both IDs are valid ObjectIds
-    if (
-      !mongoose.Types.ObjectId.isValid(parentId) ||
-      !mongoose.Types.ObjectId.isValid(subId)
-    ) {
+    if (!mongoose.Types.ObjectId.isValid(parentId) || !mongoose.Types.ObjectId.isValid(subId)) {
       return res.status(400).json({ message: "Invalid assignment ID" });
     }
 
-    // Find parent assignment
+    // Step 1: Get the current assignment data
     const parentAssignment = await Assignment.findById(parentId);
     if (!parentAssignment) {
       return res.status(404).json({ message: "Parent assignment not found" });
     }
 
-    // Find sub-assignment
+    // Find the specific sub-assignment
     const subAssignmentIndex = parentAssignment.assignments.findIndex(
       (sub) => sub._id.toString() === subId
     );
@@ -351,64 +358,259 @@ export const updateAssignment = async (req, res) => {
       return res.status(404).json({ message: "Sub-assignment not found" });
     }
 
-    // Get the old values to calculate workload changes
+    // Store the old values for later comparison
     const oldAssignment = parentAssignment.assignments[subAssignmentIndex];
-    const { instructorId, courseId, labDivision } = req.body;
-    let updatedWorkload = oldAssignment.workload;
+    const oldInstructorId = oldAssignment.instructorId;
+    const oldWorkload = oldAssignment.workload;
+    
+    // Convert values to strings for comparison
+    const oldLabDivision = String(oldAssignment.labDivision || 'No');
+    const newLabDivision = String(labDivision || oldLabDivision);
+    
+    console.log("Current assignment data:", {
+      oldInstructorId: oldInstructorId.toString(),
+      oldWorkload,
+      oldLabDivision
+    });
+    
+    // Check if lab division is changing
+    const isLabDivisionChanging = newLabDivision !== oldLabDivision;
+    
+    console.log("Is lab division changing?", isLabDivisionChanging, {
+      oldLabDivision,
+      newLabDivision
+    });
 
-    // Recalculate workload if needed
-    if (courseId && mongoose.Types.ObjectId.isValid(courseId)) {
-      const course = await Course.findById(courseId);
+    // Step 2: Calculate the new workload if needed
+    let newWorkload = oldWorkload;
+    
+    // If course is changing or lab division is changing, recalculate workload
+    const targetCourseId = courseId || oldAssignment.courseId;
+    if (isLabDivisionChanging || (courseId && courseId !== oldAssignment.courseId.toString())) {
+      const course = await Course.findById(targetCourseId);
       if (!course) {
-        return res
-          .status(404)
-          .json({ message: `Course not found for ID: ${courseId}` });
+        return res.status(404).json({ message: `Course not found for ID: ${targetCourseId}` });
       }
+      
+      console.log("Course found for workload calculation:", {
+        courseId: course._id.toString(),
+        lecture: course.lecture,
+        lab: course.lab,
+        tutorial: course.tutorial
+      });
 
-      if (labDivision === "Yes") {
-        updatedWorkload =
-          course.lecture +
-          2 * ((2 / 3) * course.lab) +
-          2 * ((2 / 3) * course.tutorial);
+      // Calculate new workload based on lab division
+      if (newLabDivision === 'Yes') {
+        newWorkload = course.lecture + 2 * ((2 / 3) * course.lab) + 2 * ((2 / 3) * course.tutorial);
       } else {
-        updatedWorkload =
-          course.lecture + (2 / 3) * course.lab + (2 / 3) * course.tutorial;
+        newWorkload = course.lecture + (2 / 3) * course.lab + (2 / 3) * course.tutorial;
       }
-      updatedWorkload = Math.round(updatedWorkload * 100) / 100;
+      newWorkload = Math.round(newWorkload * 100) / 100;
+      
+      console.log("New workload calculated:", {
+        newWorkload,
+        oldWorkload,
+        difference: newWorkload - oldWorkload
+      });
+    }
+    
+    // Step 3: Update the assignment
+    const updatedAssignment = { ...oldAssignment.toObject() };
+    
+    // Only update fields that are provided in the request
+    if (instructorId) updatedAssignment.instructorId = instructorId;
+    if (courseId) updatedAssignment.courseId = courseId;
+    if (labDivision !== undefined) updatedAssignment.labDivision = labDivision;
+    if (assignmentReason !== undefined) updatedAssignment.assignmentReason = assignmentReason;
+    
+    // Always update the workload
+    updatedAssignment.workload = newWorkload;
+    
+    // Keep the original ID
+    updatedAssignment._id = subId;
+    
+    console.log("Updated assignment object:", updatedAssignment);
+    
+    // Apply the update to the parent document
+    parentAssignment.assignments[subAssignmentIndex] = updatedAssignment;
+    
+    // Step 4: Determine if instructor workload needs to be updated
+    const isWorkloadChanging = newWorkload !== oldWorkload;
+    const isInstructorChanging = instructorId && oldInstructorId.toString() !== instructorId;
+    
+    console.log("Change detection:", {
+      isWorkloadChanging,
+      isInstructorChanging,
+      workloadDifference: isWorkloadChanging ? newWorkload - oldWorkload : 0
+    });
+    
+    // Save the parent assignment first
+    await parentAssignment.save();
+    console.log("Parent assignment saved successfully");
+    
+    // Step 5: Handle instructor workload updates
+    if (isInstructorChanging) {
+      // Case 1: Instructor is changing - update both old and new instructor
+      console.log("Updating workload for instructor change scenario");
+      
+      // Remove workload from old instructor
+      if (oldInstructorId) {
+        try {
+          const oldInstructor = await Instructor.findById(oldInstructorId);
+          if (oldInstructor) {
+            console.log("Found old instructor:", oldInstructor._id.toString());
+            
+            const oldWorkloadIndex = oldInstructor.workload.findIndex(
+              w => 
+                w.year == parentAssignment.year && 
+                w.semester === parentAssignment.semester && 
+                w.program === parentAssignment.program
+            );
+            
+            if (oldWorkloadIndex !== -1) {
+              console.log("Old instructor current workload:", oldInstructor.workload[oldWorkloadIndex].value);
+              
+              oldInstructor.workload[oldWorkloadIndex].value -= oldWorkload;
+              if (oldInstructor.workload[oldWorkloadIndex].value < 0) {
+                oldInstructor.workload[oldWorkloadIndex].value = 0;
+              }
+              
+              console.log("Removed workload from old instructor:", {
+                removed: oldWorkload,
+                newTotal: oldInstructor.workload[oldWorkloadIndex].value
+              });
+              
+              await oldInstructor.save();
+              console.log("Old instructor workload updated successfully");
+            }
+          }
+        } catch (error) {
+          console.error("Error updating old instructor workload:", error);
+        }
+      }
+      
+      // Add workload to new instructor
+      if (instructorId) {
+        try {
+          const newInstructor = await Instructor.findById(instructorId);
+          if (newInstructor) {
+            console.log("Found new instructor:", newInstructor._id.toString());
+            
+            const newWorkloadIndex = newInstructor.workload.findIndex(
+              w => 
+                w.year == parentAssignment.year && 
+                w.semester === parentAssignment.semester && 
+                w.program === parentAssignment.program
+            );
+            
+            if (newWorkloadIndex !== -1) {
+              console.log("New instructor current workload:", newInstructor.workload[newWorkloadIndex].value);
+              
+              newInstructor.workload[newWorkloadIndex].value += newWorkload;
+              
+              console.log("Added workload to new instructor:", {
+                added: newWorkload,
+                newTotal: newInstructor.workload[newWorkloadIndex].value
+              });
+            } else {
+              console.log("Creating new workload entry for instructor");
+              
+              newInstructor.workload.push({
+                year: parentAssignment.year,
+                semester: parentAssignment.semester,
+                program: parentAssignment.program,
+                value: newWorkload
+              });
+            }
+            
+            await newInstructor.save();
+            console.log("New instructor workload updated successfully");
+          }
+        } catch (error) {
+          console.error("Error updating new instructor workload:", error);
+        }
+      }
+    } 
+    // Case 2: Same instructor but workload is changing
+    else if (isWorkloadChanging && oldInstructorId) {
+      console.log("Updating workload for same instructor scenario");
+      
+      try {
+        const instructor = await Instructor.findById(oldInstructorId);
+        if (instructor) {
+          console.log("Found instructor for workload update:", instructor._id.toString());
+          
+          const workloadIndex = instructor.workload.findIndex(
+            w => 
+              w.year == parentAssignment.year && 
+              w.semester === parentAssignment.semester && 
+              w.program === parentAssignment.program
+          );
+          
+          if (workloadIndex !== -1) {
+            console.log("Instructor current workload:", instructor.workload[workloadIndex].value);
+            
+            // Calculate the workload difference
+            const workloadDifference = newWorkload - oldWorkload;
+            
+            // Update the instructor's workload
+            instructor.workload[workloadIndex].value += workloadDifference;
+            
+            // Ensure workload doesn't go below 0
+            if (instructor.workload[workloadIndex].value < 0) {
+              instructor.workload[workloadIndex].value = 0;
+            }
+            
+            console.log("Adjusted instructor workload:", {
+              difference: workloadDifference,
+              newTotal: instructor.workload[workloadIndex].value
+            });
+            
+            // Use direct MongoDB update to ensure changes are saved
+            await Instructor.updateOne(
+              { 
+                _id: instructor._id,
+                "workload._id": instructor.workload[workloadIndex]._id
+              },
+              {
+                $set: {
+                  [`workload.$.value`]: instructor.workload[workloadIndex].value
+                }
+              }
+            );
+            
+            console.log("Instructor workload updated successfully with MongoDB update");
+          }
+        }
+      } catch (error) {
+        console.error("Error updating instructor workload:", error);
+      }
+    } else {
+      console.log("No workload or instructor changes needed");
     }
 
-    // Update the sub-assignment
-    parentAssignment.assignments[subAssignmentIndex] = {
-      ...parentAssignment.assignments[subAssignmentIndex].toObject(),
-      ...req.body,
-      workload: updatedWorkload,
-      _id: subId, // Keep the original ID
-    };
-
-    // Save the parent document
-    await parentAssignment.save();
-
-    // Populate data for response
-    await parentAssignment.populate(
+    // Fetch the updated assignment with populated data
+    const updatedParentAssignment = await Assignment.findById(parentId).populate(
       "assignments.instructorId assignments.courseId"
     );
-
-    // Also update the instructor workload if needed
-    if (instructorId && mongoose.Types.ObjectId.isValid(instructorId)) {
-      // Handle instructor workload update similar to your existing code
-      const instructor = await Instructor.findById(instructorId);
-      if (instructor) {
-        // Update workload logic here...
-      }
-    }
+    
+    // Find the updated sub-assignment
+    const updatedSubAssignment = updatedParentAssignment.assignments.find(
+      sub => sub._id.toString() === subId
+    );
 
     res.json({
       message: "Assignment updated successfully",
-      assignment: parentAssignment.assignments[subAssignmentIndex],
+      assignment: updatedSubAssignment,
+      workloadChanged: isWorkloadChanging ? {
+        old: oldWorkload,
+        new: newWorkload,
+        difference: newWorkload - oldWorkload
+      } : null
     });
   } catch (error) {
     console.error("Error updating sub-assignment:", error);
-    res.status(500).json({ message: "Error updating sub-assignment", error });
+    res.status(500).json({ message: "Error updating sub-assignment", error: error.message });
   }
 };
 

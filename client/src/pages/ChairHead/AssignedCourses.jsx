@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Pencil, Trash2, Save, X, Loader2, AlertCircle, BookOpen, 
-  Calendar, User, GraduationCap, BookText, Clock, FileBarChart
+  Calendar, User, GraduationCap, BookText, Clock, FileBarChart,
+  MessageSquare, UserCheck, ChevronDown, Clock3
 } from 'lucide-react';
 import api from '../../utils/api';
 import { toast } from 'react-hot-toast';
@@ -13,15 +14,22 @@ const AssignedCourses = ({ fetchAssignments, assignments, currentFilters }) => {
     subId: null,
     data: {}
   });
+  const [instructors, setInstructors] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [filteredAssignments, setFilteredAssignments] = useState([]);
+  const [expandedReasons, setExpandedReasons] = useState({});
   const [stats, setStats] = useState({
     totalCourses: 0,
     totalInstructors: 0,
     totalWorkload: 0
   });
+
+  // Fetch instructors when component mounts
+  useEffect(() => {
+    fetchInstructors();
+  }, [currentFilters]);
 
   // Filter assignments based on current filters
   useEffect(() => {
@@ -56,6 +64,27 @@ const AssignedCourses = ({ fetchAssignments, assignments, currentFilters }) => {
       });
     }
   }, [assignments, currentFilters]);
+
+  const fetchInstructors = async () => {
+    try {
+      const { data } = await api.get(`/users/users/${currentFilters.chair}`);
+      setInstructors(data);
+    } catch (error) {
+      console.error("Error fetching instructors:", error);
+      setError("Failed to load instructors. Please try again.");
+    }
+  };
+
+  // Toggle reason visibility
+  const toggleReason = (parentId, subId) => {
+    setExpandedReasons(prev => {
+      const key = `${parentId}-${subId}`;
+      return {
+        ...prev,
+        [key]: !prev[key]
+      };
+    });
+  };
 
   // Implementation of handleDelete function
   const handleDelete = async (parentId, subId) => {
@@ -94,7 +123,8 @@ const AssignedCourses = ({ fetchAssignments, assignments, currentFilters }) => {
         section: subAssignment.section || "",
         NoOfSections: subAssignment.NoOfSections || 1,
         labDivision: subAssignment.labDivision || "No",
-        workload: subAssignment.workload
+        workload: subAssignment.workload,
+        assignmentReason: subAssignment.assignmentReason || ""
       }
     });
   };
@@ -286,7 +316,10 @@ const AssignedCourses = ({ fetchAssignments, assignments, currentFilters }) => {
                         Lab Division
                       </th>
                       <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                      Credit Hour
+                        Workload
+                      </th>
+                      <th scope="col" className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                        Assignment Reason
                       </th>
                       <th scope="col" className="px-3 py-2 text-right text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                         Actions
@@ -308,9 +341,25 @@ const AssignedCourses = ({ fetchAssignments, assignments, currentFilters }) => {
                             </div>
                           </td>
                           <td className="px-3 py-2 whitespace-nowrap">
-                            <div className="text-sm text-gray-900 dark:text-white truncate max-w-[180px]">
-                              {assignment.instructorId?.fullName || "Unassigned"}
-                            </div>
+                            {editingData.parentId === parentAssignment._id && editingData.subId === assignment._id ? (
+                              <select
+                                name="instructorId"
+                                value={editingData.data.instructorId}
+                                onChange={handleUpdateChange}
+                                className="w-full text-xs p-1 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200"
+                              >
+                                <option value="">Select Instructor</option>
+                                {instructors.map(instructor => (
+                                  <option key={instructor._id} value={instructor._id}>
+                                    {instructor.fullName}
+                                  </option>
+                                ))}
+                              </select>
+                            ) : (
+                              <div className="text-sm text-gray-900 dark:text-white truncate max-w-[180px]">
+                                {assignment.instructorId?.fullName || "Unassigned"}
+                              </div>
+                            )}
                           </td>
                           <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
                             {editingData.parentId === parentAssignment._id && editingData.subId === assignment._id ? (
@@ -354,12 +403,52 @@ const AssignedCourses = ({ fetchAssignments, assignments, currentFilters }) => {
                                 step="0.01"
                                 value={editingData.data.workload}
                                 onChange={handleUpdateChange}
-                                className="w-full text-xs p-1 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200"
+                                disabled
+                                className="w-full text-xs p-1 border border-gray-300 dark:border-gray-600 rounded bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-gray-200 cursor-not-allowed"
                               />
                             ) : (
-                              <span className="text-sm font-medium text-gray-900 dark:text-white">
+                              <span className="px-2 py-0.5 inline-flex text-xs leading-4 font-medium rounded-full bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200">
                                 {assignment.workload} hrs
                               </span>
+                            )}
+                          </td>
+                          <td className="px-3 py-2">
+                            {editingData.parentId === parentAssignment._id && editingData.subId === assignment._id ? (
+                              <textarea
+                                name="assignmentReason"
+                                value={editingData.data.assignmentReason || ""}
+                                onChange={handleUpdateChange}
+                                className="w-full text-xs p-1 border border-gray-300 dark:border-gray-600 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200"
+                                rows="2"
+                                placeholder="Reason for assignment"
+                              />
+                            ) : (
+                              <div>
+                                {assignment.assignmentReason ? (
+                                  <div>
+                                    <button 
+                                      onClick={() => toggleReason(parentAssignment._id, assignment._id)}
+                                      className="flex items-center text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300"
+                                    >
+                                      <MessageSquare className="h-3 w-3 mr-1" />
+                                      <span>View Reason</span>
+                                      <ChevronDown 
+                                        className={`h-3 w-3 ml-1 transition-transform ${
+                                          expandedReasons[`${parentAssignment._id}-${assignment._id}`] ? 'rotate-180' : ''
+                                        }`} 
+                                      />
+                                    </button>
+                                    
+                                    {expandedReasons[`${parentAssignment._id}-${assignment._id}`] && (
+                                      <div className="mt-1 p-2 text-xs text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded">
+                                        {assignment.assignmentReason}
+                                      </div>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span className="text-xs text-gray-500 dark:text-gray-500 italic">No reason provided</span>
+                                )}
+                              </div>
                             )}
                           </td>
                           <td className="px-3 py-2 whitespace-nowrap text-right text-sm font-medium">
@@ -425,7 +514,8 @@ const AssignedCourses = ({ fetchAssignments, assignments, currentFilters }) => {
                               </p>
                             </div>
                             <div>
-                              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200">
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-200">
+                                <Clock3 className="h-3 w-3 mr-1" />
                                 {assignment.workload} hrs
                               </span>
                             </div>
@@ -433,15 +523,28 @@ const AssignedCourses = ({ fetchAssignments, assignments, currentFilters }) => {
                         </div>
                         
                         <div className="p-2 space-y-1.5">
-                          <div className="flex items-center text-xs">
-                            <User className="h-3 w-3 text-gray-500 dark:text-gray-400 mr-1 flex-shrink-0" />
-                            <span className="text-gray-700 dark:text-gray-300 font-medium truncate">
-                              {assignment.instructorId?.fullName || "Unassigned"}
-                            </span>
-                          </div>
-                          
                           {editingData.parentId === parentAssignment._id && editingData.subId === assignment._id ? (
-                            <div className="pt-1.5 border-t border-gray-100 dark:border-gray-700 space-y-1.5">
+                            <div className="pt-1.5 space-y-1.5">
+                              <div>
+                                <label className="block text-xs text-gray-600 dark:text-gray-400 mb-0.5 flex items-center">
+                                  <UserCheck className="h-3 w-3 mr-1" />
+                                  Instructor
+                                </label>
+                                <select
+                                  name="instructorId"
+                                  value={editingData.data.instructorId}
+                                  onChange={handleUpdateChange}
+                                  className="w-full text-xs p-1 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200"
+                                >
+                                  <option value="">Select Instructor</option>
+                                  {instructors.map(instructor => (
+                                    <option key={instructor._id} value={instructor._id}>
+                                      {instructor.fullName}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                              
                               <div className="grid grid-cols-2 gap-1.5">
                                 <div>
                                   <label className="block text-xs text-gray-600 dark:text-gray-400 mb-0.5">Lab Division</label>
@@ -466,15 +569,18 @@ const AssignedCourses = ({ fetchAssignments, assignments, currentFilters }) => {
                                   />
                                 </div>
                               </div>
+                              
                               <div>
-                                <label className="block text-xs text-gray-600 dark:text-gray-400 mb-0.5">Workload</label>
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  name="workload"
-                                  placeholder="Workload"
-                                  value={editingData.data.workload}
+                                <label className="block text-xs text-gray-600 dark:text-gray-400 mb-0.5 flex items-center">
+                                  <MessageSquare className="h-3 w-3 mr-1" />
+                                  Assignment Reason
+                                </label>
+                                <textarea
+                                  name="assignmentReason"
+                                  placeholder="Reason for assignment"
+                                  value={editingData.data.assignmentReason || ""}
                                   onChange={handleUpdateChange}
+                                  rows="2"
                                   className="w-full text-xs p-1 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-200"
                                 />
                               </div>
@@ -498,6 +604,13 @@ const AssignedCourses = ({ fetchAssignments, assignments, currentFilters }) => {
                             </div>
                           ) : (
                             <>
+                              <div className="flex items-center text-xs">
+                                <User className="h-3 w-3 text-gray-500 dark:text-gray-400 mr-1 flex-shrink-0" />
+                                <span className="text-gray-700 dark:text-gray-300 font-medium truncate">
+                                  {assignment.instructorId?.fullName || "Unassigned"}
+                                </span>
+                              </div>
+                              
                               <div className="flex items-center justify-between text-xs flex-wrap gap-y-0.5">
                                 <div className="flex items-center">
                                   <FileBarChart className="h-3 w-3 text-gray-500 dark:text-gray-400 mr-1 flex-shrink-0" />
@@ -508,6 +621,29 @@ const AssignedCourses = ({ fetchAssignments, assignments, currentFilters }) => {
                                   <span className="text-gray-700 dark:text-gray-300">Lab: {assignment.labDivision || "No"}</span>
                                 </div>
                               </div>
+                              
+                              {assignment.assignmentReason && (
+                                <div>
+                                  <button 
+                                    onClick={() => toggleReason(parentAssignment._id, assignment._id)}
+                                    className="flex items-center text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 mt-1"
+                                  >
+                                    <MessageSquare className="h-3 w-3 mr-1 flex-shrink-0" />
+                                    <span>Assignment Reason</span>
+                                    <ChevronDown 
+                                      className={`h-3 w-3 ml-1 transition-transform ${
+                                        expandedReasons[`${parentAssignment._id}-${assignment._id}`] ? 'rotate-180' : ''
+                                      }`} 
+                                    />
+                                  </button>
+                                  
+                                  {expandedReasons[`${parentAssignment._id}-${assignment._id}`] && (
+                                    <div className="mt-1 p-2 text-xs text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded">
+                                      {assignment.assignmentReason}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                               
                               <div className="pt-1.5 border-t border-gray-100 dark:border-gray-700 flex justify-between">
                                 <button
