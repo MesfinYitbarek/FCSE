@@ -67,7 +67,6 @@ const UsersManagement = () => {
     username: "",
     email: "",
     password: "",
-    confirmPassword: "",
     role: "Instructor",
     phone: "",
     chair: "",
@@ -91,21 +90,18 @@ const UsersManagement = () => {
   const filtersRef = useRef(null);
   const contentRef = useRef(null);
 
-  // Track window size for responsive design
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Fetch all users on component mount
   useEffect(() => {
     fetchUsers();
     fetchChairs();
     fetchPositions();
   }, []);
 
-  // Handle clicks outside of filter dropdown
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (filtersRef.current && !filtersRef.current.contains(event.target)) {
@@ -117,15 +113,12 @@ const UsersManagement = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [filtersRef]);
 
-  // Update filtered users when filters or search term changes
   useEffect(() => {
     filterUsers();
   }, [users, searchTerm, filters]);
 
-  // Calculate total pages when filtered users or items per page changes
   useEffect(() => {
     setTotalPages(Math.ceil(filteredUsers.length / itemsPerPage));
-    // Don't reset to first page when filters change to avoid jumps
     if (page > Math.ceil(filteredUsers.length / itemsPerPage)) {
       setPage(1);
     }
@@ -138,7 +131,6 @@ const UsersManagement = () => {
       const response = await api.get("/users");
       setUsers(response.data);
     } catch (err) {
-      console.error("Error fetching users:", err);
       setError("Failed to load users. Please try again later.");
       toast.error("Failed to load users");
     } finally {
@@ -151,7 +143,7 @@ const UsersManagement = () => {
       const response = await api.get("/chairs");
       setAvailableChairs(response.data);
     } catch (err) {
-      console.error("Error fetching chairs:", err);
+      toast.error("Failed to load chairs");
     }
   };
 
@@ -160,14 +152,13 @@ const UsersManagement = () => {
       const response = await api.get("/positions");
       setAvailablePositions(response.data);
     } catch (err) {
-      console.error("Error fetching positions:", err);
+      toast.error("Failed to load positions");
     }
   };
 
   const filterUsers = () => {
     let result = [...users];
 
-    // Filter by search term
     if (searchTerm) {
       const lowerCaseSearch = searchTerm.toLowerCase();
       result = result.filter(
@@ -179,7 +170,6 @@ const UsersManagement = () => {
       );
     }
 
-    // Apply filters
     if (filters.role) {
       result = result.filter(user => user.role === filters.role);
     }
@@ -191,7 +181,6 @@ const UsersManagement = () => {
       result = result.filter(user => user.active === isActive);
     }
 
-    // Apply sorting
     if (sortConfig.key) {
       result.sort((a, b) => {
         if (!a[sortConfig.key] && !b[sortConfig.key]) return 0;
@@ -254,21 +243,18 @@ const UsersManagement = () => {
     
     setLoading(true);
     try {
-      const { confirmPassword, ...userData } = newUser;
+      const userData = { ...newUser };
       
       const response = await api.post("/users/signup", userData);
       
-      // Defensive check - ensure we have a valid user object with required fields
       const newUserData = response.data.user || response.data;
       
-      // Make sure the user object has all required fields before adding to state
       const safeUser = {
-        _id: newUserData._id || Date.now().toString(), // Fallback ID if none exists
+        _id: newUserData._id || Date.now().toString(),
         fullName: newUserData.fullName || userData.fullName || "",
         username: newUserData.username || userData.username || "",
         email: newUserData.email || userData.email || "",
         role: newUserData.role || userData.role || "Instructor",
-        // Include all other fields you're displaying in the UI with fallbacks
         phone: newUserData.phone || userData.phone || "",
         chair: newUserData.chair || userData.chair || "",
         rank: newUserData.rank || userData.rank || "",
@@ -278,17 +264,12 @@ const UsersManagement = () => {
         createdAt: newUserData.createdAt || new Date().toISOString()
       };
       
-      // Add the new user to the beginning of the array
       setUsers(prev => [safeUser, ...prev]);
-      
-      // Reset to first page to ensure the new user is visible
       setPage(1);
-      
       toast.success("User added successfully");
       resetForm();
       setIsAddUserOpen(false);
     } catch (err) {
-      console.error("Error adding user:", err);
       if (err.response?.data?.message) {
         toast.error(err.response.data.message);
       } else {
@@ -306,8 +287,7 @@ const UsersManagement = () => {
     
     setLoading(true);
     try {
-      // Remove password fields if they're empty
-      const { confirmPassword, password, ...userData } = newUser;
+      const { password, ...userData } = newUser;
       const dataToSend = password ? { ...userData, password } : userData;
       
       const response = await api.put(`/users/${selectedUser._id}`, dataToSend);
@@ -320,7 +300,6 @@ const UsersManagement = () => {
       resetForm();
       setIsEditUserOpen(false);
     } catch (err) {
-      console.error("Error updating user:", err);
       toast.error("Failed to update user");
     } finally {
       setLoading(false);
@@ -330,29 +309,24 @@ const UsersManagement = () => {
   const handleDeleteUser = async () => {
     setLoading(true);
     try {
-      // First fetch the latest users from the server
       const usersResponse = await api.get("/users");
       setUsers(usersResponse.data);
       
-      // Then delete the selected user
       await api.delete(`/users/${selectedUser._id}`);
       
-      // Fetch the users again to get the updated list after deletion
       const updatedUsersResponse = await api.get("/users");
       setUsers(updatedUsersResponse.data);
       
       toast.success("User deleted successfully");
       setIsDeleteUserOpen(false);
     } catch (err) {
-      console.error("Error deleting user:", err);
       toast.error("Failed to delete user");
       
-      // Refresh the users list even if deletion fails
       try {
         const response = await api.get("/users");
         setUsers(response.data);
       } catch (fetchErr) {
-        console.error("Error fetching users after delete failure:", fetchErr);
+        toast.error("Error refreshing user list");
       }
     } finally {
       setLoading(false);
@@ -362,7 +336,7 @@ const UsersManagement = () => {
   const toggleUserActive = async (userId, currentActiveState) => {
     setLoading(true);
     try {
-      const response = await api.put(`/users/${userId}`, { active: !currentActiveState });
+      await api.put(`/users/${userId}`, { active: !currentActiveState });
       
       setUsers(prev => 
         prev.map(u => u._id === userId ? { ...u, active: !currentActiveState } : u)
@@ -370,7 +344,6 @@ const UsersManagement = () => {
       
       toast.success(`User ${!currentActiveState ? 'activated' : 'deactivated'} successfully`);
     } catch (err) {
-      console.error("Error toggling user active status:", err);
       toast.error("Failed to update user status");
     } finally {
       setLoading(false);
@@ -380,32 +353,22 @@ const UsersManagement = () => {
   const validateForm = (isEdit = false) => {
     const errors = {};
     
-    // These fields are always required
     if (!newUser.fullName.trim()) errors.fullName = "Full name is required";
     if (!newUser.username.trim()) errors.username = "Username is required";
     if (!newUser.email.trim()) errors.email = "Email is required";
     if (!newUser.role) errors.role = "Role is required";
     
-    // Only validate password for new users or if password field is filled for edits
-    if (!isEdit || newUser.password) {
-      if (!isEdit && !newUser.password) {
-        errors.password = "Password is required";
-      } else if (newUser.password && newUser.password.length < 8) {
-        errors.password = "Password must be at least 8 characters";
-      }
-      
-      if (newUser.password !== newUser.confirmPassword) {
-        errors.confirmPassword = "Passwords don't match";
-      }
+    if (!isEdit && !newUser.password) {
+      errors.password = "Password is required";
+    } else if (newUser.password && newUser.password.length < 8) {
+      errors.password = "Password must be at least 8 characters";
     }
     
-    // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (newUser.email && !emailRegex.test(newUser.email)) {
       errors.email = "Please enter a valid email address";
     }
     
-    // Phone validation (basic)
     if (newUser.phone && !/^\+?[0-9\s-()]{8,}$/.test(newUser.phone)) {
       errors.phone = "Please enter a valid phone number";
     }
@@ -420,7 +383,6 @@ const UsersManagement = () => {
       username: "",
       email: "",
       password: "",
-      confirmPassword: "",
       role: "Instructor",
       phone: "",
       chair: "",
@@ -440,7 +402,6 @@ const UsersManagement = () => {
       username: user.username || "",
       email: user.email || "",
       password: "",
-      confirmPassword: "",
       role: user.role || "Instructor",
       phone: user.phone || "",
       chair: user.chair || "",
@@ -469,19 +430,16 @@ const UsersManagement = () => {
       [name]: type === 'checkbox' ? checked : value 
     }));
     
-    // Clear validation error when field is edited
     if (formErrors[name]) {
       setFormErrors(prev => ({ ...prev, [name]: "" }));
     }
   };
 
-  // Get paginated users
   const paginatedUsers = useMemo(() => {
     const startIndex = (page - 1) * itemsPerPage;
     return filteredUsers.slice(startIndex, startIndex + itemsPerPage);
   }, [filteredUsers, page, itemsPerPage]);
 
-  // Get role badge color
   const getRoleBadgeColor = (role) => {
     switch (role) {
       case "HeadOfFaculty":
@@ -527,17 +485,13 @@ const UsersManagement = () => {
       "Phone", 
       "Chair", 
       "Rank", 
-      "Position", 
       "Location", 
-      "Status",
-      "Created At"
+      "Status"
     ];
     
     const csvRows = [];
-    // Add the headers
     csvRows.push(headers.join(','));
     
-    // Add the data
     filteredUsers.forEach(user => {
       const values = [
         `"${user.fullName || ''}"`,
@@ -547,18 +501,14 @@ const UsersManagement = () => {
         `"${user.phone || ''}"`,
         `"${user.chair || ''}"`,
         `"${user.rank || ''}"`,
-        `"${user.position || ''}"`,
         `"${user.location || ''}"`,
         `"${user.active !== undefined ? (user.active ? 'Active' : 'Inactive') : 'Active'}"`,
-        `"${user.createdAt ? dayjs(user.createdAt).format('YYYY-MM-DD') : ''}"`,
       ];
       csvRows.push(values.join(','));
     });
     
-    // Create the CSV content
     const csvContent = csvRows.join('\n');
     
-    // Create and download the file
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
@@ -607,7 +557,6 @@ const UsersManagement = () => {
 
   return (
     <div className="animate-fadeIn">
-      {/* Page header */}
       <div className="mb-4 sm:mb-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
           <div className="mb-3 sm:mb-0">
@@ -629,11 +578,9 @@ const UsersManagement = () => {
         </div>
       </div>
 
-      {/* Filters & Search */}
       <div className="bg-white dark:bg-gray-800 shadow rounded-lg mb-4">
         <div className="p-3 sm:p-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
-            {/* Search */}
             <div className="relative flex-1">
               <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                 <Search className="w-4 h-4 text-gray-400" />
@@ -656,7 +603,6 @@ const UsersManagement = () => {
               )}
             </div>
 
-            {/* Filters */}
             <div className="flex gap-2">
               <div className="relative" ref={filtersRef}>
                 <button
@@ -672,7 +618,6 @@ const UsersManagement = () => {
                   )}
                 </button>
 
-                {/* Filter dropdown */}
                 {showFilters && (
                   <div className="absolute right-0 mt-2 w-64 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md shadow-lg z-10">
                     <div className="p-3">
@@ -687,7 +632,6 @@ const UsersManagement = () => {
                       </div>
 
                       <div className="space-y-3">
-                        {/* Role filter */}
                         <div>
                           <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                             Role
@@ -705,7 +649,6 @@ const UsersManagement = () => {
                           </select>
                         </div>
 
-                        {/* Chair filter */}
                         <div>
                           <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                             Chair
@@ -724,7 +667,6 @@ const UsersManagement = () => {
                           </select>
                         </div>
 
-                        {/* Status filter */}
                         <div>
                           <label className="block text-xs font-medium text-gray-700 dark:text-gray-300 mb-1">
                             Status
@@ -745,7 +687,6 @@ const UsersManagement = () => {
                 )}
               </div>
 
-              {/* Export Button */}
               <button
                 onClick={exportToCSV}
                 className="inline-flex items-center px-3 py-1.5 sm:px-4 sm:py-2 border border-gray-300 dark:border-gray-600 shadow-sm text-sm font-medium rounded-md text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
@@ -757,7 +698,6 @@ const UsersManagement = () => {
           </div>
         </div>
 
-        {/* Active filters */}
         {(searchTerm || filters.role || filters.chair || filters.active !== "") && (
           <div className="px-3 sm:px-4 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
             <div className="flex flex-wrap items-center gap-1.5">
@@ -822,7 +762,6 @@ const UsersManagement = () => {
         )}
       </div>
 
-      {/* Users Table/Cards */}
       <div className="bg-white dark:bg-gray-800 shadow rounded-lg overflow-hidden flex-1 flex flex-col">
         {loading && users.length > 0 ? (
           <div className="flex justify-center items-center h-16">
@@ -862,7 +801,6 @@ const UsersManagement = () => {
           </div>
         ) : (
           <>
-            {/* Mobile view (cards) */}
             {isMobile ? (
               <div className="divide-y divide-gray-200 dark:divide-gray-700 overflow-y-auto flex-1">
                 {paginatedUsers.map((user) => (
@@ -921,7 +859,6 @@ const UsersManagement = () => {
                 ))}
               </div>
             ) : (
-              // Desktop view (table)
               <div className="overflow-y-auto flex-1">
                 <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                   <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0 z-10">
@@ -1105,7 +1042,6 @@ const UsersManagement = () => {
               </div>
             )}
             
-            {/* Pagination */}
             <div className="bg-white dark:bg-gray-800 px-3 py-2 flex items-center justify-between border-t border-gray-200 dark:border-gray-700 sm:px-4">
               <div className="flex flex-1 justify-between sm:hidden">
                 <button
@@ -1159,16 +1095,13 @@ const UsersManagement = () => {
                       <ChevronLeft className="h-5 w-5" />
                     </button>
                     
-                    {/* Page numbers - show 3 pages max plus ellipsis */}
                     {Array.from({ length: totalPages }).map((_, i) => {
-                      // Calculate which pages to show
                       const pageNum = i + 1;
                       const isCurrentPage = pageNum === page;
                       const isFirstPage = pageNum === 1;
                       const isLastPage = pageNum === totalPages;
                       const isWithinTwoPages = Math.abs(pageNum - page) <= 1;
                       
-                      // Only show first, last, and pages within +/- 1 of current
                       if (isFirstPage || isLastPage || isWithinTwoPages) {
                         return (
                           <button
@@ -1187,7 +1120,6 @@ const UsersManagement = () => {
                         (pageNum === 2 && page > 3) || 
                         (pageNum === totalPages - 1 && page < totalPages - 2)
                       ) {
-                        // Show ellipsis
                         return (
                           <span
                             key={i}
@@ -1220,7 +1152,6 @@ const UsersManagement = () => {
         )}
       </div>
 
-      {/* Detail Modal for Mobile */}
       <AnimatePresence>
         {isDetailOpen && (
           <>
@@ -1407,7 +1338,6 @@ const UsersManagement = () => {
         )}
       </AnimatePresence>
 
-      {/* Add User Modal */}
       <AnimatePresence>
         {isAddUserOpen && (
           <>
@@ -1442,7 +1372,6 @@ const UsersManagement = () => {
                 
                 <form onSubmit={handleAddUser} className="px-4 sm:px-6 py-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Name field */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Full Name <span className="text-red-500 dark:text-red-400">*</span>
@@ -1461,7 +1390,6 @@ const UsersManagement = () => {
                       )}
                     </div>
                     
-                    {/* Username field */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Username <span className="text-red-500 dark:text-red-400">*</span>
@@ -1480,7 +1408,6 @@ const UsersManagement = () => {
                       )}
                     </div>
                     
-                    {/* Email field */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Email <span className="text-red-500 dark:text-red-400">*</span>
@@ -1499,7 +1426,6 @@ const UsersManagement = () => {
                       )}
                     </div>
                     
-                    {/* Phone field */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Phone
@@ -1518,7 +1444,6 @@ const UsersManagement = () => {
                       )}
                     </div>
                     
-                    {/* Password field */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Password <span className="text-red-500 dark:text-red-400">*</span>
@@ -1550,26 +1475,6 @@ const UsersManagement = () => {
                       )}
                     </div>
                     
-                    {/* Confirm Password field */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Confirm Password <span className="text-red-500 dark:text-red-400">*</span>
-                      </label>
-                      <input
-                        type={showPassword ? "text" : "password"}
-                        name="confirmPassword"
-                        value={newUser.confirmPassword}
-                        onChange={handleChange}
-                        className={`w-full px-3 py-2 border ${
-                          formErrors.confirmPassword ? "border-red-500 dark:border-red-400" : "border-gray-300 dark:border-gray-600"
-                        } rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
-                      />
-                      {formErrors.confirmPassword && (
-                        <p className="mt-1 text-xs text-red-600 dark:text-red-400">{formErrors.confirmPassword}</p>
-                      )}
-                    </div>
-                    
-                    {/* Role field */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Role <span className="text-red-500 dark:text-red-400">*</span>
@@ -1592,7 +1497,6 @@ const UsersManagement = () => {
                       )}
                     </div>
                     
-                    {/* Chair field */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Chair
@@ -1612,7 +1516,6 @@ const UsersManagement = () => {
                       </select>
                     </div>
 
-                    {/* Status field */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Status
@@ -1645,7 +1548,6 @@ const UsersManagement = () => {
                       </div>
                     </div>
                     
-                    {/* Position field */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Position
@@ -1665,7 +1567,6 @@ const UsersManagement = () => {
                       </select>
                     </div>
                     
-                    {/* Rank field */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Rank
@@ -1679,7 +1580,6 @@ const UsersManagement = () => {
                       />
                     </div>
                     
-                    {/* Location field */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Location
@@ -1717,7 +1617,6 @@ const UsersManagement = () => {
         )}
       </AnimatePresence>
 
-      {/* Edit User Modal */}
       <AnimatePresence>
         {isEditUserOpen && (
           <>
@@ -1754,7 +1653,6 @@ const UsersManagement = () => {
                 
                 <form onSubmit={handleEditUser} className="px-4 sm:px-6 py-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Name field */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Full Name <span className="text-red-500 dark:text-red-400">*</span>
@@ -1773,7 +1671,6 @@ const UsersManagement = () => {
                       )}
                     </div>
                     
-                    {/* Username field */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Username <span className="text-red-500 dark:text-red-400">*</span>
@@ -1792,7 +1689,6 @@ const UsersManagement = () => {
                       )}
                     </div>
                     
-                    {/* Email field */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Email <span className="text-red-500 dark:text-red-400">*</span>
@@ -1811,7 +1707,6 @@ const UsersManagement = () => {
                       )}
                     </div>
                     
-                    {/* Phone field */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Phone
@@ -1830,7 +1725,6 @@ const UsersManagement = () => {
                       )}
                     </div>
                     
-                    {/* Password field (optional for edit) */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Password <span className="text-gray-500 dark:text-gray-400 text-xs">(leave empty to keep current)</span>
@@ -1862,26 +1756,6 @@ const UsersManagement = () => {
                       )}
                     </div>
                     
-                    {/* Confirm Password field */}
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                        Confirm Password
-                      </label>
-                      <input
-                        type={showPassword ? "text" : "password"}
-                        name="confirmPassword"
-                        value={newUser.confirmPassword}
-                        onChange={handleChange}
-                        className={`w-full px-3 py-2 border ${
-                          formErrors.confirmPassword ? "border-red-500 dark:border-red-400" : "border-gray-300 dark:border-gray-600"
-                        } rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white`}
-                      />
-                      {formErrors.confirmPassword && (
-                        <p className="mt-1 text-xs text-red-600 dark:text-red-400">{formErrors.confirmPassword}</p>
-                      )}
-                    </div>
-                    
-                    {/* Role field */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Role <span className="text-red-500 dark:text-red-400">*</span>
@@ -1904,7 +1778,6 @@ const UsersManagement = () => {
                       )}
                     </div>
                     
-                    {/* Chair field */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Chair
@@ -1924,7 +1797,6 @@ const UsersManagement = () => {
                       </select>
                     </div>
 
-                    {/* Status field */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Status
@@ -1957,7 +1829,6 @@ const UsersManagement = () => {
                       </div>
                     </div>
                     
-                    {/* Position field */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Position
@@ -1977,7 +1848,6 @@ const UsersManagement = () => {
                       </select>
                     </div>
                     
-                    {/* Rank field */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Rank
@@ -1991,7 +1861,6 @@ const UsersManagement = () => {
                       />
                     </div>
                     
-                    {/* Location field */}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                         Location
@@ -2029,7 +1898,6 @@ const UsersManagement = () => {
         )}
       </AnimatePresence>
 
-      {/* Delete Confirmation Modal */}
       <AnimatePresence>
         {isDeleteUserOpen && (
           <>

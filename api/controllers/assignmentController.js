@@ -46,9 +46,9 @@ export const manualAssignment = async (req, res) => {
       }
 
       if (existingAssignment) {
+        // Check if the course and section combination already exists
         const isDuplicate = existingAssignment.assignments.some(
           existing =>
-            existing.instructorId.toString() === instructorId &&
             existing.courseId.toString() === courseId &&
             existing.section === section
         );
@@ -140,7 +140,7 @@ export const manualAssignment = async (req, res) => {
     };
 
     if (duplicateAssignments.length > 0) {
-      response.warning = "Some assignments were skipped because they already exist";
+      response.warning = "Some assignments were skipped because the course and section are already assigned";
       response.duplicateAssignments = duplicateAssignments;
     }
 
@@ -150,7 +150,6 @@ export const manualAssignment = async (req, res) => {
     res.status(500).json({ message: "Error in manual assignment", error });
   }
 };
-
 
 export const commonManualAssignment = async (req, res) => {
   try {
@@ -184,11 +183,10 @@ export const commonManualAssignment = async (req, res) => {
         return res.status(404).json({ message: `Course not found for ID: ${courseId}` });
       }
 
-      // ✅ Check for duplicates
+      // ✅ Check if course and section combination already exists
       if (existingAssignment) {
         const isDuplicate = existingAssignment.assignments.some(
           existing =>
-            existing.instructorId.toString() === instructorId &&
             existing.courseId.toString() === courseId &&
             existing.section === section
         );
@@ -279,7 +277,7 @@ export const commonManualAssignment = async (req, res) => {
     };
 
     if (duplicateAssignments.length > 0) {
-      response.warning = "Some assignments were skipped because they already exist";
+      response.warning = "Some assignments were skipped because the course and section are already assigned";
       response.duplicateAssignments = duplicateAssignments;
     }
 
@@ -294,7 +292,7 @@ export const commonManualAssignment = async (req, res) => {
 export const updateAssignment = async (req, res) => {
   try {
     const { parentId, subId } = req.params;
-    const { instructorId, courseId, labDivision, assignmentReason, NoOfSections } = req.body;
+    const { instructorId, courseId, section, labDivision, assignmentReason, NoOfSections } = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(parentId) || !mongoose.Types.ObjectId.isValid(subId)) {
       return res.status(400).json({ message: "Invalid assignment ID" });
@@ -314,10 +312,31 @@ export const updateAssignment = async (req, res) => {
     }
 
     const oldAssignment = parentAssignment.assignments[subAssignmentIndex];
+    const oldCourseId = oldAssignment.courseId.toString();
+    const oldSection = oldAssignment.section;
     const oldInstructorId = oldAssignment.instructorId;
     const oldWorkload = oldAssignment.workload;
     const oldLabDivision = String(oldAssignment.labDivision || "No");
     const oldNoOfSections = oldAssignment.NoOfSections || 1;
+
+    // Check if updating to a course/section combination that already exists
+    if ((courseId && courseId !== oldCourseId) || (section && section !== oldSection)) {
+      const newCourseId = courseId || oldCourseId;
+      const newSection = section || oldSection;
+      
+      const duplicateExists = parentAssignment.assignments.some(
+        existing => 
+          existing._id.toString() !== subId && // Skip the current assignment
+          existing.courseId.toString() === newCourseId &&
+          existing.section === newSection
+      );
+      
+      if (duplicateExists) {
+        return res.status(400).json({ 
+          message: "Cannot update: The course and section combination is already assigned" 
+        });
+      }
+    }
 
     const updatedLabDivision = labDivision !== undefined ? labDivision : oldLabDivision;
     const updatedNoOfSections = NoOfSections !== undefined ? parseInt(NoOfSections) : oldNoOfSections;
@@ -351,6 +370,7 @@ export const updateAssignment = async (req, res) => {
     const updatedAssignment = { ...oldAssignment.toObject() };
     if (instructorId) updatedAssignment.instructorId = instructorId;
     if (courseId) updatedAssignment.courseId = courseId;
+    if (section) updatedAssignment.section = section;
     if (labDivision !== undefined) updatedAssignment.labDivision = labDivision;
     if (assignmentReason !== undefined) updatedAssignment.assignmentReason = assignmentReason;
     if (NoOfSections !== undefined) updatedAssignment.NoOfSections = updatedNoOfSections;
@@ -679,13 +699,14 @@ export const runAutomaticAssignment = async (req, res) => {
 
     let assignedCourses = [];
     let instructorAssigned = new Set();
-    const existingCourseAssignments = new Map();
+    const existingCourseSections = new Map();
     let duplicateAssignments = [];
 
+    // Store already assigned course-section combinations
     if (existingAssignment) {
       existingAssignment.assignments.forEach((a) => {
-        const key = `${a.courseId}-${a.section}-${a.instructorId}`;
-        existingCourseAssignments.set(key, true);
+        const key = `${a.courseId}-${a.section}`;
+        existingCourseSections.set(key, true);
       });
     }
 
@@ -714,6 +735,18 @@ export const runAutomaticAssignment = async (req, res) => {
         courseId = new mongoose.Types.ObjectId(courseId);
         const meta = getCourseMeta(courseId);
         if (!meta) continue;
+
+        // Check if this course-section is already assigned
+        const courseSectionKey = `${courseId}-${meta.section}`;
+        if (existingCourseSections.has(courseSectionKey)) {
+          const course = await Course.findById(courseId);
+          duplicateAssignments.push({
+            course: course ? course.name : "Unknown course",
+            section: meta.section,
+            instructorId: pref.instructorId._id
+          });
+          continue;
+        }
 
         const instructorId = pref.instructorId._id;
         const experienceYears = await getInstructorCourseExperience(instructorId, courseId);
@@ -763,8 +796,9 @@ export const runAutomaticAssignment = async (req, res) => {
       const meta = getCourseMeta(courseId);
       if (!meta) continue;
 
-      const assignmentKey = `${courseId}-${meta.section}-${instructorId}`;
-      if (existingCourseAssignments.has(assignmentKey)) {
+      // Check again if this course-section is already assigned
+      const courseSectionKey = `${courseId}-${meta.section}`;
+      if (existingCourseSections.has(courseSectionKey)) {
         duplicateAssignments.push({
           course: course.name,
           section: meta.section,
@@ -820,6 +854,9 @@ export const runAutomaticAssignment = async (req, res) => {
         assignmentReason: reason,
       });
 
+      // Mark this course-section as assigned
+      existingCourseSections.set(courseSectionKey, true);
+
       const instructor = await Instructor.findOne({ userId: instructorId });
       if (!instructor) continue;
 
@@ -846,7 +883,7 @@ export const runAutomaticAssignment = async (req, res) => {
 
     if (finalAssignments.length === 0 && duplicateAssignments.length > 0) {
       return res.status(400).json({
-        message: "All assignments already exist for this year, semester, and program",
+        message: "All course-section combinations already exist for this year, semester, and program",
         duplicateAssignments,
       });
     }
@@ -877,7 +914,7 @@ export const runAutomaticAssignment = async (req, res) => {
     };
 
     if (duplicateAssignments.length > 0) {
-      response.warning = "Some assignments were skipped due to duplicates";
+      response.warning = "Some assignments were skipped because the course and section are already assigned";
       response.duplicateAssignments = duplicateAssignments;
     }
 
@@ -915,21 +952,33 @@ export const autoAssignCommonCourses = async (req, res) => {
     const instructorRecords = await Instructor.find({ userId: { $in: instructors.map(i => i._id) } });
 
     const existingAssignment = await Assignment.findOne({ year, semester, program: "Regular" });
-    const existingCourseAssignments = new Map();
-    if (existingAssignment) {
-      existingAssignment.assignments.forEach(a => {
-        const key = `${a.courseId}-${a.section}-${a.instructorId}`;
-        existingCourseAssignments.set(key, true);
-      });
-    }
-
+    const existingCourseSections = new Map();
     let assignments = [];
     let duplicateAssignments = [];
+
+    // Store already assigned course-section combinations
+    if (existingAssignment) {
+      existingAssignment.assignments.forEach(a => {
+        const key = `${a.courseId}-${a.section}`;
+        existingCourseSections.set(key, true);
+      });
+    }
 
     for (const frontendCourse of frontendCourses) {
       const { courseId, section, labDivision = "No", NoOfSections = 1 } = frontendCourse;
       const course = courses.find(c => c._id.toString() === courseId);
       if (!course) continue;
+
+      // Check if this course-section is already assigned
+      const courseSectionKey = `${courseId}-${section}`;
+      if (existingCourseSections.has(courseSectionKey)) {
+        duplicateAssignments.push({
+          course: course.name,
+          section,
+          instructor: "Any" // We don't know which instructor yet
+        });
+        continue;
+      }
 
       const baseWorkload = course.lecture + (2 / 3) * course.lab + (2 / 3) * course.tutorial;
       const additionalLab = labDivision === "Yes" ? (2 / 3) * course.lab + (2 / 3) * course.tutorial : 0;
@@ -956,15 +1005,6 @@ export const autoAssignCommonCourses = async (req, res) => {
       if (!selected) continue;
 
       const instructorId = selected.instructor._id;
-      const key = `${courseId}-${section}-${instructorId}`;
-      if (existingCourseAssignments.has(key)) {
-        duplicateAssignments.push({
-          course: course.name,
-          section,
-          instructor: selected.instructor.fullName,
-        });
-        continue;
-      }
 
       // Update workload record
       const workloadRecord = selected.record;
@@ -991,12 +1031,13 @@ export const autoAssignCommonCourses = async (req, res) => {
         assignmentReason,
       });
 
-      existingCourseAssignments.set(key, true);
+      // Mark this course-section as assigned
+      existingCourseSections.set(courseSectionKey, true);
     }
 
     if (!assignments.length && duplicateAssignments.length) {
       return res.status(400).json({
-        message: "All assignments already exist for this year, semester, and program.",
+        message: "All course-section combinations already exist for this year, semester, and program.",
         duplicateAssignments,
       });
     }
@@ -1019,7 +1060,10 @@ export const autoAssignCommonCourses = async (req, res) => {
     res.status(201).json({
       message: "Automatic assignment completed successfully.",
       assignments,
-      ...(duplicateAssignments.length > 0 && { warning: "Some assignments were skipped due to duplication", duplicateAssignments })
+      ...(duplicateAssignments.length > 0 && { 
+        warning: "Some assignments were skipped because the course and section are already assigned", 
+        duplicateAssignments 
+      })
     });
 
   } catch (error) {
@@ -1058,13 +1102,14 @@ export const autoAssignExtensionCourses = async (req, res) => {
       program: "Extension",
     });
 
-    const existingCourseAssignments = new Map();
+    const existingCourseSections = new Map();
     const duplicateAssignments = [];
 
+    // Store already assigned course-section combinations
     if (existingAssignment) {
       existingAssignment.assignments.forEach((assignment) => {
-        const key = `${assignment.courseId}-${assignment.section}-${assignment.instructorId}`;
-        existingCourseAssignments.set(key, true);
+        const key = `${assignment.courseId}-${assignment.section}`;
+        existingCourseSections.set(key, true);
       });
     }
 
@@ -1104,20 +1149,16 @@ export const autoAssignExtensionCourses = async (req, res) => {
       const course = courses.find((c) => c._id.toString() === courseId);
       if (!course) continue;
 
-      let isDuplicate = false;
-      for (const instructor of instructors) {
-        const assignmentKey = `${courseId}-${section}-${instructor._id}`;
-        if (existingCourseAssignments.has(assignmentKey)) {
-          duplicateAssignments.push({
-            course: course.name,
-            section,
-            instructor: instructor.fullName || instructor.name,
-          });
-          isDuplicate = true;
-          break;
-        }
+      // Check if this course-section is already assigned
+      const courseSectionKey = `${courseId}-${section}`;
+      if (existingCourseSections.has(courseSectionKey)) {
+        duplicateAssignments.push({
+          course: course.name,
+          section,
+          instructor: "Any" // We don't know which instructor yet
+        });
+        continue;
       }
-      if (isDuplicate) continue;
 
       let instructorBenefits = [];
 
@@ -1198,9 +1239,6 @@ export const autoAssignExtensionCourses = async (req, res) => {
           ? bestInstructors[Math.floor(Math.random() * bestInstructors.length)]
           : bestInstructors[0];
 
-      const assignmentKey = `${courseId}-${section}-${selectedInstructor.instructorId}`;
-      if (existingCourseAssignments.has(assignmentKey)) continue;
-
       if (selectedInstructor.existingExtensionWorkload) {
         selectedInstructor.existingExtensionWorkload.value +=
           selectedInstructor.workload;
@@ -1249,13 +1287,14 @@ export const autoAssignExtensionCourses = async (req, res) => {
         assignmentReason,
       });
 
-      existingCourseAssignments.set(assignmentKey, true);
+      // Mark this course-section as assigned
+      existingCourseSections.set(courseSectionKey, true);
     }
 
     if (finalAssignments.length === 0 && duplicateAssignments.length > 0) {
       return res.status(400).json({
         message:
-          "All assignments already exist for this year, semester, and program",
+          "All course-section combinations already exist for this year, semester, and program",
         duplicateAssignments,
       });
     }
@@ -1281,7 +1320,7 @@ export const autoAssignExtensionCourses = async (req, res) => {
     };
 
     if (duplicateAssignments.length > 0) {
-      response.warning = "Some assignments were skipped because they already exist";
+      response.warning = "Some assignments were skipped because the course and section are already assigned";
       response.duplicateAssignments = duplicateAssignments;
     }
 
@@ -1313,13 +1352,14 @@ export const autoAssignSummerCourses = async (req, res) => {
       program: "Summer",
     });
 
-    const existingCourseAssignments = new Map();
+    const existingCourseSections = new Map();
     const duplicateAssignments = [];
 
+    // Store already assigned course-section combinations
     if (existingAssignment) {
       existingAssignment.assignments.forEach(assignment => {
-        const key = `${assignment.courseId}-${assignment.section}-${assignment.instructorId}`;
-        existingCourseAssignments.set(key, true);
+        const key = `${assignment.courseId}-${assignment.section}`;
+        existingCourseSections.set(key, true);
       });
     }
 
@@ -1348,20 +1388,16 @@ export const autoAssignSummerCourses = async (req, res) => {
       const course = courses.find((c) => c._id.toString() === courseId);
       if (!course) continue;
 
-      let isDuplicate = false;
-      for (const instructor of instructors) {
-        const assignmentKey = `${courseId}-${section}-${instructor._id}`;
-        if (existingCourseAssignments.has(assignmentKey)) {
-          duplicateAssignments.push({
-            course: course.name,
-            section,
-            instructor: instructor.fullName || instructor.name,
-          });
-          isDuplicate = true;
-          break;
-        }
+      // Check if this course-section is already assigned
+      const courseSectionKey = `${courseId}-${section}`;
+      if (existingCourseSections.has(courseSectionKey)) {
+        duplicateAssignments.push({
+          course: course.name,
+          section,
+          instructor: "Any" // We don't know which instructor yet
+        });
+        continue;
       }
-      if (isDuplicate) continue;
 
       for (let instructor of instructors) {
         let instructorRecord = await Instructor.findOne({ userId: instructor._id }) || new Instructor({
@@ -1426,14 +1462,18 @@ export const autoAssignSummerCourses = async (req, res) => {
     }
 
     for (const [courseId, instructorList] of benefitMap.entries()) {
+      const courseSectionKey = `${courseId}-${instructorList[0].section}`;
+      
+      // Check again if this course-section has been assigned (could have happened in a previous iteration)
+      if (existingCourseSections.has(courseSectionKey)) {
+        continue;
+      }
+      
       instructorList.sort((a, b) => a.benefit - b.benefit);
       const minBenefit = instructorList[0].benefit;
       const tiedInstructors = instructorList.filter(i => i.benefit === minBenefit);
 
       const selectedInstructor = tiedInstructors[Math.floor(Math.random() * tiedInstructors.length)];
-
-      const assignmentKey = `${selectedInstructor.courseId}-${selectedInstructor.section}-${selectedInstructor.instructorId}`;
-      if (existingCourseAssignments.has(assignmentKey)) continue;
 
       const assignmentReasonParts = [
         `Reason:`,
@@ -1461,12 +1501,14 @@ export const autoAssignSummerCourses = async (req, res) => {
       selectedInstructor.assignmentReason = assignmentReasonParts.join(" ");
       selectedInstructor.score = -selectedInstructor.benefit;
       assignments.push(selectedInstructor);
-      existingCourseAssignments.set(assignmentKey, true);
+      
+      // Mark this course-section as assigned
+      existingCourseSections.set(courseSectionKey, true);
     }
 
     if (assignments.length === 0 && duplicateAssignments.length > 0) {
       return res.status(400).json({
-        message: "All assignments already exist for this year, semester, and program",
+        message: "All course-section combinations already exist for this year, semester, and program",
         duplicateAssignments,
       });
     }
@@ -1492,7 +1534,7 @@ export const autoAssignSummerCourses = async (req, res) => {
     };
 
     if (duplicateAssignments.length > 0) {
-      response.warning = "Some assignments were skipped because they already exist";
+      response.warning = "Some assignments were skipped because the course and section are already assigned";
       response.duplicateAssignments = duplicateAssignments;
     }
 
