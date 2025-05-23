@@ -169,7 +169,19 @@ const PreferenceForm = () => {
 
   // Handle input change
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    
+    // If changing maxPreferences, ensure it doesn't exceed selected courses
+    if (name === "maxPreferences") {
+      const coursesCount = formData.courses.length;
+      if (parseInt(value) > coursesCount && coursesCount > 0) {
+        toast.error(`Maximum preferences cannot exceed the number of selected courses (${coursesCount})`);
+        setFormData({ ...formData, [name]: coursesCount });
+        return;
+      }
+    }
+    
+    setFormData({ ...formData, [name]: value });
   };
 
   // Handle course selection with details
@@ -189,6 +201,17 @@ const PreferenceForm = () => {
       const newSelectedCourseDetails = { ...selectedCourseDetails };
       delete newSelectedCourseDetails[courseId];
       setSelectedCourseDetails(newSelectedCourseDetails);
+      
+      // Update maxPreferences if it now exceeds courses count
+      if (formData.maxPreferences > updatedCourses.length && updatedCourses.length > 0) {
+        setFormData({ 
+          ...formData, 
+          courses: updatedCourses,
+          maxPreferences: updatedCourses.length
+        });
+        toast.info(`Maximum preferences adjusted to match course count (${updatedCourses.length})`);
+        return;
+      }
     } else {
       // Add course with details
       updatedCourses.push({
@@ -304,12 +327,18 @@ const PreferenceForm = () => {
   };
 
   // Get current datetime in ISO format for min attribute on datetime-local inputs
+  // Fixed version to address timezone issues
   const getCurrentDateTimeISO = () => {
     const now = new Date();
-    // Format to local timezone YYYY-MM-DDThh:mm
-    return new Date(now.getTime() - (now.getTimezoneOffset() * 60000))
-      .toISOString()
-      .slice(0, 16);
+    // Just use the direct ISO string without timezone adjustment
+    return now.toISOString().slice(0, 16);
+  };
+
+  // Format date for timezone-safe storage and use
+  const formatDateForInput = (dateString) => {
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    return date.toISOString().slice(0, 16);
   };
 
   // Handle creating or updating a preference form
@@ -328,6 +357,12 @@ const PreferenceForm = () => {
 
     if (endDate < startDate) {
       toast.error("Submission end date cannot be earlier than the start date");
+      return;
+    }
+
+    // Validate that maxPreferences doesn't exceed course count
+    if (formData.maxPreferences > formData.courses.length) {
+      toast.error(`Maximum preferences cannot exceed the number of selected courses (${formData.courses.length})`);
       return;
     }
 
@@ -462,12 +497,16 @@ const PreferenceForm = () => {
         .map(instructor => instructor._id);
     }
 
+    // Format dates to handle timezone consistently
+    const submissionStart = formatDateForInput(form.submissionStart);
+    const submissionEnd = formatDateForInput(form.submissionEnd);
+
     setFormData({
       year: form.year,
       semester: form.semester,
       maxPreferences: form.maxPreferences,
-      submissionStart: form.submissionStart,
-      submissionEnd: form.submissionEnd,
+      submissionStart: submissionStart,
+      submissionEnd: submissionEnd,
       courses: coursesWithDetails,
       instructors: form.instructors.map(instructor => instructor._id || instructor),
       allInstructors: form.allInstructors || false,
@@ -850,9 +889,15 @@ const PreferenceForm = () => {
                       value={formData.maxPreferences}
                       onChange={handleChange}
                       min={1}
+                      max={formData.courses.length || 1}
                       required
                       className="block w-full text-base bg-white dark:bg-slate-800 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                     />
+                    {formData.courses.length > 0 && (
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        Maximum value: {formData.courses.length} (number of selected courses)
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-1 md:col-span-3 lg:col-span-1">
