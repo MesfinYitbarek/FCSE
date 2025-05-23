@@ -305,8 +305,12 @@ const PreferenceForm = () => {
 
   // Get current datetime in ISO format for min attribute on datetime-local inputs
   const getCurrentDateTimeISO = () => {
-    return new Date().toISOString().slice(0, 16);
-  };
+  const now = new Date();
+  // Format to local timezone YYYY-MM-DDThh:mm
+  return new Date(now.getTime() - (now.getTimezoneOffset() * 60000))
+    .toISOString()
+    .slice(0, 16);
+};
 
   // Handle creating or updating a preference form
   const handleSubmit = async (e) => {
@@ -816,9 +820,7 @@ const PreferenceForm = () => {
                       type="number"
                       name="year"
                       value={formData.year}
-                      onChange={handleChange}
-                      min={currentYear - 2}
-                      max={currentYear + 2}
+                      onChange={handleChange}                     
                       required
                       className="block w-full text-base bg-white dark:bg-slate-800 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                     />
@@ -848,7 +850,6 @@ const PreferenceForm = () => {
                       value={formData.maxPreferences}
                       onChange={handleChange}
                       min={1}
-                      max={10}
                       required
                       className="block w-full text-base bg-white dark:bg-slate-800 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                     />
