@@ -326,28 +326,49 @@ const PreferenceForm = () => {
     setCourseFilterSemester("");
   };
 
-  // Get current datetime in ISO format for min attribute on datetime-local inputs
-  // Fixed version to address timezone issues
-  const getCurrentDateTimeISO = () => {
-    const now = new Date();
-    // Just use the direct ISO string without timezone adjustment
-    return now.toISOString().slice(0, 16);
+  // Format a Date object to YYYY-MM-DDThh:mm format expected by datetime-local inputs
+  // This properly handles timezone differences by using local date parts
+  const formatDateTimeForInput = (date) => {
+    if (!date) return "";
+    
+    const d = new Date(date);
+    
+    // Format date as YYYY-MM-DDThh:mm in local time
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
   };
 
-  // Format date for timezone-safe storage and use
-  const formatDateForInput = (dateString) => {
-    if (!dateString) return "";
-    const date = new Date(dateString);
-    return date.toISOString().slice(0, 16);
+  // Get current datetime in local format for min attribute on datetime-local inputs
+  const getCurrentDateTimeISO = () => {
+    return formatDateTimeForInput(new Date());
+  };
+  
+  // Create a standardized date object from a datetime-local input value
+  // This preserves the user's intended time without timezone shifts
+  const createDateFromLocalInput = (datetimeLocalValue) => {
+    if (!datetimeLocalValue) return null;
+    
+    // Parse the datetime-local value (YYYY-MM-DDThh:mm)
+    const [datePart, timePart] = datetimeLocalValue.split('T');
+    const [year, month, day] = datePart.split('-').map(Number);
+    const [hours, minutes] = timePart.split(':').map(Number);
+    
+    // Create a Date object using local parts (this maintains the exact time entered)
+    return new Date(year, month - 1, day, hours, minutes);
   };
 
   // Handle creating or updating a preference form
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Validate submission dates
-    const startDate = new Date(formData.submissionStart);
-    const endDate = new Date(formData.submissionEnd);
+    // Validate submission dates - convert from input format first
+    const startDate = createDateFromLocalInput(formData.submissionStart);
+    const endDate = createDateFromLocalInput(formData.submissionEnd);
     const currentDate = new Date();
 
     if (startDate < currentDate) {
@@ -408,8 +429,15 @@ const PreferenceForm = () => {
         finalInstructors = formData.instructors;
       }
 
+      // Create ISO strings from local date inputs to ensure consistent timezone handling
+      // For server storage, use ISO strings which include timezone info
+      const submissionStart = startDate.toISOString();
+      const submissionEnd = endDate.toISOString();
+
       const dataToSubmit = {
         ...formData,
+        submissionStart,
+        submissionEnd,
         courses: formattedCourses,
         instructors: finalInstructors,
         chair: filterChair || user.chair
@@ -497,9 +525,9 @@ const PreferenceForm = () => {
         .map(instructor => instructor._id);
     }
 
-    // Format dates to handle timezone consistently
-    const submissionStart = formatDateForInput(form.submissionStart);
-    const submissionEnd = formatDateForInput(form.submissionEnd);
+    // Format dates for input fields in local timezone
+    const submissionStart = formatDateTimeForInput(new Date(form.submissionStart));
+    const submissionEnd = formatDateTimeForInput(new Date(form.submissionEnd));
 
     setFormData({
       year: form.year,
