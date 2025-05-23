@@ -82,12 +82,12 @@ const CoursesCH = () => {
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
-  // Modified default filter - ensure we start with showing all courses
+
   const [filters, setFilters] = useState({
     year: "all",
     semester: "all",
-    department: "all",
-    status: "all" // Changed default to "all" to show all courses initially
+    chair: "",
+    status: "all"
   });
   const [showFilters, setShowFilters] = useState(false);
   const [error, setError] = useState(null);
@@ -623,7 +623,12 @@ const CoursesCH = () => {
     const matchesStatus = filters.status === "all" ||
       (course.status !== undefined && course.status === filters.status);
 
-    return matchesSearchTerm && matchesYear && matchesSemester && matchesStatus;
+    // Chair filter
+    const matchesChair = !filters.chair ||
+      (course.chair === filters.chair) ||
+      (course.assignedTo === filters.chair);
+
+    return matchesSearchTerm && matchesYear && matchesSemester && matchesStatus && matchesChair;
   });
 
   console.log("Filtered courses:", filteredCourses.length);
@@ -967,21 +972,20 @@ const CoursesCH = () => {
                     </select>
                   </div>
                   <div>
-                    <label htmlFor="department" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-2">
-                      <Building size={16} className="text-gray-500 dark:text-gray-400" />
-                      Department
+                    <label htmlFor="status" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-2">
+                      <Shield size={16} className="text-gray-500 dark:text-gray-400" />
+                      Status
                     </label>
                     <select
-                      id="department"
-                      name="department"
-                      value={filters.department}
+                      id="status"
+                      name="status"
+                      value={filters.status}
                       onChange={handleFilterChange}
                       className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600 focus:border-indigo-500 dark:focus:border-indigo-600 outline-none transition dark:bg-gray-700 dark:text-white text-base"
                     >
-                      <option value="all">All Departments</option>
-                      <option value="Software Engineering">Software Engineering</option>
-                      <option value="Computer Science">Computer Science</option>
-                      <option value="Information Technology">Information Technology</option>
+                      {statusOptions.map(option => (
+                        <option key={option.value} value={option.value}>{option.label}</option>
+                      ))}
                     </select>
                   </div>
                   <div>
@@ -992,11 +996,11 @@ const CoursesCH = () => {
                     <select
                       id="chair"
                       name="chair"
-                      value={form.chair}
-                      onChange={handleChange}
-                      className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600 focus:border-indigo-500 dark:focus:border-indigo-600 outline-none transition dark:bg-gray-700 dark:text-white text-base"
+                      value={filters.chair || ""}
+                      onChange={handleFilterChange}
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 dark:focus:ring-indigo-600 focus:border-indigo-500 dark:focus:border-indigo-600 outline-none transition dark:bg-gray-700 dark:text-white text-base"
                     >
-                      <option value="">Select Chair</option>
+                      <option value="">All Chairs</option>
                       <option value="COC">COC</option>
                       {chairHeads.map(chair => (
                         <option key={chair._id} value={chair.name}>{chair.name}</option>
@@ -1070,7 +1074,7 @@ const CoursesCH = () => {
         )}
 
         {/* Filter indicator badges */}
-        {(filters.year !== "all" || filters.semester !== "all" || filters.department !== "all" || filters.status !== "all") && (
+        {(filters.year !== "all" || filters.semester !== "all" || filters.chair || filters.status !== "all") && (
           <div className="mb-4 flex flex-wrap gap-2">
             {filters.year !== "all" && (
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300">
@@ -1094,12 +1098,12 @@ const CoursesCH = () => {
                 </button>
               </span>
             )}
-            {filters.department !== "all" && (
+            {filters.chair && (
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 dark:bg-indigo-900/50 text-indigo-800 dark:text-indigo-300">
-                Department: {filters.department}
+                Chair: {filters.chair}
                 <button
                   className="ml-1 text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300"
-                  onClick={() => setFilters({ ...filters, department: "all" })}
+                  onClick={() => setFilters({ ...filters, chair: "" })}
                 >
                   <X size={14} />
                 </button>
@@ -1107,7 +1111,7 @@ const CoursesCH = () => {
             )}
             {filters.status !== "all" && (
               <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 dark:bg-yellow-900/50 text-yellow-800 dark:text-yellow-300">
-                Status: {filters.status}
+                Status: {statusOptions.find(option => option.value === filters.status)?.label || filters.status}
                 <button
                   className="ml-1 text-yellow-600 dark:text-yellow-400 hover:text-yellow-800 dark:hover:text-yellow-300"
                   onClick={() => setFilters({ ...filters, status: "all" })}
@@ -1118,7 +1122,7 @@ const CoursesCH = () => {
             )}
             <button
               className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200 flex items-center"
-              onClick={() => setFilters({ year: "all", semester: "all", department: "all", status: "all" })}
+              onClick={() => setFilters({ year: "all", semester: "all", chair: "", status: "all" })}
             >
               Clear all filters
             </button>
@@ -2146,7 +2150,7 @@ const CoursesCH = () => {
                         <option key={chair._id} value={chair.name}>{chair.name}</option>
                       ))}
                     </select>
-                  </div>
+                  </div>yyyyy
 
                   <div className="flex justify-end gap-3 pt-6 border-t border-gray-200 dark:border-gray-700">
                     <button

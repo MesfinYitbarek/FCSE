@@ -305,12 +305,12 @@ const PreferenceForm = () => {
 
   // Get current datetime in ISO format for min attribute on datetime-local inputs
   const getCurrentDateTimeISO = () => {
-  const now = new Date();
-  // Format to local timezone YYYY-MM-DDThh:mm
-  return new Date(now.getTime() - (now.getTimezoneOffset() * 60000))
-    .toISOString()
-    .slice(0, 16);
-};
+    const now = new Date();
+    // Format to local timezone YYYY-MM-DDThh:mm
+    return new Date(now.getTime() - (now.getTimezoneOffset() * 60000))
+      .toISOString()
+      .slice(0, 16);
+  };
 
   // Handle creating or updating a preference form
   const handleSubmit = async (e) => {
@@ -820,7 +820,7 @@ const PreferenceForm = () => {
                       type="number"
                       name="year"
                       value={formData.year}
-                      onChange={handleChange}                     
+                      onChange={handleChange}
                       required
                       className="block w-full text-base bg-white dark:bg-slate-800 border border-gray-300 dark:border-gray-700 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                     />
@@ -958,15 +958,15 @@ const PreferenceForm = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                       {filteredCourses.length > 0 ? filteredCourses.map((course) => (
                         <div key={course._id} className={`p-2 border rounded-md ${isCourseSelected(course._id)
-                            ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800'
-                            : 'bg-white dark:bg-slate-900 border-gray-200 dark:border-gray-700'
+                          ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800'
+                          : 'bg-white dark:bg-slate-900 border-gray-200 dark:border-gray-700'
                           }`}>
                           <div className="flex items-center space-x-2 mb-1">
                             <div
                               onClick={() => handleCourseSelection(course._id)}
                               className={`flex h-5 w-5 items-center justify-center border rounded cursor-pointer transition-colors ${isCourseSelected(course._id)
-                                  ? 'bg-indigo-500 border-indigo-500'
-                                  : 'border-gray-300 dark:border-gray-600'
+                                ? 'bg-indigo-500 border-indigo-500'
+                                : 'border-gray-300 dark:border-gray-600'
                                 }`}
                             >
                               {isCourseSelected(course._id) && (
@@ -1038,8 +1038,8 @@ const PreferenceForm = () => {
                     <div
                       onClick={handleAllInstructorsToggle}
                       className={`flex h-5 w-5 items-center justify-center border rounded cursor-pointer transition-colors mr-2 ${formData.allInstructors
-                          ? 'bg-indigo-500 border-indigo-500'
-                          : 'border-gray-300 dark:border-gray-600'
+                        ? 'bg-indigo-500 border-indigo-500'
+                        : 'border-gray-300 dark:border-gray-600'
                         }`}
                     >
                       {formData.allInstructors && (
@@ -1062,8 +1062,8 @@ const PreferenceForm = () => {
                           <div
                             onClick={() => handleInstructorSelection(instructor._id)}
                             className={`flex h-5 w-5 items-center justify-center border rounded cursor-pointer transition-colors ${isInstructorSelected(instructor._id)
-                                ? 'bg-indigo-500 border-indigo-500'
-                                : 'border-gray-300 dark:border-gray-600'
+                              ? 'bg-indigo-500 border-indigo-500'
+                              : 'border-gray-300 dark:border-gray-600'
                               }`}
                           >
                             {isInstructorSelected(instructor._id) && (
