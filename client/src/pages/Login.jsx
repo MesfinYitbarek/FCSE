@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { loginUser } from '../features/auth/authSlice';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, User, Lock, ArrowRight, Loader2 } from 'lucide-react';
 
 const Login = () => {
@@ -20,7 +20,7 @@ const Login = () => {
 
   useEffect(() => {
     if (user) {
-      navigate("/dashboard", { replace: true }); 
+      navigate("/dashboard", { replace: true });
     }
   }, [user, navigate]);
 
@@ -35,7 +35,7 @@ const Login = () => {
               </div>
             </div>
           </div>
-          
+
           <div className="px-6 sm:px-8 pt-16 pb-8">
             <h2 className="text-2xl font-bold mb-2 text-center text-gray-800 dark:text-white">
               Welcome Back
@@ -43,13 +43,13 @@ const Login = () => {
             <p className="text-center text-gray-500 dark:text-gray-400 mb-6 text-sm">
               Sign in to access your account
             </p>
-            
+
             {error && (
               <div className="mb-6 p-3 bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 dark:border-red-700 text-red-700 dark:text-red-400 rounded">
                 <p className="text-sm">{error}</p>
               </div>
             )}
-            
+
             <form onSubmit={handleSubmit} className="space-y-5">
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
@@ -64,7 +64,7 @@ const Login = () => {
                   required
                 />
               </div>
-              
+
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
                   <Lock className="w-5 h-5 text-gray-400 dark:text-gray-500" />
@@ -77,8 +77,8 @@ const Login = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                 />
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                   onClick={() => setShowPassword(!showPassword)}
                   aria-label={showPassword ? "Hide password" : "Show password"}
@@ -90,9 +90,9 @@ const Login = () => {
                   )}
                 </button>
               </div>
-              
-              <button 
-                type="submit" 
+
+              <button
+                type="submit"
                 className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-medium rounded-lg shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-slate-800 transition-all duration-200 flex items-center justify-center text-base"
                 disabled={loading}
               >
@@ -109,11 +109,18 @@ const Login = () => {
                 )}
               </button>
             </form>
-            
-            
+
+
           </div>
         </div>
-        
+        <div className="mt-6 text-center">
+          <Link
+            to="/developer"
+            className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 text-sm font-medium transition-colors duration-200"
+          >
+            Meet Our Development Team
+          </Link>
+        </div>
         <div className="mt-4 text-center text-xs text-gray-500 dark:text-gray-500">
           FCSE Course Offering System &copy; {new Date().getFullYear()}
         </div>

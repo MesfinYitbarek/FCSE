@@ -41,6 +41,7 @@ import COCDashboard from "@/pages/COC/COCDashboard";
 import InstructorDashboard from "@/pages/Instructor/InstructorDashboard.jsx";
 import ReportsDetail from "@/components/ReportsHOF/ReportsDetail";
 import ReportDetailCOC from "@/components/ReportsCOC/ReportDetail";
+import Developer from "@/pages/Developer";
 
 const AppRoutes = () => {
   const { user, isLoading } = useSelector((state) => state.auth);
@@ -64,6 +65,7 @@ const AppRoutes = () => {
       <Toaster position="top-right" />
       
       <Routes>
+        <Route path="/developer" element={<Developer />} />
         <Route path="/" element={user ? <Navigate to="/dashboard" replace /> : <Login />} />
         
         {user ? (
